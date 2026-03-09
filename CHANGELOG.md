@@ -12,6 +12,8 @@ All notable changes to BudgetPilot are documented here.
 - **Bank Statement PDF Import** — New "Statement" tab in Add Transaction. Upload bank statement PDFs and AI extracts all transactions, categorizes them, and checks for duplicates. Supports BRD, BCR, ING, Raiffeisen, Banca Transilvania, CEC, UniCredit, OTP, Alpha Bank.
 - **Bank Loans Tracking** — Full loan management page under Planning > Loans. Track mortgages, auto loans, personal loans, student loans, credit cards, and more. Record payments with principal/interest split, view progress bars, payment history, and estimated months remaining.
 - **Loan Payment Quick Fill** — Payment form pre-fills the monthly payment amount for faster recording.
+- **Screenshot Upload in Bug Reports** — Attach screenshots when reporting bugs. Images are compressed client-side (JPEG, max 1200px) before submission. Admin panel displays attached screenshots with click-to-zoom.
+- **More Recurring Frequencies** — Added Daily, Every 2 months, Every 2 years. Quarterly label clarified to "Quarterly (3 months)". Full range: Daily → Weekly → Biweekly → Monthly → Bimonthly → Quarterly → Semiannual → Annual → Biannual.
 
 ### Fixed
 - **api.js update() crash** — CRUD `update()` now supports both `update(id, changes)` and `update(fullRecord)` calling conventions. Previously passing a full record object caused "Failed to execute 'get' on IDBObjectStore" error.
