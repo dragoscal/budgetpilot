@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import {
   Shield, Users, Activity, AlertTriangle, Zap, RefreshCw,
-  KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash,
+  KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot,
 } from 'lucide-react';
 
 const TABS = [
@@ -34,6 +34,7 @@ const ACTION_LABELS = {
   admin_suspend_user: 'Suspended user (admin)',
   admin_activate_user: 'Activated user (admin)',
   admin_delete_user: 'Deleted user (admin)',
+  admin_toggle_ai_access: 'Toggled AI access (admin)',
 };
 
 function timeAgo(ts) {
@@ -119,6 +120,16 @@ export default function Admin() {
     }
   };
 
+  const handleToggleAiAccess = async (u) => {
+    try {
+      const result = await adminApi.toggleAiAccess(u.id, !u.aiProxyAllowed);
+      toast.success(`AI proxy ${result.allowed ? 'enabled' : 'disabled'} for ${u.name}`);
+      loadTabData();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="text-center py-20">
@@ -162,7 +173,7 @@ export default function Admin() {
       {loading ? <SkeletonPage /> : (
         <>
           {tab === 'overview' && stats && <OverviewTab stats={stats} />}
-          {tab === 'users' && <UsersTab users={users} onResetPassword={setResetModal} onToggle={handleToggleUser} onDelete={setDeleteModal} currentUserId={user.id} />}
+          {tab === 'users' && <UsersTab users={users} onResetPassword={setResetModal} onToggle={handleToggleUser} onToggleAi={handleToggleAiAccess} onDelete={setDeleteModal} currentUserId={user.id} />}
           {tab === 'activity' && <ActivityTab activity={activity} />}
           {tab === 'errors' && <ErrorsTab errors={errors} />}
           {tab === 'performance' && performance && <PerformanceTab performance={performance} />}
@@ -271,7 +282,7 @@ function OverviewTab({ stats }) {
 }
 
 // ─── Users Tab ───────────────────────────────────────────
-function UsersTab({ users, onResetPassword, onToggle, onDelete, currentUserId }) {
+function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, currentUserId }) {
   return (
     <div className="card overflow-hidden p-0">
       <div className="overflow-x-auto">
@@ -281,6 +292,7 @@ function UsersTab({ users, onResetPassword, onToggle, onDelete, currentUserId })
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">User</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Role</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">AI</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Records</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Last Active</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Joined</th>
@@ -314,6 +326,24 @@ function UsersTab({ users, onResetPassword, onToggle, onDelete, currentUserId })
                       <span className="flex items-center gap-1 text-red-600 text-xs"><Ban size={12} /> Suspended</span>
                     ) : (
                       <span className="flex items-center gap-1 text-green-600 text-xs"><CheckCircle size={12} /> Active</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.role === 'admin' ? (
+                      <span className="flex items-center gap-1 text-purple-600 text-xs"><Bot size={12} /> Owner</span>
+                    ) : (
+                      <button
+                        onClick={() => onToggleAi(u)}
+                        className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${
+                          u.aiProxyAllowed
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200'
+                            : 'bg-cream-200 text-cream-500 dark:bg-dark-border dark:text-cream-600 hover:bg-cream-300'
+                        }`}
+                        title={u.aiProxyAllowed ? 'Click to revoke shared AI key access' : 'Click to grant shared AI key access'}
+                      >
+                        <Bot size={12} />
+                        {u.aiProxyAllowed ? 'Allowed' : 'Off'}
+                      </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-cream-700 dark:text-cream-400">{totalRecords}</td>

@@ -7,15 +7,18 @@ import { useSync } from '../contexts/SyncContext';
 import { getSetting, setSetting, getAllSettings } from '../lib/storage';
 import { exportData, importData, clearData } from '../lib/api';
 import { deleteAccount } from '../lib/auth';
+import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
-import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const { dark, toggleTheme } = useTheme();
   const { toast } = useToast();
   const { hideAmounts, updateHideAmounts } = useHideAmounts();
   const { refreshStatus: refreshSyncStatus, syncNow } = useSync();
+  const navigate = useNavigate();
   const fileRef = useRef(null);
 
   const [apiUrl, setApiUrl] = useState('');
@@ -38,6 +41,7 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [aiTestResult, setAiTestResult] = useState(null);
   const [aiTesting, setAiTesting] = useState(false);
+  const [keySyncStatus, setKeySyncStatus] = useState(null); // null | 'syncing' | 'synced' | 'local'
 
   useEffect(() => {
     loadSettings();
@@ -81,6 +85,27 @@ export default function SettingsPage() {
       }
       // Refresh sync status (starts auto-sync if backend URL was just configured)
       await refreshSyncStatus();
+
+      // Encrypt and sync AI keys to server if backend + encryption key available
+      const anyAiKey = anthropicKey.trim() || openaiKey.trim() || openrouterKey.trim();
+      if (apiUrl.trim() && hasEncryptionKey() && anyAiKey) {
+        setKeySyncStatus('syncing');
+        try {
+          const ok = await pushEncryptedKeys({
+            anthropicApiKey: anthropicKey.trim(),
+            openaiApiKey: openaiKey.trim(),
+            openrouterApiKey: openrouterKey.trim(),
+            aiProvider,
+            aiModel: aiModel || currentProvider.defaultModel,
+          });
+          setKeySyncStatus(ok ? 'synced' : 'local');
+        } catch {
+          setKeySyncStatus('local');
+        }
+      } else if (anyAiKey) {
+        setKeySyncStatus('local');
+      }
+
       toast.success('Settings saved');
     } catch (err) {
       toast.error(err.message);
@@ -286,6 +311,22 @@ export default function SettingsPage() {
                aiProvider === 'openai' ? 'Get your key from platform.openai.com' :
                'Get your key from openrouter.ai/keys — access many models with one key'}
             </p>
+            {keySyncStatus && (
+              <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
+                keySyncStatus === 'synced' ? 'text-success' :
+                keySyncStatus === 'syncing' ? 'text-accent-500' :
+                'text-cream-500'
+              }`}>
+                {keySyncStatus === 'synced' && <><CheckCircle2 size={12} /> Encrypted &amp; synced to your account</>}
+                {keySyncStatus === 'syncing' && <><CloudUpload size={12} className="animate-pulse" /> Syncing encrypted key...</>}
+                {keySyncStatus === 'local' && <><Key size={12} /> Local only — log in with backend to sync across devices</>}
+              </div>
+            )}
+            {user?.aiProxyAllowed && !anthropicKey && !openaiKey && !openrouterKey && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-xs text-accent-500">
+                <CheckCircle2 size={12} /> Using shared AI key from admin — no personal key needed
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={testAiKey} disabled={aiTesting} className="btn-secondary text-xs">
@@ -338,7 +379,7 @@ export default function SettingsPage() {
           </div>
           {apiUrl && (
             <p className="text-xs text-cream-400 mt-1">
-              Data syncs automatically every 60 seconds when a backend is configured. Your API keys (AI, Telegram) stay local and are never synced to the server.
+              Data syncs automatically every 60 seconds. AI keys are encrypted with your password before syncing — the server never sees them in plaintext.
             </p>
           )}
         </div>
@@ -539,6 +580,15 @@ export default function SettingsPage() {
       </div>
 
       <button onClick={saveSettings} className="btn-primary w-full">Save settings</button>
+
+      {/* Sign out — always visible, especially important on mobile where sidebar is hidden */}
+      <button
+        onClick={() => { logout(); navigate('/login'); }}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-danger hover:bg-danger/8 transition-colors"
+      >
+        <LogOut size={16} />
+        Sign out
+      </button>
     </div>
   );
 }

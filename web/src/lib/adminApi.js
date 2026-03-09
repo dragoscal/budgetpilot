@@ -29,6 +29,9 @@ export const adminApi = {
     method: 'PUT', body: JSON.stringify({ newPassword }),
   }),
   toggleUser: (userId) => adminFetch(`/api/admin/users/${userId}/toggle`, { method: 'PUT' }),
+  toggleAiAccess: (userId, allowed) => adminFetch(`/api/admin/users/${userId}/ai-access`, {
+    method: 'PUT', body: JSON.stringify({ allowed }),
+  }),
   deleteUser: (userId) => adminFetch(`/api/admin/users/${userId}`, { method: 'DELETE' }),
   getStats: () => adminFetch('/api/admin/stats'),
   getActivity: (filters = {}) => {

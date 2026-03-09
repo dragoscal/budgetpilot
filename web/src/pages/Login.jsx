@@ -125,7 +125,7 @@ export default function Login() {
         </div>
 
         <p className="mt-6 text-center text-xs text-cream-500">
-          All data stored locally in your browser. No data leaves your device.
+          Your data is encrypted and synced securely across your devices.
         </p>
       </div>
     </div>

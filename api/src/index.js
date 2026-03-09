@@ -133,6 +133,15 @@ router.post('/api/auth/login', async (ctx) => {
 
   const token = await createToken({ sub: user.id, email: user.email }, ctx.env.JWT_SECRET);
 
+  // Check AI proxy access
+  let aiProxyAllowed = user.role === 'admin';
+  if (!aiProxyAllowed) {
+    const proxySetting = await ctx.env.DB.prepare(
+      `SELECT value FROM settings WHERE userId = ? AND key = 'aiProxyAllowed'`
+    ).bind(user.id).first();
+    aiProxyAllowed = proxySetting?.value === 'true';
+  }
+
   ctx.ctx.waitUntil(logActivity(ctx.env.DB, user.id, 'login', {}));
 
   return json({
@@ -142,11 +151,21 @@ router.post('/api/auth/login', async (ctx) => {
       defaultCurrency: user.defaultCurrency,
       onboardingComplete: !!user.onboardingComplete,
       role: user.role || 'user',
+      aiProxyAllowed,
     }
   });
 });
 
 router.get('/api/auth/me', async (ctx) => {
+  // Check if user has AI proxy access (admin always has it)
+  let aiProxyAllowed = ctx.user.role === 'admin';
+  if (!aiProxyAllowed) {
+    const proxySetting = await ctx.env.DB.prepare(
+      `SELECT value FROM settings WHERE userId = ? AND key = 'aiProxyAllowed'`
+    ).bind(ctx.user.id).first();
+    aiProxyAllowed = proxySetting?.value === 'true';
+  }
+
   return json({
     user: {
       id: ctx.user.id,
@@ -155,6 +174,7 @@ router.get('/api/auth/me', async (ctx) => {
       defaultCurrency: ctx.user.defaultCurrency,
       onboardingComplete: !!ctx.user.onboardingComplete,
       role: ctx.user.role || 'user',
+      aiProxyAllowed,
     }
   });
 });
@@ -215,6 +235,19 @@ router.delete('/api/auth/account', async (ctx) => {
 router.post('/api/ai/process', async (ctx) => {
   const anthropicKey = ctx.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return json({ error: 'Anthropic API key not configured on server' }, 503);
+
+  // Check if user has AI proxy access (admin always has it)
+  const isAdmin = ctx.user.role === 'admin';
+  let proxyAllowed = isAdmin;
+  if (!isAdmin) {
+    const proxySetting = await ctx.env.DB.prepare(
+      `SELECT value FROM settings WHERE userId = ? AND key = 'aiProxyAllowed'`
+    ).bind(ctx.user.id).first();
+    proxyAllowed = proxySetting?.value === 'true';
+  }
+  if (!proxyAllowed) {
+    return json({ error: 'AI proxy access not granted. Ask the admin or add your own API key in Settings.' }, 403);
+  }
 
   const { messages, maxTokens, system, model } = ctx.body;
 

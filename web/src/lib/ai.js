@@ -146,7 +146,13 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
       headers,
       body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel }),
     });
-    if (!res.ok) throw new Error('AI processing failed via API');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        throw new Error(err.error || 'AI proxy access not granted. Add your own API key in Settings.');
+      }
+      throw new Error(err.error || 'AI processing failed via server');
+    }
     return res.json();
   }
 

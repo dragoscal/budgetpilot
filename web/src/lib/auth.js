@@ -1,5 +1,6 @@
 import { getAll, add, getById, getSetting } from './storage';
 import { generateId } from './helpers';
+import { deriveEncryptionKey, storeEncryptionKey, clearEncryptionKey, pullEncryptedKeys } from './crypto';
 
 const SESSION_KEY = 'budgetpilot_session';
 const TOKEN_KEY = 'bp_token';
@@ -51,6 +52,15 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
     localStorage.setItem(TOKEN_KEY, data.token);
     const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+    // Derive encryption key from password for future AI key encryption
+    try {
+      const encKey = await deriveEncryptionKey(password, email.toLowerCase());
+      await storeEncryptionKey(encKey, true);
+    } catch (e) {
+      console.warn('Encryption key setup failed:', e.message);
+    }
+
     return data.user;
   }
 
@@ -105,6 +115,17 @@ export async function login({ email, password, remember = false }) {
     storage.setItem(TOKEN_KEY, data.token);
     const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
     storage.setItem(SESSION_KEY, JSON.stringify(session));
+
+    // Derive encryption key from password and store for AI key decryption
+    try {
+      const encKey = await deriveEncryptionKey(password, email.toLowerCase());
+      await storeEncryptionKey(encKey, remember);
+      // Pull encrypted AI keys from server (non-blocking)
+      pullEncryptedKeys().catch(() => {});
+    } catch (e) {
+      console.warn('Encryption key setup failed:', e.message);
+    }
+
     return data.user;
   }
 
@@ -178,6 +199,7 @@ export function logout() {
   sessionStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
+  clearEncryptionKey();
 }
 
 export async function updateProfile(userId, changes) {

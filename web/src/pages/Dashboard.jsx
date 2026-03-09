@@ -11,6 +11,7 @@ import MonthPicker from '../components/MonthPicker';
 import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import SyncIndicator from '../components/SyncIndicator';
 import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
 
@@ -156,14 +157,20 @@ export default function Dashboard() {
 
   const currency = user?.defaultCurrency || 'RON';
 
+  // Show fewer recent transactions on mobile
+  const recentTxMobile = recentTx.slice(0, 3);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title mb-0">
             {user?.name ? `Hey, ${user.name.split(' ')[0]}` : 'Dashboard'}
           </h1>
-          <p className="text-sm text-cream-600 dark:text-cream-500">Here's your financial overview</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-cream-600 dark:text-cream-500">Here's your financial overview</p>
+            <span className="md:hidden"><SyncIndicator mobile /></span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -177,69 +184,73 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} />
-        <StatCard label="Total Income" value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} />
-        <StatCard label="Net" value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} />
-        <StatCard label="Budget Left" value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} />
-        <StatCard label="Daily Avg" value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} />
-        <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} />
+      {/* Stat cards — horizontal scroll on mobile, grid on desktop */}
+      <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
+        <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label="Total Income" value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label="Net" value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label="Budget Left" value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label="Daily Avg" value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
       </div>
 
-      {/* In My Pocket */}
-      <div className="card relative overflow-hidden border-success/20">
+      {/* In My Pocket — compact on mobile */}
+      <div className="card relative overflow-hidden border-success/20 !p-3 md:!p-5">
         <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
         <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold text-success uppercase tracking-wider">In My Pocket</p>
-            <p className="text-sm text-cream-500 dark:text-cream-400 mt-0.5">Safe to spend after bills</p>
+            <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">In My Pocket</p>
+            <p className="text-xs md:text-sm text-cream-500 dark:text-cream-400 mt-0.5">Safe to spend after bills</p>
           </div>
-          <p className="text-3xl font-heading font-bold text-success money">
+          <p className="text-2xl md:text-3xl font-heading font-bold text-success money">
             {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Spending trend chart */}
-        <div className="card">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Spending trend chart — shorter on mobile */}
+        <div className="card !p-3 md:!p-5">
           <h3 className="section-title">Spending trend</h3>
           {spendingChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={spendingChartData}>
-                <defs>
-                  <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#e11d48" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: '12px' }}
-                  formatter={(val) => [hidden ? '••••••' : formatCurrency(val, currency), '']}
-                />
-                <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#e11d48'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="h-[140px] md:h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={spendingChartData}>
+                  <defs>
+                    <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#e11d48" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: '12px' }}
+                    formatter={(val) => [hidden ? '••••••' : formatCurrency(val, currency), '']}
+                  />
+                  <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#e11d48'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-10">No spending data this month</p>
+            <p className="text-sm text-cream-500 text-center py-6">No spending data this month</p>
           )}
         </div>
 
-        {/* Category breakdown */}
-        <div className="card">
+        {/* Category breakdown — compact pie on mobile */}
+        <div className="card !p-3 md:!p-5">
           <h3 className="section-title">By category</h3>
           {categoryData.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <ResponsiveContainer width={140} height={140}>
-                <PieChart>
-                  <Pie data={categoryData} dataKey="value" innerRadius={40} outerRadius={65} paddingAngle={2} stroke="none">
-                    {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#e7e5e4' : d.color} />)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={categoryData} dataKey="value" innerRadius="55%" outerRadius="90%" paddingAngle={2} stroke="none">
+                      {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#e7e5e4' : d.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
               <div className="flex-1 space-y-1.5">
                 {categoryData.slice(0, 5).map((d) => (
                   <div key={d.name} className="flex items-center justify-between text-xs">
@@ -253,32 +264,35 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-10">No data yet</p>
+            <p className="text-sm text-cream-500 text-center py-6">No data yet</p>
           )}
         </div>
       </div>
 
-      {/* Budget progress */}
+      {/* Budget progress — show top 3 on mobile */}
       {budgetProgress.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
+        <div className="card !p-3 md:!p-5">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="section-title mb-0">Budget progress</h3>
             <Link to="/budgets" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
               View all <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="space-y-3">
-            {budgetProgress.map((b) => (
-              <BudgetBar key={b.id} category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} compact hide={hidden} />
+          <div className="space-y-2.5 md:space-y-3">
+            {budgetProgress.map((b, idx) => (
+              <div key={b.id} className={idx >= 3 ? 'hidden md:block' : ''}>
+                <BudgetBar category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} compact hide={hidden} />
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Goals preview */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
+      {/* Goals & Bills — hide empty sections on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Goals preview — hidden on mobile if empty */}
+        <div className={`card !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
+          <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="section-title mb-0">Savings goals</h3>
             <Link to="/goals" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
               View all <ArrowRight size={12} />
@@ -306,9 +320,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Upcoming bills */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
+        {/* Upcoming bills — hidden on mobile if empty */}
+        <div className={`card !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
+          <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="section-title mb-0">Upcoming bills</h3>
             <Link to="/recurring" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
               View all <ArrowRight size={12} />
@@ -336,8 +350,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent transactions */}
-      <div className="card">
+      {/* Recent transactions — 3 on mobile, 6 on desktop */}
+      <div className="card !p-3 md:!p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="section-title mb-0">Recent transactions</h3>
           <Link to="/transactions" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
@@ -345,9 +359,16 @@ export default function Dashboard() {
           </Link>
         </div>
         {recentTx.length > 0 ? (
-          <div className="divide-y divide-cream-100 dark:divide-dark-border">
-            {recentTx.map((tx) => <TransactionRow key={tx.id} transaction={tx} hide={hidden} />)}
-          </div>
+          <>
+            {/* Mobile: show 3 */}
+            <div className="divide-y divide-cream-100 dark:divide-dark-border md:hidden">
+              {recentTxMobile.map((tx) => <TransactionRow key={tx.id} transaction={tx} hide={hidden} />)}
+            </div>
+            {/* Desktop: show all 6 */}
+            <div className="divide-y divide-cream-100 dark:divide-dark-border hidden md:block">
+              {recentTx.map((tx) => <TransactionRow key={tx.id} transaction={tx} hide={hidden} />)}
+            </div>
+          </>
         ) : (
           <EmptyState
             icon={PlusCircle}

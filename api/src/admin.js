@@ -27,12 +27,19 @@ export function registerAdminRoutes(router) {
         (SELECT COUNT(*) FROM people WHERE userId = u.id) as peopleCount,
         (SELECT COUNT(*) FROM debts WHERE userId = u.id) as debtCount,
         (SELECT COUNT(*) FROM wishlist WHERE userId = u.id) as wishlistCount,
-        (SELECT MAX(timestamp) FROM activity_log WHERE userId = u.id) as lastActive
+        (SELECT MAX(timestamp) FROM activity_log WHERE userId = u.id) as lastActive,
+        (SELECT value FROM settings WHERE userId = u.id AND key = 'aiProxyAllowed') as aiProxyAllowed
       FROM users u
       ORDER BY u.createdAt DESC
     `).all();
 
-    return json({ data: users.results || [] });
+    // Normalize aiProxyAllowed to boolean
+    const normalized = (users.results || []).map(u => ({
+      ...u,
+      aiProxyAllowed: u.aiProxyAllowed === 'true',
+    }));
+
+    return json({ data: normalized });
   });
 
   // ─── Reset user password ───────────────────────────────
@@ -84,6 +91,27 @@ export function registerAdminRoutes(router) {
     await logActivity(ctx.env.DB, ctx.user.id, newStatus ? 'admin_suspend_user' : 'admin_activate_user', { targetUserId: id });
 
     return json({ success: true, suspended: !!newStatus });
+  });
+
+  // ─── Toggle AI proxy access for a user ─────────────────
+  router.put('/api/admin/users/:id/ai-access', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+    const { allowed } = ctx.body;
+
+    const user = await ctx.env.DB.prepare('SELECT id, name FROM users WHERE id = ?').bind(id).first();
+    if (!user) return json({ error: 'User not found' }, 404);
+
+    const val = allowed ? 'true' : 'false';
+    await ctx.env.DB.prepare(
+      `INSERT INTO settings (userId, key, value) VALUES (?, 'aiProxyAllowed', ?) ON CONFLICT(userId, key) DO UPDATE SET value = ?`
+    ).bind(id, val, val).run();
+
+    await logActivity(ctx.env.DB, ctx.user.id, 'admin_toggle_ai_access', { targetUserId: id, allowed: !!allowed });
+
+    return json({ success: true, allowed: !!allowed });
   });
 
   // ─── Delete user and all their data ────────────────────

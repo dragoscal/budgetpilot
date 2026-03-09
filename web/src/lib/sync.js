@@ -180,8 +180,8 @@ export async function pullFromServer() {
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData.data) {
-          // Don't overwrite local-only settings
-          const skipKeys = new Set(['apiUrl', 'apiKey', 'anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'lastSyncAt']);
+          // Don't overwrite local-only settings (AI keys are handled separately via crypto.js)
+          const skipKeys = new Set(['apiUrl', 'apiKey', 'anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'lastSyncAt', 'encryptedAiKeys']);
           for (const [key, value] of Object.entries(settingsData.data)) {
             if (skipKeys.has(key)) continue;
             const local = await getSetting(key);

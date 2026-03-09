@@ -40,7 +40,7 @@ function AppLayout({ children }) {
     <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
       <Sidebar />
       <main className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">
-        <div className="max-w-content mx-auto px-4 md:px-8 py-6 md:py-8 animate-fadeUp">
+        <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8 animate-fadeUp">
           {children}
         </div>
       </main>

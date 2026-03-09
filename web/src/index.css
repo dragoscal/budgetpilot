@@ -253,6 +253,20 @@ textarea:-webkit-autofill {
     font-family: 'Fraunces', serif;
     font-variant-numeric: tabular-nums;
   }
+
+  /* Hide scrollbar but keep scrollable */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding for mobile bottom nav */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 /* ─── Print ───────────────────────────────────────────── */
