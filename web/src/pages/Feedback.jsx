@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { feedbackApi } from '../lib/api';
 import {
   Bug, Lightbulb, MessageSquare, Send, ChevronDown, ChevronUp,
-  CheckCircle, Clock, AlertCircle, Loader2,
+  CheckCircle, Clock, AlertCircle, Loader2, Camera, X, Image as ImageIcon,
 } from 'lucide-react';
 
 const TYPES = [
@@ -27,11 +27,59 @@ export default function Feedback() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [screenshot, setScreenshot] = useState(null); // base64 data URL
+  const [screenshotName, setScreenshotName] = useState('');
+  const fileRef = useRef(null);
   const [myFeedback, setMyFeedback] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => { loadMyFeedback(); }, []);
+
+  const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleScreenshot = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, etc.)');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image too large. Maximum 10MB.');
+      return;
+    }
+    const compressed = await compressImage(file);
+    setScreenshot(compressed);
+    setScreenshotName(file.name);
+  };
+
+  const removeScreenshot = () => {
+    setScreenshot(null);
+    setScreenshotName('');
+    if (fileRef.current) fileRef.current.value = '';
+  };
 
   const loadMyFeedback = async () => {
     setLoadingHistory(true);
@@ -55,12 +103,14 @@ export default function Feedback() {
         type,
         title: title.trim(),
         description: description.trim() || null,
+        screenshot: screenshot || null,
         page: location.pathname,
       });
       toast.success('Thank you! Your feedback has been submitted.');
       setTitle('');
       setDescription('');
       setType('bug');
+      removeScreenshot();
       await loadMyFeedback();
     } catch (err) {
       toast.error(err.message);
@@ -140,6 +190,48 @@ export default function Feedback() {
           {description.length > 0 && (
             <p className="text-[10px] text-cream-400 text-right mt-0.5">{description.length}/2000</p>
           )}
+        </div>
+
+        {/* Screenshot */}
+        <div>
+          <label className="text-xs font-medium text-cream-500 mb-1.5 block">
+            Screenshot <span className="text-cream-400">(optional)</span>
+          </label>
+          {screenshot ? (
+            <div className="relative rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border">
+              <img src={screenshot} alt="Screenshot" className="w-full max-h-48 object-contain bg-cream-50 dark:bg-dark-bg" />
+              <button
+                type="button"
+                onClick={removeScreenshot}
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              >
+                <X size={14} />
+              </button>
+              <div className="px-3 py-1.5 bg-cream-50 dark:bg-dark-card text-[10px] text-cream-500 flex items-center gap-1.5">
+                <ImageIcon size={10} />
+                {screenshotName}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-cream-200 dark:border-dark-border text-cream-400 hover:border-cream-300 hover:text-cream-500 transition-colors text-xs"
+            >
+              <Camera size={16} />
+              Add screenshot
+            </button>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleScreenshot(file);
+            }}
+          />
         </div>
 
         {/* Submit */}

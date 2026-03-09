@@ -723,6 +723,18 @@ function FeedbackTab({ data, counts, onUpdate }) {
                     <p className="text-sm text-cream-700 dark:text-cream-400 whitespace-pre-wrap">{fb.description}</p>
                   )}
 
+                  {fb.screenshot && (
+                    <div className="rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border">
+                      <img
+                        src={fb.screenshot}
+                        alt="Bug screenshot"
+                        className="w-full max-h-64 object-contain bg-cream-50 dark:bg-dark-bg cursor-pointer"
+                        onClick={() => window.open(fb.screenshot, '_blank')}
+                        title="Click to view full size"
+                      />
+                    </div>
+                  )}
+
                   {fb.adminNote && (
                     <div className="p-2.5 rounded-lg bg-info/5 border border-info/20">
                       <p className="text-[10px] font-medium text-info mb-0.5">Admin note:</p>
