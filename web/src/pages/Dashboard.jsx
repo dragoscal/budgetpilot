@@ -84,7 +84,12 @@ export default function Dashboard() {
     const net = totalIncome - totalSpent;
     const totalBudget = sumBy(budgetsList, 'amount');
     const budgetRemaining = totalBudget - totalSpent;
-    const daysPassed = new Date().getDate();
+    const now = new Date();
+    const [selYear, selMonth] = month.split('-').map(Number);
+    const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth() + 1;
+    const daysPassed = isCurrentMonth
+      ? now.getDate()
+      : new Date(selYear, selMonth, 0).getDate(); // total days in that month
     const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
     const netWorth = sumBy(accountsList, (a) =>
       ['credit_card', 'loan'].includes(a.type) ? -(a.balance || 0) : (a.balance || 0)

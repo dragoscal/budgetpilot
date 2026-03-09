@@ -92,7 +92,7 @@ export default function NetWorth() {
             <p className="text-xs text-cream-500 capitalize">{account.type?.replace('_', ' ')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button onClick={() => handleEdit(account)} className="p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400"><Edit3 size={14} /></button>
           <button onClick={() => handleDelete(account)} className="p-1 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger"><Trash2 size={14} /></button>
         </div>
@@ -116,10 +116,10 @@ export default function NetWorth() {
       {/* Big number */}
       <div className="card text-center py-8">
         <p className="text-xs font-medium text-cream-500 uppercase tracking-wide mb-2">Total Net Worth</p>
-        <p className={`text-5xl font-heading font-bold money ${netWorth >= 0 ? 'text-success' : 'text-danger'}`}>
+        <p className={`text-3xl md:text-5xl font-heading font-bold money ${netWorth >= 0 ? 'text-success' : 'text-danger'}`}>
           {formatCurrency(netWorth, currency)}
         </p>
-        <div className="flex justify-center gap-8 mt-4 text-sm">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 mt-4 text-sm">
           <span className="text-cream-500">Assets: <span className="font-medium text-success money">{formatCurrency(totalAssets, currency)}</span></span>
           <span className="text-cream-500">Liabilities: <span className="font-medium text-danger money">{formatCurrency(totalLiabilities, currency)}</span></span>
         </div>

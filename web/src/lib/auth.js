@@ -165,9 +165,12 @@ export async function getCurrentUser() {
       const res = await fetch(`${apiUrl}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!res.ok) { logout(); return null; }
-      const data = await res.json();
-      return data.user;
+      if (res.status === 401 || res.status === 403) { logout(); return null; }
+      if (res.ok) {
+        const data = await res.json();
+        return data.user;
+      }
+      // Server error (500 etc.) — fall through to local
     } catch {
       // Network error — fall through to local
     }

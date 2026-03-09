@@ -140,7 +140,7 @@ export default function Recurring() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="page-title mb-0">Recurring & Subscriptions</h1>
         <button onClick={openNewForm} className="btn-primary text-xs flex items-center gap-1">
           <Plus size={14} /> Add
@@ -148,7 +148,7 @@ export default function Recurring() {
       </div>
 
       {/* Summary — frequency-aware */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="card text-center">
           <p className="text-xs text-cream-500 mb-1">Active</p>
           <p className="text-xl font-heading font-bold">{activeItems.length}</p>

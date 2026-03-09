@@ -221,7 +221,7 @@ export default function People() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="page-title mb-0">People & Debts</h1>
           <p className="text-xs text-cream-500 mt-1">Track money lent and borrowed</p>

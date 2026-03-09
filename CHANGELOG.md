@@ -6,6 +6,18 @@ All notable changes to BudgetPilot are documented here.
 
 ---
 
+## 2026-03-10
+
+### Fixed
+- **Mobile action buttons invisible** — Edit/Delete/Pause buttons on transactions, recurring items, goals, wishlist, budgets, net worth accounts, and receipt drafts were hidden on touch devices (used hover-only opacity). Now always visible on mobile, hover-reveal on desktop.
+- **Dashboard daily average wrong for past months** — `dailyAvg` always used today's date number instead of total days in the selected month. Now correctly uses full month days for past months.
+- **Auth: server errors caused permanent logout** — `getCurrentUser()` called `logout()` on any non-OK response (including 500 server errors), permanently clearing the session. Now only logs out on 401/403; other errors fall through to local mode gracefully.
+- **Duplicate save silently failed** — `confirmSaveDespiteDuplicate()` didn't `await` the save, so errors were silently lost. Now properly awaited with error toast.
+- **Mobile layout overflows** — People & Debts header buttons, Loans type selector (4-col → 2-col on mobile), Recurring summary cards (3-col → 2-col on mobile), Net Worth big number (text-5xl → responsive sizing). Added `flex-wrap` to headers across multiple pages.
+- **Mobile menu scroll leak** — Body could scroll behind the slide-up More menu. Added scroll lock (`overflow: hidden`) when menu is open.
+
+---
+
 ## 2026-03-09
 
 ### Added

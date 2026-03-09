@@ -130,9 +130,13 @@ export default function AddTransaction() {
     }
   };
 
-  const confirmSaveDespiteDuplicate = () => {
+  const confirmSaveDespiteDuplicate = async () => {
     if (pendingSave) {
-      saveTransaction(pendingSave);
+      try {
+        await saveTransaction(pendingSave);
+      } catch (err) {
+        toast.error(err.message || 'Failed to save');
+      }
       setDuplicateWarning(null);
       setPendingSave(null);
     }
@@ -482,7 +486,7 @@ export default function AddTransaction() {
                   </div>
                   <button
                     onClick={(e) => handleDeleteDraft(draft.id, e)}
-                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
+                    className="p-1.5 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
                     title="Delete draft"
                   >
                     <Trash2 size={14} />

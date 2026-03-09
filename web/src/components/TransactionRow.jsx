@@ -51,7 +51,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, selected
           {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency, { hide })}
         </p>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         {onEdit && (
           <button onClick={() => onEdit(transaction)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700">
             <Edit3 size={14} />

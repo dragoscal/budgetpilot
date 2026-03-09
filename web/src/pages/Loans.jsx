@@ -333,7 +333,7 @@ export default function Loans() {
           {/* Loan type */}
           <div>
             <label className="text-xs font-medium text-cream-500 mb-2 block">Loan Type</label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {LOAN_TYPES.map((t) => (
                 <button
                   key={t.id}

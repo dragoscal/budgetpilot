@@ -179,7 +179,7 @@ export default function Budgets() {
           {budgetData.map((b) => (
             <div key={b.id} className="relative group">
               <BudgetBar category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} />
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-3 right-3 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleEdit(b)} className="p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 text-xs">Edit</button>
                 <button onClick={() => handleDelete(b.id)} className="p-1 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger text-xs">Del</button>
               </div>

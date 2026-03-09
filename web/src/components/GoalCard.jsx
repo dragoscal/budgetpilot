@@ -46,7 +46,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
             <p className="text-xs text-cream-500">{isSaveUp ? 'Save Up' : 'Pay Down'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           {onEdit && (
             <button onClick={() => onEdit(goal)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500">
               <Edit3 size={14} />

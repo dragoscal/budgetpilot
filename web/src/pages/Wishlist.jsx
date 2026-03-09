@@ -95,7 +95,7 @@ export default function Wishlist() {
                     {item.estimatedPrice > 0 && (
                       <span className="text-lg font-heading font-bold money">{formatCurrency(item.estimatedPrice, currency)}</span>
                     )}
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handlePurchase(item)} className="p-1.5 rounded-lg hover:bg-success/10 text-cream-400 hover:text-success" title="Mark purchased"><ShoppingCart size={14} /></button>
                       <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger"><Trash2 size={14} /></button>
                     </div>
