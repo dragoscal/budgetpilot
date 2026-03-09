@@ -1,0 +1,12 @@
+name = "budgetpilot-api"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+JWT_SECRET = "change-this-to-a-random-secret"
+ANTHROPIC_API_KEY = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "budgetpilot-db"
+database_id = "your-database-id-here"

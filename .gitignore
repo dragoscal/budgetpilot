@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.dev.vars
+.wrangler/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+.claude/
+claude-code-prompt.md

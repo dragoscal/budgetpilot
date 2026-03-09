@@ -1,0 +1,95 @@
+import { formatCurrency, percentOf } from '../lib/helpers';
+import { differenceInMonths, parseISO } from 'date-fns';
+import { Target, CreditCard, Edit3, Trash2 } from 'lucide-react';
+
+export default function GoalCard({ goal, onEdit, onDelete, onAddFunds }) {
+  const pct = percentOf(goal.currentAmount || 0, goal.targetAmount);
+  const isSaveUp = goal.type === 'save_up';
+  const remaining = goal.targetAmount - (goal.currentAmount || 0);
+
+  // Calculate monthly needed
+  let monthlyNeeded = 0;
+  let status = 'on-track';
+  if (goal.targetDate) {
+    const monthsLeft = differenceInMonths(parseISO(goal.targetDate), new Date());
+    if (monthsLeft > 0) {
+      monthlyNeeded = remaining / monthsLeft;
+      const expectedPct = percentOf(
+        goal.targetAmount - monthlyNeeded * monthsLeft,
+        goal.targetAmount
+      );
+      if (pct < expectedPct - 5) status = 'behind';
+      else if (pct > expectedPct + 5) status = 'ahead';
+    } else if (remaining > 0) {
+      status = 'behind';
+    }
+  }
+
+  const statusColors = {
+    'on-track': 'text-success bg-success/10',
+    behind: 'text-danger bg-danger/10',
+    ahead: 'text-info bg-info/10',
+  };
+
+  return (
+    <div className="card group">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (goal.color || '#4a7fa5') + '15' }}>
+            {goal.icon || (isSaveUp ? '🎯' : '💳')}
+          </div>
+          <div>
+            <p className="font-medium text-sm">{goal.name}</p>
+            <p className="text-xs text-cream-500">{isSaveUp ? 'Save Up' : 'Pay Down'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onEdit && (
+            <button onClick={() => onEdit(goal)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500">
+              <Edit3 size={14} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={() => onDelete(goal)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-end justify-between mb-2">
+        <span className="text-xl font-heading font-bold money">{formatCurrency(goal.currentAmount || 0, goal.currency)}</span>
+        <span className="text-sm text-cream-500">of {formatCurrency(goal.targetAmount, goal.currency)}</span>
+      </div>
+
+      <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full bg-success rounded-full transition-all duration-500"
+          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: goal.color || '#3a7d5c' }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-xs">
+        <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
+          {status === 'on-track' ? 'On track' : status === 'behind' ? 'Behind' : 'Ahead'}
+        </span>
+        <span className="text-cream-500">{pct}% complete</span>
+      </div>
+
+      {monthlyNeeded > 0 && (
+        <p className="text-xs text-cream-500 mt-2">
+          {formatCurrency(monthlyNeeded, goal.currency)}/month needed
+        </p>
+      )}
+
+      {onAddFunds && (
+        <button
+          onClick={() => onAddFunds(goal)}
+          className="btn-secondary w-full mt-3 text-xs"
+        >
+          {isSaveUp ? 'Add funds' : 'Record payment'}
+        </button>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,16 @@
+{
+  "name": "BudgetPilot",
+  "short_name": "BudgetPilot",
+  "description": "Your personal AI-powered budget companion",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f3",
+  "theme_color": "#3a7d5c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

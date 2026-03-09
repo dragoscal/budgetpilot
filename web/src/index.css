@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e8e0d4;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #2e2e34;
+}
+
+/* Number inputs — hide spinners */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+@layer components {
+  .card {
+    @apply bg-white border rounded-[14px] p-5;
+    border-color: #ede8de;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .dark .card {
+    background: #242429;
+    border-color: #2e2e34;
+  }
+
+  .btn-primary {
+    @apply text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150;
+    background: #2d2a24;
+  }
+  .btn-primary:hover {
+    background: #3d3930;
+  }
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+  .dark .btn-primary {
+    background: #faf8f3;
+    color: #2d2a24;
+  }
+  .dark .btn-primary:hover {
+    background: #f5f0e6;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150;
+    background: #f5f0e6;
+    color: #2d2a24;
+  }
+  .btn-secondary:hover {
+    background: #ede8de;
+  }
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+  .dark .btn-secondary {
+    background: #2e2e34;
+    color: #e8e4dc;
+  }
+  .dark .btn-secondary:hover {
+    background: #242429;
+  }
+
+  .btn-ghost {
+    @apply px-3 py-2 rounded-lg text-sm transition-all duration-150;
+    color: #8a7e6d;
+  }
+  .btn-ghost:hover {
+    background: #f5f0e6;
+  }
+  .btn-ghost:active {
+    transform: scale(0.98);
+  }
+  .dark .btn-ghost {
+    color: #c4b9a8;
+  }
+  .dark .btn-ghost:hover {
+    background: #2e2e34;
+  }
+
+  .btn-danger {
+    @apply px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150;
+    background: rgba(212, 79, 79, 0.1);
+    color: #d44f4f;
+  }
+  .btn-danger:hover {
+    background: rgba(212, 79, 79, 0.2);
+  }
+  .btn-danger:active {
+    transform: scale(0.98);
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-150;
+    border: 1px solid #ede8de;
+    background: white;
+    color: #2d2a24;
+  }
+  .input::placeholder {
+    color: #c4b9a8;
+  }
+  .input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(45, 42, 36, 0.1);
+    border-color: #e8e0d4;
+  }
+  .dark .input {
+    background: #242429;
+    border-color: #2e2e34;
+    color: #e8e4dc;
+  }
+  .dark .input:focus {
+    box-shadow: 0 0 0 2px rgba(232, 228, 220, 0.1);
+    border-color: #a99e8f;
+  }
+
+  .label {
+    @apply block text-xs font-medium mb-1.5 uppercase tracking-wide;
+    color: #8a7e6d;
+  }
+  .dark .label {
+    color: #c4b9a8;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold mb-6;
+    font-family: 'Fraunces', serif;
+  }
+
+  .section-title {
+    @apply text-sm font-semibold uppercase tracking-wider mb-3;
+    color: #8a7e6d;
+  }
+  .dark .section-title {
+    color: #c4b9a8;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    @apply relative overflow-hidden;
+    background: linear-gradient(90deg, #f5f0e6 25%, #faf8f3 50%, #f5f0e6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .dark .shimmer {
+    background: linear-gradient(90deg, #2e2e34 25%, #242429 50%, #2e2e34 75%);
+    background-size: 200% 100%;
+  }
+}
+
+@layer utilities {
+  .money {
+    font-family: 'Fraunces', serif;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .no-print {
+    display: none !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+    max-width: 100% !important;
+  }
+}
