@@ -124,8 +124,10 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
   const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
   const selectedModel = model || providerConfig.defaultModel;
 
-  // Server proxy mode — let backend handle it
-  if (apiUrl && provider === 'anthropic') {
+  const apiKey = await getSetting(providerConfig.keyName);
+
+  // If no client-side key, try server proxy (for Anthropic only)
+  if (!apiKey && apiUrl && provider === 'anthropic') {
     const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -138,7 +140,6 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     return res.json();
   }
 
-  const apiKey = await getSetting(providerConfig.keyName);
   if (!apiKey) {
     throw new Error(`No ${providerConfig.name} API key configured. Go to Settings to add it.`);
   }
