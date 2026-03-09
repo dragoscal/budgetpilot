@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'budgetpilot';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise = null;
 
@@ -73,6 +73,14 @@ function getDB() {
           const receiptStore = db.createObjectStore('receipts', { keyPath: 'id' });
           receiptStore.createIndex('processedAt', 'processedAt');
           receiptStore.createIndex('userId', 'userId');
+        }
+
+        if (oldVersion < 3) {
+          // Receipt drafts — save-for-later feature
+          if (!db.objectStoreNames.contains('receiptDrafts')) {
+            const draftStore = db.createObjectStore('receiptDrafts', { keyPath: 'id' });
+            draftStore.createIndex('savedAt', 'savedAt');
+          }
         }
       },
     });
@@ -216,4 +224,32 @@ export async function getTransactionsByDateRange(startDate, endDate, userId = 'l
     const d = new Date(t.date);
     return d >= start && d <= end;
   });
+}
+
+// ─── Receipt Drafts (save for later) ────────────────────────
+export async function saveDraft(draft) {
+  const db = await getDB();
+  await db.put('receiptDrafts', draft);
+  return draft;
+}
+
+export async function getDrafts() {
+  const db = await getDB();
+  const drafts = await db.getAll('receiptDrafts');
+  return drafts.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+export async function getDraftById(id) {
+  const db = await getDB();
+  return db.get('receiptDrafts', id);
+}
+
+export async function deleteDraft(id) {
+  const db = await getDB();
+  await db.delete('receiptDrafts', id);
+}
+
+export async function getDraftCount() {
+  const db = await getDB();
+  return (await db.getAll('receiptDrafts')).length;
 }

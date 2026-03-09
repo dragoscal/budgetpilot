@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { transactions as txApi } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
-import { getTransactionsByDateRange } from '../lib/storage';
+import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
 import ReceiptScanner from '../components/ReceiptScanner';
 import QuickAdd from '../components/QuickAdd';
 import ManualForm from '../components/ManualForm';
@@ -13,7 +13,7 @@ import CategoryPicker from '../components/CategoryPicker';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
-  Plus, Minus, Trash2, Undo2, Pencil,
+  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -39,10 +39,24 @@ export default function AddTransaction() {
   const [addingItem, setAddingItem] = useState(null); // txIdx or null
   const [newItem, setNewItem] = useState({ name: '', price: '', qty: '1', category: 'other' });
 
+  // Draft state
+  const [drafts, setDrafts] = useState([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+
   // Focus edit input when it appears
   useEffect(() => {
     if (editRef.current) editRef.current.focus();
   }, [editingField]);
+
+  // Load drafts on mount
+  const loadDrafts = useCallback(async () => {
+    try {
+      const d = await getDrafts();
+      setDrafts(d);
+    } catch (e) { /* silently fail */ }
+  }, []);
+
+  useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
   const handleAIResult = async (results) => {
     let txns;
@@ -141,6 +155,57 @@ export default function AddTransaction() {
   };
 
   const handleError = (msg) => toast.error(msg);
+
+  // ─── DRAFT SAVE / LOAD / DELETE ────────────────────────
+  const handleSaveForLater = async () => {
+    if (!pendingResults) return;
+    try {
+      const merchant = pendingResults[0]?.merchant || 'Receipt';
+      const date = pendingResults[0]?.date || new Date().toISOString().slice(0, 10);
+      const totalAmount = pendingResults
+        .filter(t => !t._dismissed)
+        .reduce((s, t) => s + (t.amount || 0), 0);
+      const currency = pendingResults[0]?.currency || 'RON';
+
+      const draft = {
+        id: generateId(),
+        savedAt: new Date().toISOString(),
+        label: `${merchant} — ${date}`,
+        merchant,
+        date,
+        totalAmount,
+        currency,
+        transactionCount: pendingResults.filter(t => !t._dismissed).length,
+        transactions: pendingResults,
+        receiptMeta: receiptMeta || null,
+      };
+
+      await saveDraft(draft);
+      toast.success('Saved as draft — come back anytime to review');
+      setPendingResults(null);
+      setReceiptMeta(null);
+      await loadDrafts();
+    } catch (err) {
+      toast.error('Failed to save draft: ' + err.message);
+    }
+  };
+
+  const handleLoadDraft = async (draft) => {
+    setPendingResults(draft.transactions);
+    setReceiptMeta(draft.receiptMeta || null);
+    // Delete the draft from storage since it's now loaded
+    await deleteDraft(draft.id);
+    await loadDrafts();
+    setShowDrafts(false);
+    toast.info('Draft loaded — edit and save when ready');
+  };
+
+  const handleDeleteDraft = async (id, e) => {
+    e.stopPropagation();
+    await deleteDraft(id);
+    toast.success('Draft removed');
+    await loadDrafts();
+  };
 
   // ─── INLINE EDITING ────────────────────────────────────
   const startEdit = (txIdx, field, currentValue, itemIdx = undefined) => {
@@ -305,6 +370,18 @@ export default function AddTransaction() {
     ? pendingResults.reduce((sum, tx) => sum + (tx.items?.filter(i => i.needsReview)?.length || 0), 0)
     : 0;
 
+  const formatDraftAge = (isoDate) => {
+    const diff = Date.now() - new Date(isoDate).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'yesterday';
+    return `${days}d ago`;
+  };
+
   // ─── QTY +/- HELPERS ─────────────────────────────────────
   const adjustQty = (txIdx, itemIdx, delta) => {
     const item = pendingResults[txIdx].items[itemIdx];
@@ -364,6 +441,57 @@ export default function AddTransaction() {
           </button>
         ))}
       </div>
+
+      {/* Saved Drafts */}
+      {drafts.length > 0 && (
+        <div className="card border-info/20 bg-info/5">
+          <button
+            onClick={() => setShowDrafts(!showDrafts)}
+            className="flex items-center justify-between w-full"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-info">
+              <FileText size={16} />
+              Saved drafts
+              <span className="text-[10px] font-medium bg-info/15 text-info px-1.5 py-0.5 rounded-full">
+                {drafts.length}
+              </span>
+            </span>
+            {showDrafts ? <ChevronUp size={16} className="text-info" /> : <ChevronDown size={16} className="text-info" />}
+          </button>
+
+          {showDrafts && (
+            <div className="mt-3 space-y-2">
+              {drafts.map((draft) => (
+                <div
+                  key={draft.id}
+                  onClick={() => handleLoadDraft(draft)}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border hover:border-info/40 cursor-pointer transition-all group"
+                >
+                  <span className="text-lg">🧾</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{draft.label}</p>
+                    <p className="text-[11px] text-cream-500">
+                      {draft.transactionCount} transaction{draft.transactionCount !== 1 ? 's' : ''}
+                      {' · '}
+                      {formatCurrency(draft.totalAmount, draft.currency)}
+                      {' · saved '}
+                      {formatDraftAge(draft.savedAt)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteDraft(draft.id, e)}
+                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
+                    title="Delete draft"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <ChevronDown size={14} className="text-cream-400 rotate-[-90deg] shrink-0" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Add */}
       {activeTab === 'quick' && (
@@ -457,6 +585,9 @@ export default function AddTransaction() {
             <div className="flex gap-2">
               <button onClick={() => { setPendingResults(null); setReceiptMeta(null); }} className="btn-ghost text-xs flex items-center gap-1">
                 <X size={14} /> Discard
+              </button>
+              <button onClick={handleSaveForLater} className="btn-ghost text-xs flex items-center gap-1 text-info border-info/30 hover:bg-info/10">
+                <Clock size={14} /> Later
               </button>
               <button onClick={handleSaveResults} className="btn-primary text-xs flex items-center gap-1">
                 <Check size={14} /> Save {pendingResults.filter(t => !t._dismissed).length > 1 ? `all (${pendingResults.filter(t => !t._dismissed).length})` : ''}
