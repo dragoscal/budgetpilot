@@ -49,7 +49,7 @@ export default function Recurring() {
 
   // Filter out dismissed and already-tracked suggestions
   const activeSuggestions = suggestions.filter(
-    (s) => !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6
+    (s) => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6
   );
 
   const handleSave = async () => {

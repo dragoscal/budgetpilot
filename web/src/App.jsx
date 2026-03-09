@@ -24,6 +24,7 @@ import SettingsPage from './pages/Settings';
 import People from './pages/People';
 import Wishlist from './pages/Wishlist';
 import MonthlyReview from './pages/MonthlyReview';
+import Admin from './pages/Admin';
 import NotFound from './pages/NotFound';
 
 import { useEffect } from 'react';
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="/people" element={<ProtectedRoute><AppLayout><People /></AppLayout></ProtectedRoute>} />
         <Route path="/wishlist" element={<ProtectedRoute><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
         <Route path="/review" element={<ProtectedRoute><AppLayout><MonthlyReview /></AppLayout></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AppLayout><Admin /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

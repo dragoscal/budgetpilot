@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useHideAmounts } from '../contexts/SettingsContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
 import { formatCurrency, percentOf, sumBy, groupBy, trendIndicator, getDaysRemaining, formatDate, getCategoryById, sortByDate } from '../lib/helpers';
 import StatCard from '../components/StatCard';
@@ -10,11 +11,12 @@ import MonthPicker from '../components/MonthPicker';
 import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { hideAmounts, updateHideAmounts, shouldHide } = useHideAmounts();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
   const [prevTransactions, setPrevTransactions] = useState([]);
@@ -23,6 +25,9 @@ export default function Dashboard() {
   const [recurringList, setRecurring] = useState([]);
   const [accountsList, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Single master toggle for hiding all amounts
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -160,28 +165,38 @@ export default function Dashboard() {
           </h1>
           <p className="text-sm text-cream-600 dark:text-cream-500">Here's your financial overview</p>
         </div>
-        <MonthPicker value={month} onChange={setMonth} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setHidden(!hidden)}
+            className="p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
+            title={hidden ? 'Show all amounts' : 'Hide all amounts'}
+          >
+            {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+          <MonthPicker value={month} onChange={setMonth} />
+        </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} />
-        <StatCard label="Total Income" value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} />
-        <StatCard label="Net" value={formatCurrency(stats.net, currency)} icon={DollarSign} />
-        <StatCard label="Budget Left" value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} />
-        <StatCard label="Daily Avg" value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} />
-        <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} />
+        <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} />
+        <StatCard label="Total Income" value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} />
+        <StatCard label="Net" value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} />
+        <StatCard label="Budget Left" value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} />
+        <StatCard label="Daily Avg" value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} />
+        <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} />
       </div>
 
       {/* In My Pocket */}
-      <div className="card bg-success/5 border-success/20 dark:bg-success/10">
-        <div className="flex items-center justify-between">
+      <div className="card relative overflow-hidden border-success/20">
+        <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
+        <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-success uppercase tracking-wide">In My Pocket</p>
-            <p className="text-sm text-cream-600 dark:text-cream-400">Safe to spend after bills</p>
+            <p className="text-[11px] font-bold text-success uppercase tracking-wider">In My Pocket</p>
+            <p className="text-sm text-cream-500 dark:text-cream-400 mt-0.5">Safe to spend after bills</p>
           </div>
           <p className="text-3xl font-heading font-bold text-success money">
-            {formatCurrency(Math.max(0, stats.inMyPocket), currency)}
+            {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
           </p>
         </div>
       </div>
@@ -195,17 +210,17 @@ export default function Dashboard() {
               <AreaChart data={spendingChartData}>
                 <defs>
                   <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#d44f4f" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#d44f4f" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#e11d48" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis hide />
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: '12px' }}
-                  formatter={(val) => [formatCurrency(val, currency), '']}
+                  formatter={(val) => [hidden ? '••••••' : formatCurrency(val, currency), '']}
                 />
-                <Area type="monotone" dataKey="cumulative" stroke="#d44f4f" fill="url(#spendGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#e11d48'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -221,7 +236,7 @@ export default function Dashboard() {
               <ResponsiveContainer width={140} height={140}>
                 <PieChart>
                   <Pie data={categoryData} dataKey="value" innerRadius={40} outerRadius={65} paddingAngle={2} stroke="none">
-                    {categoryData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#e7e5e4' : d.color} />)}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
@@ -229,10 +244,10 @@ export default function Dashboard() {
                 {categoryData.slice(0, 5).map((d) => (
                   <div key={d.name} className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? '#e7e5e4' : d.color }} />
                       {d.name}
                     </span>
-                    <span className="font-medium money">{formatCurrency(d.value, currency)}</span>
+                    <span className="font-medium money">{hidden ? '••••••' : formatCurrency(d.value, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -254,7 +269,7 @@ export default function Dashboard() {
           </div>
           <div className="space-y-3">
             {budgetProgress.map((b) => (
-              <BudgetBar key={b.id} category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} compact />
+              <BudgetBar key={b.id} category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} compact hide={hidden} />
             ))}
           </div>
         </div>
@@ -280,7 +295,7 @@ export default function Dashboard() {
                       <span className="text-cream-500">{pct}%</span>
                     </div>
                     <div className="h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-                      <div className="h-full bg-success rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: g.color || '#3a7d5c' }} />
+                      <div className="h-full bg-success rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: g.color || '#059669' }} />
                     </div>
                   </div>
                 );
@@ -310,7 +325,7 @@ export default function Dashboard() {
                       <span>{r.name}</span>
                       <span className="text-xs text-cream-400">Day {r.billingDay}</span>
                     </span>
-                    <span className="font-heading font-bold money">{formatCurrency(r.amount, r.currency || currency)}</span>
+                    <span className="font-heading font-bold money">{hidden ? '••••••' : formatCurrency(r.amount, r.currency || currency)}</span>
                   </div>
                 );
               })}
@@ -331,7 +346,7 @@ export default function Dashboard() {
         </div>
         {recentTx.length > 0 ? (
           <div className="divide-y divide-cream-100 dark:divide-dark-border">
-            {recentTx.map((tx) => <TransactionRow key={tx.id} transaction={tx} />)}
+            {recentTx.map((tx) => <TransactionRow key={tx.id} transaction={tx} hide={hidden} />)}
           </div>
         ) : (
           <EmptyState

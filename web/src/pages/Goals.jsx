@@ -20,7 +20,7 @@ export default function Goals() {
   const [fundAmount, setFundAmount] = useState('');
 
   // Form
-  const [form, setForm] = useState({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency: user?.defaultCurrency || 'RON', icon: '🎯', color: '#3a7d5c', interestRate: '', minimumPayment: '' });
+  const [form, setForm] = useState({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency: user?.defaultCurrency || 'RON', icon: '🎯', color: '#059669', interestRate: '', minimumPayment: '' });
 
   const currency = user?.defaultCurrency || 'RON';
 
@@ -94,12 +94,12 @@ export default function Goals() {
 
   const handleEdit = (goal) => {
     setEditGoal(goal);
-    setForm({ name: goal.name, type: goal.type, targetAmount: goal.targetAmount.toString(), currentAmount: (goal.currentAmount || 0).toString(), targetDate: goal.targetDate || '', currency: goal.currency || currency, icon: goal.icon || '🎯', color: goal.color || '#3a7d5c', interestRate: goal.interestRate?.toString() || '', minimumPayment: goal.minimumPayment?.toString() || '' });
+    setForm({ name: goal.name, type: goal.type, targetAmount: goal.targetAmount.toString(), currentAmount: (goal.currentAmount || 0).toString(), targetDate: goal.targetDate || '', currency: goal.currency || currency, icon: goal.icon || '🎯', color: goal.color || '#059669', interestRate: goal.interestRate?.toString() || '', minimumPayment: goal.minimumPayment?.toString() || '' });
     setShowForm(true);
   };
 
   const resetForm = () => {
-    setForm({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency, icon: '🎯', color: '#3a7d5c', interestRate: '', minimumPayment: '' });
+    setForm({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency, icon: '🎯', color: '#059669', interestRate: '', minimumPayment: '' });
   };
 
   const saveUpGoals = goalsList.filter((g) => g.type === 'save_up');

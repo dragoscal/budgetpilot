@@ -3,7 +3,7 @@ import { getSetting } from './storage';
 import { addToSyncQueue } from './sync';
 
 async function getApiUrl() {
-  return await getSetting('apiUrl');
+  return (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
 }
 
 function getAuthToken() {

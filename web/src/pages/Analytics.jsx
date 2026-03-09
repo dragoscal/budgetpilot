@@ -124,12 +124,12 @@ export default function Analytics() {
         {categoryBudgetData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={categoryBudgetData} layout="vertical" margin={{ left: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ede8de" />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e7e5e4" />
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={60} />
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-              <Bar dataKey="spent" fill="#d44f4f" radius={[0, 4, 4, 0]} name="Spent" />
-              <Bar dataKey="budget" fill="#ede8de" radius={[0, 4, 4, 0]} name="Budget" />
+              <Bar dataKey="spent" fill="#e11d48" radius={[0, 4, 4, 0]} name="Spent" />
+              <Bar dataKey="budget" fill="#e7e5e4" radius={[0, 4, 4, 0]} name="Budget" />
             </BarChart>
           </ResponsiveContainer>
         ) : <p className="text-sm text-cream-500 text-center py-8">No data</p>}
@@ -143,7 +143,7 @@ export default function Analytics() {
             <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} />
             <YAxis hide />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Bar dataKey="total" fill="#c9773c" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="total" fill="#d97706" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

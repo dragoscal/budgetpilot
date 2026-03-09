@@ -1,8 +1,11 @@
 import { formatCurrency, percentOf } from '../lib/helpers';
+import { useHideAmounts } from '../contexts/SettingsContext';
 import { differenceInMonths, parseISO } from 'date-fns';
 import { Target, CreditCard, Edit3, Trash2 } from 'lucide-react';
 
-export default function GoalCard({ goal, onEdit, onDelete, onAddFunds }) {
+export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hideProp }) {
+  const { shouldHide } = useHideAmounts();
+  const hide = hideProp !== undefined ? hideProp : shouldHide('expense');
   const pct = percentOf(goal.currentAmount || 0, goal.targetAmount);
   const isSaveUp = goal.type === 'save_up';
   const remaining = goal.targetAmount - (goal.currentAmount || 0);
@@ -35,7 +38,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds }) {
     <div className="card group">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (goal.color || '#4a7fa5') + '15' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (goal.color || '#6366f1') + '15' }}>
             {goal.icon || (isSaveUp ? '🎯' : '💳')}
           </div>
           <div>
@@ -58,14 +61,14 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds }) {
       </div>
 
       <div className="flex items-end justify-between mb-2">
-        <span className="text-xl font-heading font-bold money">{formatCurrency(goal.currentAmount || 0, goal.currency)}</span>
-        <span className="text-sm text-cream-500">of {formatCurrency(goal.targetAmount, goal.currency)}</span>
+        <span className="text-xl font-heading font-bold money">{formatCurrency(goal.currentAmount || 0, goal.currency, { hide })}</span>
+        <span className="text-sm text-cream-500">of {formatCurrency(goal.targetAmount, goal.currency, { hide })}</span>
       </div>
 
       <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
         <div
           className="h-full bg-success rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: goal.color || '#3a7d5c' }}
+          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: goal.color || '#059669' }}
         />
       </div>
 
@@ -78,7 +81,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds }) {
 
       {monthlyNeeded > 0 && (
         <p className="text-xs text-cream-500 mt-2">
-          {formatCurrency(monthlyNeeded, goal.currency)}/month needed
+          {formatCurrency(monthlyNeeded, goal.currency, { hide })}/month needed
         </p>
       )}
 

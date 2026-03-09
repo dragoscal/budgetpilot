@@ -93,6 +93,20 @@ export async function pullFromServer() {
       }
     }
 
+    // Pull settings from server and merge into local
+    try {
+      const settingsRes = await fetch(`${apiUrl}/api/settings`, { headers });
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        if (settingsData.data) {
+          for (const [key, value] of Object.entries(settingsData.data)) {
+            const local = await getSetting(key);
+            if (!local) await setSetting(key, typeof value === 'string' ? value : JSON.stringify(value));
+          }
+        }
+      }
+    } catch {}
+
     // Update last sync timestamp
     if (result.syncedAt) {
       await setSetting('lastSyncAt', result.syncedAt);

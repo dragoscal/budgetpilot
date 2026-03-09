@@ -3,8 +3,34 @@ import { Router, json } from './router.js';
 import { createToken, verifyToken, hashPassword, generateSalt, generateId } from './auth.js';
 import { registerCrudRoutes } from './crud.js';
 import { registerTelegramRoutes } from './telegram.js';
+import { registerAdminRoutes } from './admin.js';
 
 const router = new Router();
+
+// ─── Activity Logger ─────────────────────────────────────
+export async function logActivity(db, userId, action, metadata = {}) {
+  try {
+    await db.prepare(
+      `INSERT INTO activity_log (id, userId, action, metadata, timestamp) VALUES (?, ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), userId, action, JSON.stringify(metadata), new Date().toISOString()).run();
+  } catch {}
+}
+
+// ─── Rate Limiting (in-memory per isolate) ───────────────
+const rateLimits = new Map();
+const RATE_LIMIT_WINDOW = 60000;
+const RATE_LIMIT_MAX = 10;
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimits.get(ip);
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
+    rateLimits.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX;
+}
 
 // ─── Auth Middleware ──────────────────────────────────────
 // Skip auth for public routes
@@ -26,6 +52,7 @@ router.use(async (ctx) => {
     if (!setting) return json({ error: 'Invalid API key' }, 401);
     const user = await ctx.env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(setting.userId).first();
     if (!user) return json({ error: 'User not found' }, 401);
+    if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
     ctx.user = user;
     return;
   }
@@ -39,6 +66,7 @@ router.use(async (ctx) => {
     const payload = await verifyToken(token, ctx.env.JWT_SECRET);
     const user = await ctx.env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(payload.sub).first();
     if (!user) return json({ error: 'User not found' }, 401);
+    if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
     ctx.user = user;
   } catch (err) {
     return json({ error: 'Invalid token: ' + err.message }, 401);
@@ -52,6 +80,9 @@ router.get('/api/health', async () => {
 
 // ─── Auth Routes ──────────────────────────────────────────
 router.post('/api/auth/register', async (ctx) => {
+  const ip = ctx.request.headers.get('CF-Connecting-IP') || 'unknown';
+  if (!checkRateLimit(ip)) return json({ error: 'Too many attempts. Try again later.' }, 429);
+
   const { email, password, name, defaultCurrency } = ctx.body;
 
   if (!email || !password || !name) {
@@ -62,7 +93,6 @@ router.post('/api/auth/register', async (ctx) => {
     return json({ error: 'Password must be at least 8 characters' }, 400);
   }
 
-  // Check if email exists
   const existing = await ctx.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first();
   if (existing) return json({ error: 'Email already registered' }, 409);
 
@@ -72,18 +102,23 @@ router.post('/api/auth/register', async (ctx) => {
   const userId = generateId();
 
   await ctx.env.DB.prepare(
-    `INSERT INTO users (id, email, name, passwordHash, salt, defaultCurrency, onboardingComplete, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`
+    `INSERT INTO users (id, email, name, passwordHash, salt, defaultCurrency, onboardingComplete, role, suspended, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, 0, 'user', 0, ?, ?)`
   ).bind(userId, email.toLowerCase(), name, passwordHash, salt, defaultCurrency || 'RON', now, now).run();
 
   const token = await createToken({ sub: userId, email: email.toLowerCase() }, ctx.env.JWT_SECRET);
 
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'register', {}));
+
   return json({
     token,
-    user: { id: userId, email: email.toLowerCase(), name, defaultCurrency: defaultCurrency || 'RON' }
+    user: { id: userId, email: email.toLowerCase(), name, defaultCurrency: defaultCurrency || 'RON', role: 'user' }
   }, 201);
 });
 
 router.post('/api/auth/login', async (ctx) => {
+  const ip = ctx.request.headers.get('CF-Connecting-IP') || 'unknown';
+  if (!checkRateLimit(ip)) return json({ error: 'Too many attempts. Try again later.' }, 429);
+
   const { email, password } = ctx.body;
 
   if (!email || !password) return json({ error: 'Email and password required' }, 400);
@@ -91,14 +126,23 @@ router.post('/api/auth/login', async (ctx) => {
   const user = await ctx.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email.toLowerCase()).first();
   if (!user) return json({ error: 'Invalid credentials' }, 401);
 
+  if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
+
   const hash = await hashPassword(password, user.salt);
   if (hash !== user.passwordHash) return json({ error: 'Invalid credentials' }, 401);
 
   const token = await createToken({ sub: user.id, email: user.email }, ctx.env.JWT_SECRET);
 
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, user.id, 'login', {}));
+
   return json({
     token,
-    user: { id: user.id, email: user.email, name: user.name, defaultCurrency: user.defaultCurrency, onboardingComplete: !!user.onboardingComplete }
+    user: {
+      id: user.id, email: user.email, name: user.name,
+      defaultCurrency: user.defaultCurrency,
+      onboardingComplete: !!user.onboardingComplete,
+      role: user.role || 'user',
+    }
   });
 });
 
@@ -110,6 +154,7 @@ router.get('/api/auth/me', async (ctx) => {
       name: ctx.user.name,
       defaultCurrency: ctx.user.defaultCurrency,
       onboardingComplete: !!ctx.user.onboardingComplete,
+      role: ctx.user.role || 'user',
     }
   });
 });
@@ -154,12 +199,26 @@ router.put('/api/auth/password', async (ctx) => {
   return json({ success: true });
 });
 
+// ─── Delete Own Account ──────────────────────────────────
+router.delete('/api/auth/account', async (ctx) => {
+  const userId = ctx.user.id;
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log'];
+  for (const table of tables) {
+    await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
+  }
+  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
+  await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(userId).run();
+  return json({ success: true });
+});
+
 // ─── AI Proxy ─────────────────────────────────────────────
 router.post('/api/ai/process', async (ctx) => {
   const anthropicKey = ctx.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return json({ error: 'Anthropic API key not configured on server' }, 503);
 
-  const { messages, maxTokens, system } = ctx.body;
+  const { messages, maxTokens, system, model } = ctx.body;
+
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {}));
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -169,7 +228,7 @@ router.post('/api/ai/process', async (ctx) => {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: model || 'claude-sonnet-4-20250514',
       max_tokens: maxTokens || 2000,
       system: system || undefined,
       messages,
@@ -193,13 +252,43 @@ router.post('/api/ai/process', async (ctx) => {
   return json({ content: data.content });
 });
 
-// ─── Register CRUD and Telegram routes ────────────────────
+// ─── Register routes (admin BEFORE crud to avoid /:table collision) ──
+registerAdminRoutes(router);
 registerCrudRoutes(router);
 registerTelegramRoutes(router);
 
-// ─── Worker Export ────────────────────────────────────────
+// ─── Worker Export with Request Logging ──────────────────
 export default {
   async fetch(request, env, ctx) {
-    return router.handle(request, env, ctx);
+    const start = Date.now();
+    const response = await router.handle(request, env, ctx);
+
+    // Log API requests asynchronously
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api') && request.method !== 'OPTIONS') {
+      let userId = null;
+      try {
+        const auth = request.headers.get('Authorization');
+        if (auth?.startsWith('Bearer ')) {
+          const body = auth.slice(7).split('.')[1];
+          const payload = JSON.parse(atob(body.replace(/-/g, '+').replace(/_/g, '/')));
+          userId = payload.sub;
+        }
+      } catch {}
+
+      ctx.waitUntil(
+        env.DB.prepare(
+          `INSERT INTO api_logs (id, userId, method, path, status, responseTime, error, userAgent, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          crypto.randomUUID(), userId, request.method, url.pathname,
+          response.status, Date.now() - start,
+          response.status >= 400 ? `HTTP ${response.status}` : null,
+          (request.headers.get('user-agent') || '').slice(0, 200),
+          new Date().toISOString()
+        ).run().catch(() => {})
+      );
+    }
+
+    return response;
   },
 };

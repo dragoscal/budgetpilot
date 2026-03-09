@@ -1,6 +1,7 @@
 // Generic CRUD handlers for D1 database tables
 import { json } from './router.js';
 import { generateId } from './auth.js';
+import { logActivity } from './index.js';
 
 const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist'];
 
@@ -108,6 +109,7 @@ export function registerCrudRoutes(router) {
 
     // Log sync
     await logSync(ctx.env.DB, ctx.user.id, table, data.id, 'create');
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'create_record', { table }));
 
     return json({ data: deserializeRow(table, data) }, 201);
   });
@@ -135,6 +137,7 @@ export function registerCrudRoutes(router) {
     ).bind(...values).run();
 
     await logSync(ctx.env.DB, ctx.user.id, table, id, 'update');
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'update_record', { table }));
 
     return json({ data: { id, ...data } });
   });
@@ -156,6 +159,7 @@ export function registerCrudRoutes(router) {
     }
 
     await logSync(ctx.env.DB, ctx.user.id, table, id, 'delete');
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'delete_record', { table }));
 
     return json({ success: true });
   });
@@ -199,6 +203,7 @@ export function registerCrudRoutes(router) {
       }
     }
 
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'sync_push', { count: changes.length }));
     return json({ results });
   });
 

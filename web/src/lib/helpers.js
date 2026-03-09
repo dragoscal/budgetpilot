@@ -6,7 +6,8 @@ export function generateId() {
   return uuidv4();
 }
 
-export function formatCurrency(amount, currencyCode = 'RON') {
+export function formatCurrency(amount, currencyCode = 'RON', { hide = false } = {}) {
+  if (hide) return '••••••';
   const currency = CURRENCIES.find((c) => c.code === currencyCode) || CURRENCIES[0];
   const absAmount = Math.abs(amount);
   const formatted = new Intl.NumberFormat(currency.locale, {

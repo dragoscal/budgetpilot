@@ -1,5 +1,5 @@
 import { getSetting, add, getAll } from './storage';
-import { MERCHANT_CATEGORY_MAP, CATEGORIES } from './constants';
+import { MERCHANT_CATEGORY_MAP, CATEGORIES, AI_PROVIDERS } from './constants';
 import { generateId, formatDateISO } from './helpers';
 
 // ─── ENHANCED RECEIPT SYSTEM PROMPT ───────────────────────
@@ -116,48 +116,109 @@ Return JSON:
   }]
 }`;
 
-// ─── API CALLER ───────────────────────────────────────────
-async function callAnthropic(messages, systemPrompt, maxTokens = 4000) {
-  const apiUrl = await getSetting('apiUrl');
-  const anthropicKey = await getSetting('anthropicApiKey');
+// ─── API CALLER (multi-provider) ─────────────────────────
+async function callAI(messages, systemPrompt, maxTokens = 4000) {
+  const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
+  const provider = (await getSetting('aiProvider')) || 'anthropic';
+  const model = await getSetting('aiModel');
+  const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
+  const selectedModel = model || providerConfig.defaultModel;
 
-  if (apiUrl) {
+  // Server proxy mode — let backend handle it
+  if (apiUrl && provider === 'anthropic') {
+    const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${apiUrl}/api/ai/process`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, system: systemPrompt, maxTokens }),
+      headers,
+      body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel }),
     });
     if (!res.ok) throw new Error('AI processing failed via API');
     return res.json();
   }
 
-  if (!anthropicKey) {
-    throw new Error('No Anthropic API key configured. Go to Settings to add your API key.');
+  const apiKey = await getSetting(providerConfig.keyName);
+  if (!apiKey) {
+    throw new Error(`No ${providerConfig.name} API key configured. Go to Settings to add it.`);
   }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
+  let text;
+
+  if (provider === 'anthropic') {
+    // Anthropic Messages API
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages,
+      }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.error?.message || `Anthropic API error: ${res.status}`);
+    }
+    const data = await res.json();
+    text = data.content?.[0]?.text || '';
+  } else {
+    // OpenAI-compatible API (OpenAI, OpenRouter)
+    const baseUrl = provider === 'openrouter'
+      ? 'https://openrouter.ai/api/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions';
+
+    // Convert Anthropic-style messages to OpenAI format
+    const openaiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => {
+        if (typeof m.content === 'string') return { role: m.role, content: m.content };
+        // Handle multimodal (image + text)
+        return {
+          role: m.role,
+          content: m.content.map(part => {
+            if (part.type === 'text') return { type: 'text', text: part.text };
+            if (part.type === 'image') return {
+              type: 'image_url',
+              image_url: { url: `data:${part.source.media_type};base64,${part.source.data}` },
+            };
+            return part;
+          }),
+        };
+      }),
+    ];
+
+    const headers = {
       'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-    }),
-  });
+      'Authorization': `Bearer ${apiKey}`,
+    };
+    if (provider === 'openrouter') {
+      headers['HTTP-Referer'] = window.location.origin;
+      headers['X-Title'] = 'BudgetPilot';
+    }
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.error?.message || `Anthropic API error: ${res.status}`);
+    const res = await fetch(baseUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: selectedModel,
+        max_tokens: maxTokens,
+        messages: openaiMessages,
+      }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.error?.message || `${providerConfig.name} API error: ${res.status}`);
+    }
+    const data = await res.json();
+    text = data.choices?.[0]?.message?.content || '';
   }
-
-  const data = await res.json();
-  const text = data.content?.[0]?.text || '';
 
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Could not parse AI response');
@@ -166,7 +227,7 @@ async function callAnthropic(messages, systemPrompt, maxTokens = 4000) {
 
 // ─── RECEIPT PROCESSING ───────────────────────────────────
 export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
-  const result = await callAnthropic([
+  const result = await callAI([
     {
       role: 'user',
       content: [
@@ -202,7 +263,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
 // ─── NLP PROCESSING ───────────────────────────────────────
 export async function processNaturalLanguage(text) {
   const today = formatDateISO(new Date());
-  const result = await callAnthropic([
+  const result = await callAI([
     {
       role: 'user',
       content: `Parse this expense/income: "${text}". Today is ${today}. Return JSON.`,
@@ -214,14 +275,16 @@ export async function processNaturalLanguage(text) {
 
 // ─── MONTHLY SUMMARY ──────────────────────────────────────
 export async function generateMonthlySummary(transactions, budgets, goals) {
-  const anthropicKey = await getSetting('anthropicApiKey');
-  const apiUrl = await getSetting('apiUrl');
+  const provider = (await getSetting('aiProvider')) || 'anthropic';
+  const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
+  const aiKey = await getSetting(providerConfig.keyName);
+  const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
 
-  if (!anthropicKey && !apiUrl) {
+  if (!aiKey && !apiUrl) {
     return generateLocalSummary(transactions, budgets);
   }
 
-  const result = await callAnthropic([
+  const result = await callAI([
     {
       role: 'user',
       content: `Generate a brief, friendly monthly financial summary based on this data:

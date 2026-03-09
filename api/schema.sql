@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   salt TEXT NOT NULL,
   defaultCurrency TEXT DEFAULT 'RON',
   onboardingComplete INTEGER DEFAULT 0,
+  role TEXT DEFAULT 'user',
+  suspended INTEGER DEFAULT 0,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
@@ -164,6 +166,29 @@ CREATE TABLE IF NOT EXISTS sync_log (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
+-- API request logs (for admin monitoring)
+CREATE TABLE IF NOT EXISTS api_logs (
+  id TEXT PRIMARY KEY,
+  userId TEXT,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  responseTime INTEGER NOT NULL,
+  error TEXT,
+  userAgent TEXT,
+  timestamp TEXT NOT NULL
+);
+
+-- User activity log (for feature usage tracking)
+CREATE TABLE IF NOT EXISTS activity_log (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  action TEXT NOT NULL,
+  metadata TEXT DEFAULT '{}',
+  timestamp TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions(userId);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
@@ -175,3 +200,9 @@ CREATE INDEX IF NOT EXISTS idx_recurring_userId ON recurring(userId);
 CREATE INDEX IF NOT EXISTS idx_people_userId ON people(userId);
 CREATE INDEX IF NOT EXISTS idx_debts_userId ON debts(userId);
 CREATE INDEX IF NOT EXISTS idx_wishlist_userId ON wishlist(userId);
+CREATE INDEX IF NOT EXISTS idx_api_logs_userId ON api_logs(userId);
+CREATE INDEX IF NOT EXISTS idx_api_logs_timestamp ON api_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(status);
+CREATE INDEX IF NOT EXISTS idx_activity_log_userId ON activity_log(userId);
+CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_activity_log_action ON activity_log(action);

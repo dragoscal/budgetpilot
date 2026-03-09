@@ -102,12 +102,12 @@ export default function CashFlow() {
         <h3 className="section-title">Income vs Expenses (6 months)</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #ede8de)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Bar dataKey="income" fill="#2d8a4e" radius={[4, 4, 0, 0]} name="Income" />
-            <Bar dataKey="expenses" fill="#d44f4f" radius={[4, 4, 0, 0]} name="Expenses" />
+            <Bar dataKey="income" fill="#059669" radius={[4, 4, 0, 0]} name="Income" />
+            <Bar dataKey="expenses" fill="#e11d48" radius={[4, 4, 0, 0]} name="Expenses" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -120,7 +120,7 @@ export default function CashFlow() {
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Line type="monotone" dataKey="net" stroke="#4a7fa5" strokeWidth={2} dot={{ r: 4 }} name="Net" />
+            <Line type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} name="Net" />
           </LineChart>
         </ResponsiveContainer>
       </div>

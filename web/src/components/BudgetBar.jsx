@@ -1,6 +1,9 @@
 import { getCategoryById, formatCurrency, percentOf } from '../lib/helpers';
+import { useHideAmounts } from '../contexts/SettingsContext';
 
-export default function BudgetBar({ category, spent, budgeted, currency = 'RON', compact = false }) {
+export default function BudgetBar({ category, spent, budgeted, currency = 'RON', compact = false, hide: hideProp }) {
+  const { shouldHide } = useHideAmounts();
+  const hide = hideProp !== undefined ? hideProp : shouldHide('expense');
   const cat = getCategoryById(category);
   const pct = percentOf(spent, budgeted);
   const remaining = budgeted - spent;
@@ -31,7 +34,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
           <div>
             <p className="font-medium text-sm">{cat.name}</p>
             <p className="text-xs text-cream-500">
-              {formatCurrency(spent, currency)} / {formatCurrency(budgeted, currency)}
+              {formatCurrency(spent, currency, { hide })} / {formatCurrency(budgeted, currency, { hide })}
             </p>
           </div>
         </div>
@@ -44,8 +47,8 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
       </div>
       <p className="text-xs text-cream-500 mt-2">
         {remaining >= 0
-          ? `${formatCurrency(remaining, currency)} remaining`
-          : `${formatCurrency(Math.abs(remaining), currency)} over budget`}
+          ? `${formatCurrency(remaining, currency, { hide })} remaining`
+          : `${formatCurrency(Math.abs(remaining), currency, { hide })} over budget`}
       </p>
     </div>
   );

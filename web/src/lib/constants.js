@@ -1,7 +1,7 @@
 export const CATEGORIES = [
-  { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3a7d5c' },
-  { id: 'dining', name: 'Dining', icon: '🍽', color: '#c9773c' },
-  { id: 'transport', name: 'Transport', icon: '🚗', color: '#4a7fa5' },
+  { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#059669' },
+  { id: 'dining', name: 'Dining', icon: '🍽', color: '#d97706' },
+  { id: 'transport', name: 'Transport', icon: '🚗', color: '#6366f1' },
   { id: 'shopping', name: 'Shopping', icon: '🛍', color: '#9b59b6' },
   { id: 'health', name: 'Health', icon: '💊', color: '#e74c3c' },
   { id: 'subscriptions', name: 'Subscriptions', icon: '📺', color: '#8e44ad' },
@@ -14,9 +14,9 @@ export const CATEGORIES = [
   { id: 'gifts', name: 'Gifts', icon: '🎁', color: '#e91e63' },
   { id: 'insurance', name: 'Insurance', icon: '🛡', color: '#607d8b' },
   { id: 'pets', name: 'Pets', icon: '🐾', color: '#795548' },
-  { id: 'savings', name: 'Savings', icon: '🏦', color: '#2d8a4e' },
-  { id: 'income', name: 'Income', icon: '💰', color: '#2d8a4e' },
-  { id: 'transfer', name: 'Transfer', icon: '🔄', color: '#4a7fa5' },
+  { id: 'savings', name: 'Savings', icon: '🏦', color: '#059669' },
+  { id: 'income', name: 'Income', icon: '💰', color: '#059669' },
+  { id: 'transfer', name: 'Transfer', icon: '🔄', color: '#6366f1' },
   { id: 'other', name: 'Other', icon: '📦', color: '#95a5a6' },
 ];
 
@@ -69,6 +69,54 @@ export const MERCHANT_CATEGORY_MAP = {
   subway: 'dining', starbucks: 'dining', restaurant: 'dining',
 };
 
+export const AI_PROVIDERS = [
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    keyName: 'anthropicApiKey',
+    models: [
+      { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5 (fastest, cheapest)' },
+      { id: 'claude-sonnet-4-20250514', name: 'Sonnet 4 (balanced)' },
+      { id: 'claude-opus-4-20250514', name: 'Opus 4 (best quality)' },
+    ],
+    defaultModel: 'claude-sonnet-4-20250514',
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    keyName: 'openaiApiKey',
+    models: [
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini (cheapest)' },
+      { id: 'gpt-4o', name: 'GPT-4o (balanced)' },
+      { id: 'gpt-4.1', name: 'GPT-4.1 (latest)' },
+    ],
+    defaultModel: 'gpt-4o-mini',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    keyName: 'openrouterApiKey',
+    models: [
+      { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4' },
+      { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
+      { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'openai/gpt-4o', name: 'GPT-4o' },
+      { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+      { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+      { id: 'meta-llama/llama-4-maverick', name: 'Llama 4 Maverick' },
+      { id: 'deepseek/deepseek-chat-v3', name: 'DeepSeek V3' },
+      { id: 'mistralai/mistral-medium', name: 'Mistral Medium' },
+    ],
+    defaultModel: 'anthropic/claude-sonnet-4',
+  },
+];
+
+export const HIDE_AMOUNTS_OPTIONS = [
+  { id: 'none', label: 'Show all amounts' },
+  { id: 'all', label: 'Hide all amounts' },
+  { id: 'income', label: 'Hide income only' },
+];
+
 export const DEFAULT_SETTINGS = {
   defaultCurrency: 'RON',
   defaultCategory: 'other',
@@ -77,6 +125,11 @@ export const DEFAULT_SETTINGS = {
   apiUrl: '',
   apiKey: '',
   anthropicApiKey: '',
+  openaiApiKey: '',
+  openrouterApiKey: '',
+  aiProvider: 'anthropic',
+  aiModel: 'claude-sonnet-4-20250514',
+  hideAmounts: 'none',
   userName: '',
   budgetAlerts: { 50: false, 80: true, 100: true },
   weeklyDigest: false,

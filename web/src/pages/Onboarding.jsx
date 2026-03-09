@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CURRENCIES, CATEGORIES, ACCOUNT_TYPES } from '../lib/constants';
-import { setSetting } from '../lib/storage';
-import { accounts as accountsApi, budgets as budgetsApi } from '../lib/api';
+import { accounts as accountsApi, budgets as budgetsApi, settings as settingsApi } from '../lib/api';
 import { generateId, formatDateISO } from '../lib/helpers';
 import { Wallet, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 
@@ -34,12 +33,13 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     try {
-      // Save settings
-      await setSetting('defaultCurrency', currency);
-      await setSetting('userName', displayName);
+      // Save settings (syncs to server if connected)
+      await settingsApi.set('defaultCurrency', currency);
+      await settingsApi.set('userName', displayName);
       await updateProfile({ name: displayName, defaultCurrency: currency, onboardingComplete: true });
 
       // Create account if filled
+      const uid = user?.id || 'local';
       if (accountName && accountBalance) {
         const acctType = ACCOUNT_TYPES.find((t) => t.id === accountType);
         await accountsApi.create({
@@ -49,8 +49,8 @@ export default function Onboarding() {
           balance: Number(accountBalance) || 0,
           currency,
           icon: acctType?.icon || '🏦',
-          color: '#4a7fa5',
-          userId: 'local',
+          color: '#6366f1',
+          userId: uid,
           createdAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
         });
@@ -59,7 +59,6 @@ export default function Onboarding() {
       // Create budgets
       for (const [catId, amount] of Object.entries(budgetAmounts)) {
         if (Number(amount) > 0) {
-          const cat = CATEGORIES.find((c) => c.id === catId);
           await budgetsApi.create({
             id: generateId(),
             category: catId,
@@ -67,15 +66,15 @@ export default function Onboarding() {
             currency,
             rollover: false,
             month: formatDateISO(new Date()).slice(0, 7),
-            userId: 'local',
+            userId: uid,
             createdAt: new Date().toISOString(),
           });
         }
       }
 
-      // Save API key if provided
+      // Save API key if provided (syncs to server so it works across devices)
       if (apiKey.trim()) {
-        await setSetting('anthropicApiKey', apiKey.trim());
+        await settingsApi.set('anthropicApiKey', apiKey.trim());
       }
 
       toast.success('Setup complete! Welcome to BudgetPilot.');
@@ -229,7 +228,7 @@ export default function Onboarding() {
                 </div>
                 <h2 className="text-2xl font-heading font-bold">AI-powered features</h2>
                 <p className="text-cream-700 dark:text-cream-500 mt-1">
-                  Scan receipts and add expenses with natural language. Requires an Anthropic API key.
+                  Optionally scan receipts and add expenses with natural language.
                 </p>
               </div>
               <div>
@@ -273,14 +272,12 @@ export default function Onboarding() {
           </div>
 
           {/* Skip */}
-          {step < STEPS.length - 1 && (
-            <button
-              onClick={handleFinish}
-              className="w-full text-center text-xs text-cream-500 hover:text-cream-700 mt-4"
-            >
-              Skip setup and start using BudgetPilot
-            </button>
-          )}
+          <button
+            onClick={handleFinish}
+            className="w-full text-center text-xs text-cream-500 hover:text-cream-700 mt-4"
+          >
+            {step < STEPS.length - 1 ? 'Skip setup and start using BudgetPilot' : 'Skip this step'}
+          </button>
         </div>
       </div>
     </div>

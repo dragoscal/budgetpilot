@@ -1,12 +1,15 @@
 import { getCategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
 import { TRANSACTION_SOURCES } from '../lib/constants';
+import { useHideAmounts } from '../contexts/SettingsContext';
 import { Trash2, Edit3 } from 'lucide-react';
 
-export default function TransactionRow({ transaction, onEdit, onDelete, selected, onSelect }) {
+export default function TransactionRow({ transaction, onEdit, onDelete, selected, onSelect, hide: hideProp }) {
+  const { shouldHide } = useHideAmounts();
   const cat = getCategoryById(transaction.category);
   const source = TRANSACTION_SOURCES[transaction.source] || TRANSACTION_SOURCES.manual;
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
+  const hide = hideProp !== undefined ? hideProp : shouldHide(transaction.type);
 
   return (
     <div className="flex items-center gap-3 py-3 px-4 hover:bg-cream-50 dark:hover:bg-dark-border/50 rounded-xl transition-colors group">
@@ -44,7 +47,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, selected
         <p className={`text-sm font-heading font-bold money ${
           isIncome ? 'text-income' : isExpense ? 'text-danger' : 'text-info'
         }`}>
-          {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency)}
+          {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency, { hide })}
         </p>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

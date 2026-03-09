@@ -1,0 +1,260 @@
+// BudgetPilot Admin Routes — privacy-safe, aggregate data only
+import { json } from './router.js';
+import { hashPassword, generateSalt } from './auth.js';
+import { logActivity } from './index.js';
+
+function requireAdmin(ctx) {
+  if (!ctx.user || ctx.user.role !== 'admin') {
+    return json({ error: 'Admin access required' }, 403);
+  }
+  return null;
+}
+
+export function registerAdminRoutes(router) {
+
+  // ─── List users with aggregate stats (NO personal financial data) ──
+  router.get('/api/admin/users', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const users = await ctx.env.DB.prepare(`
+      SELECT
+        u.id, u.email, u.name, u.role, u.suspended, u.defaultCurrency, u.createdAt,
+        (SELECT COUNT(*) FROM transactions WHERE userId = u.id AND deletedAt IS NULL) as transactionCount,
+        (SELECT COUNT(*) FROM budgets WHERE userId = u.id) as budgetCount,
+        (SELECT COUNT(*) FROM goals WHERE userId = u.id) as goalCount,
+        (SELECT COUNT(*) FROM recurring WHERE userId = u.id) as recurringCount,
+        (SELECT COUNT(*) FROM people WHERE userId = u.id) as peopleCount,
+        (SELECT COUNT(*) FROM debts WHERE userId = u.id) as debtCount,
+        (SELECT COUNT(*) FROM wishlist WHERE userId = u.id) as wishlistCount,
+        (SELECT MAX(timestamp) FROM activity_log WHERE userId = u.id) as lastActive
+      FROM users u
+      ORDER BY u.createdAt DESC
+    `).all();
+
+    return json({ data: users.results || [] });
+  });
+
+  // ─── Reset user password ───────────────────────────────
+  router.put('/api/admin/users/:id/reset-password', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+    const { newPassword } = ctx.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return json({ error: 'Password must be at least 8 characters' }, 400);
+    }
+
+    const user = await ctx.env.DB.prepare('SELECT id, name FROM users WHERE id = ?').bind(id).first();
+    if (!user) return json({ error: 'User not found' }, 404);
+
+    const salt = generateSalt();
+    const passwordHash = await hashPassword(newPassword, salt);
+
+    await ctx.env.DB.prepare(
+      'UPDATE users SET passwordHash = ?, salt = ?, updatedAt = ? WHERE id = ?'
+    ).bind(passwordHash, salt, new Date().toISOString(), id).run();
+
+    await logActivity(ctx.env.DB, ctx.user.id, 'admin_reset_password', { targetUserId: id });
+
+    return json({ success: true });
+  });
+
+  // ─── Suspend / activate user ───────────────────────────
+  router.put('/api/admin/users/:id/toggle', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+
+    if (id === ctx.user.id) {
+      return json({ error: 'Cannot suspend yourself' }, 400);
+    }
+
+    const user = await ctx.env.DB.prepare('SELECT id, suspended FROM users WHERE id = ?').bind(id).first();
+    if (!user) return json({ error: 'User not found' }, 404);
+
+    const newStatus = user.suspended ? 0 : 1;
+    await ctx.env.DB.prepare(
+      'UPDATE users SET suspended = ?, updatedAt = ? WHERE id = ?'
+    ).bind(newStatus, new Date().toISOString(), id).run();
+
+    await logActivity(ctx.env.DB, ctx.user.id, newStatus ? 'admin_suspend_user' : 'admin_activate_user', { targetUserId: id });
+
+    return json({ success: true, suspended: !!newStatus });
+  });
+
+  // ─── Delete user and all their data ────────────────────
+  router.delete('/api/admin/users/:id', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+
+    if (id === ctx.user.id) {
+      return json({ error: 'Cannot delete yourself' }, 400);
+    }
+
+    const user = await ctx.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(id).first();
+    if (!user) return json({ error: 'User not found' }, 404);
+
+    const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log'];
+    for (const table of tables) {
+      await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(id).run();
+    }
+    await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
+    await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();
+
+    await logActivity(ctx.env.DB, ctx.user.id, 'admin_delete_user', { targetUserId: id });
+
+    return json({ success: true });
+  });
+
+  // ─── Global stats (aggregate only) ─────────────────────
+  router.get('/api/admin/stats', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [totalUsers, activeToday, activeWeek, activeMonth, totalTransactions, totalApiCalls, avgResponseTime, errorCount, recentSignups] = await Promise.all([
+      ctx.env.DB.prepare('SELECT COUNT(*) as count FROM users').first(),
+      ctx.env.DB.prepare('SELECT COUNT(DISTINCT userId) as count FROM activity_log WHERE timestamp >= ?').bind(todayStr + 'T00:00:00.000Z').first(),
+      ctx.env.DB.prepare('SELECT COUNT(DISTINCT userId) as count FROM activity_log WHERE timestamp >= ?').bind(weekAgo).first(),
+      ctx.env.DB.prepare('SELECT COUNT(DISTINCT userId) as count FROM activity_log WHERE timestamp >= ?').bind(monthAgo).first(),
+      ctx.env.DB.prepare('SELECT COUNT(*) as count FROM transactions WHERE deletedAt IS NULL').first(),
+      ctx.env.DB.prepare('SELECT COUNT(*) as count FROM api_logs').first(),
+      ctx.env.DB.prepare('SELECT AVG(responseTime) as avg FROM api_logs').first(),
+      ctx.env.DB.prepare('SELECT COUNT(*) as count FROM api_logs WHERE status >= 400').first(),
+      ctx.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE createdAt >= ?').bind(weekAgo).first(),
+    ]);
+
+    const apiCallsByDay = await ctx.env.DB.prepare(`
+      SELECT DATE(timestamp) as date, COUNT(*) as count, AVG(responseTime) as avgTime
+      FROM api_logs WHERE timestamp >= ?
+      GROUP BY DATE(timestamp) ORDER BY date ASC
+    `).bind(weekAgo).all();
+
+    const featureUsage = await ctx.env.DB.prepare(`
+      SELECT action, COUNT(*) as count
+      FROM activity_log WHERE timestamp >= ?
+      GROUP BY action ORDER BY count DESC
+    `).bind(monthAgo).all();
+
+    return json({
+      data: {
+        totalUsers: totalUsers?.count || 0,
+        activeToday: activeToday?.count || 0,
+        activeWeek: activeWeek?.count || 0,
+        activeMonth: activeMonth?.count || 0,
+        totalTransactions: totalTransactions?.count || 0,
+        totalApiCalls: totalApiCalls?.count || 0,
+        avgResponseTime: Math.round(avgResponseTime?.avg || 0),
+        errorCount: errorCount?.count || 0,
+        recentSignups: recentSignups?.count || 0,
+        apiCallsByDay: apiCallsByDay?.results || [],
+        featureUsage: featureUsage?.results || [],
+      }
+    });
+  });
+
+  // ─── Activity feed (action types only, no personal data) ──
+  router.get('/api/admin/activity', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { userId, action, limit: limitStr, offset: offsetStr } = ctx.query;
+    const limit = Math.min(parseInt(limitStr) || 50, 200);
+    const offset = parseInt(offsetStr) || 0;
+
+    let query = `
+      SELECT a.id, a.userId, a.action, a.metadata, a.timestamp, u.name as userName, u.email as userEmail
+      FROM activity_log a
+      LEFT JOIN users u ON a.userId = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (userId) { query += ' AND a.userId = ?'; params.push(userId); }
+    if (action) { query += ' AND a.action = ?'; params.push(action); }
+
+    query += ' ORDER BY a.timestamp DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const result = await ctx.env.DB.prepare(query).bind(...params).all();
+
+    return json({ data: result.results || [], meta: { limit, offset } });
+  });
+
+  // ─── Errors (path + status only, no request bodies) ────
+  router.get('/api/admin/errors', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const limit = Math.min(parseInt(ctx.query.limit) || 50, 200);
+
+    const result = await ctx.env.DB.prepare(`
+      SELECT l.id, l.method, l.path, l.status, l.error, l.responseTime, l.timestamp, u.name as userName, u.email as userEmail
+      FROM api_logs l
+      LEFT JOIN users u ON l.userId = u.id
+      WHERE l.status >= 400
+      ORDER BY l.timestamp DESC LIMIT ?
+    `).bind(limit).all();
+
+    return json({ data: result.results || [] });
+  });
+
+  // ─── Performance metrics ───────────────────────────────
+  router.get('/api/admin/performance', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const [byPath, hourly] = await Promise.all([
+      ctx.env.DB.prepare(`
+        SELECT path, COUNT(*) as count, ROUND(AVG(responseTime)) as avgTime, MAX(responseTime) as maxTime
+        FROM api_logs WHERE timestamp >= ?
+        GROUP BY path ORDER BY avgTime DESC LIMIT 20
+      `).bind(weekAgo).all(),
+      ctx.env.DB.prepare(`
+        SELECT strftime('%H', timestamp) as hour, ROUND(AVG(responseTime)) as avgTime, COUNT(*) as count
+        FROM api_logs WHERE timestamp >= ?
+        GROUP BY strftime('%H', timestamp) ORDER BY hour ASC
+      `).bind(dayAgo).all(),
+    ]);
+
+    return json({
+      data: {
+        byPath: byPath?.results || [],
+        hourly: hourly?.results || [],
+      }
+    });
+  });
+
+  // ─── Log cleanup (retention) ───────────────────────────
+  router.post('/api/admin/cleanup', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    const apiResult = await ctx.env.DB.prepare('DELETE FROM api_logs WHERE timestamp < ?').bind(thirtyDaysAgo).run();
+    const activityResult = await ctx.env.DB.prepare('DELETE FROM activity_log WHERE timestamp < ?').bind(ninetyDaysAgo).run();
+
+    return json({
+      success: true,
+      cleaned: {
+        apiLogs: apiResult.changes || 0,
+        activityLogs: activityResult.changes || 0,
+      }
+    });
+  });
+}

@@ -61,7 +61,9 @@ export default function Transactions() {
     } else if (sortKey === 'amount') {
       result.sort((a, b) => sortDir === 'desc' ? b.amount - a.amount : a.amount - b.amount);
     } else if (sortKey === 'merchant') {
-      result.sort((a, b) => (a.merchant || '').localeCompare(b.merchant || ''));
+      result.sort((a, b) => sortDir === 'desc'
+        ? (b.merchant || '').localeCompare(a.merchant || '')
+        : (a.merchant || '').localeCompare(b.merchant || ''));
     }
 
     return result;

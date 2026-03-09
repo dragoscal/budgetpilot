@@ -1,7 +1,12 @@
-import { getAll, add, getById } from './storage';
+import { getAll, add, getById, getSetting } from './storage';
 import { generateId } from './helpers';
 
 const SESSION_KEY = 'budgetpilot_session';
+const TOKEN_KEY = 'bp_token';
+
+async function getApiUrl() {
+  return (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
+}
 
 // Hash password using Web Crypto API (SHA-256 with salt)
 async function hashPassword(password, salt) {
@@ -29,7 +34,27 @@ function generateToken() {
 }
 
 export async function register({ name, email, password, defaultCurrency = 'RON' }) {
-  // Check if email already exists
+  const apiUrl = await getApiUrl();
+
+  if (apiUrl) {
+    // Server mode
+    const res = await fetch(`${apiUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, defaultCurrency }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Registration failed');
+    }
+    const data = await res.json();
+    localStorage.setItem(TOKEN_KEY, data.token);
+    const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return data.user;
+  }
+
+  // Local mode
   const users = await getAll('users');
   if (users.find((u) => u.email === email.toLowerCase())) {
     throw new Error('An account with this email already exists');
@@ -53,7 +78,6 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
 
   await add('users', user);
 
-  // Create session
   const token = generateToken();
   const session = { userId: id, token, createdAt: new Date().toISOString() };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -63,6 +87,28 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
 }
 
 export async function login({ email, password, remember = false }) {
+  const apiUrl = await getApiUrl();
+
+  if (apiUrl) {
+    // Server mode
+    const res = await fetch(`${apiUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Login failed');
+    }
+    const data = await res.json();
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(TOKEN_KEY, data.token);
+    const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
+    storage.setItem(SESSION_KEY, JSON.stringify(session));
+    return data.user;
+  }
+
+  // Local mode
   const users = await getAll('users');
   const user = users.find((u) => u.email === email.toLowerCase());
 
@@ -75,7 +121,6 @@ export async function login({ email, password, remember = false }) {
     throw new Error('Invalid email or password');
   }
 
-  // Create session
   const token = generateToken();
   const session = { userId: user.id, token, createdAt: new Date().toISOString() };
 
@@ -90,6 +135,24 @@ export async function login({ email, password, remember = false }) {
 }
 
 export async function getCurrentUser() {
+  const apiUrl = await getApiUrl();
+  const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
+  if (apiUrl && token) {
+    // Server mode — validate token with backend
+    try {
+      const res = await fetch(`${apiUrl}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) { logout(); return null; }
+      const data = await res.json();
+      return data.user;
+    } catch {
+      // Network error — fall through to local
+    }
+  }
+
+  // Local mode
   const sessionStr =
     localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
 
@@ -113,9 +176,36 @@ export async function getCurrentUser() {
 export function logout() {
   localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export async function updateProfile(userId, changes) {
+  const apiUrl = await getApiUrl();
+  const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
+  if (apiUrl && token) {
+    const res = await fetch(`${apiUrl}/api/auth/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(changes),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Profile update failed');
+    }
+    // Re-fetch full user from server
+    const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (meRes.ok) {
+      const data = await meRes.json();
+      return data.user;
+    }
+    return { id: userId, ...changes };
+  }
+
+  // Local mode
   const { update } = await import('./storage');
   const updated = await update('users', userId, changes);
   const { passwordHash: _, salt: __, ...safeUser } = updated;
@@ -123,6 +213,23 @@ export async function updateProfile(userId, changes) {
 }
 
 export async function changePassword(userId, currentPassword, newPassword) {
+  const apiUrl = await getApiUrl();
+  const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
+  if (apiUrl && token) {
+    const res = await fetch(`${apiUrl}/api/auth/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Password change failed');
+    }
+    return;
+  }
+
+  // Local mode
   const user = await getById('users', userId);
   if (!user) throw new Error('User not found');
 
@@ -136,4 +243,21 @@ export async function changePassword(userId, currentPassword, newPassword) {
 
   const { update } = await import('./storage');
   await update('users', userId, { passwordHash: newHash, salt: newSalt });
+}
+
+export async function deleteAccount() {
+  const apiUrl = await getApiUrl();
+  const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
+  if (apiUrl && token) {
+    const res = await fetch(`${apiUrl}/api/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Account deletion failed');
+    }
+  }
+  logout();
 }
