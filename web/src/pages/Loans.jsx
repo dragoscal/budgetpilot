@@ -663,7 +663,7 @@ export default function Loans() {
                   <div className="flex flex-wrap gap-2">
                     {loan.status === 'active' && (
                       <button
-                        onClick={() => { setShowPaymentForm(loan.id); setPaymentForm({ ...EMPTY_PAYMENT }); }}
+                        onClick={() => { setShowPaymentForm(loan.id); setPaymentForm({ ...EMPTY_PAYMENT, amount: loan.monthlyPayment ? String(loan.monthlyPayment) : '' }); }}
                         className="btn-primary text-xs flex items-center gap-1"
                       >
                         <DollarSign size={14} /> Record Payment

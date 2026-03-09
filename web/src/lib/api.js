@@ -89,18 +89,26 @@ function createCrud(storeName) {
       return result;
     },
 
-    async update(id, changes) {
-      // Update locally first
-      const existing = await storage.getById(storeName, id);
-      const updated = { ...existing, ...changes };
-      await storage.update(storeName, updated);
+    async update(idOrRecord, changes) {
+      // Support both: update(id, changes) and update(fullRecord)
+      let id, updated;
+      if (changes === undefined && typeof idOrRecord === 'object' && idOrRecord !== null) {
+        id = idOrRecord.id;
+        updated = { ...idOrRecord, updatedAt: new Date().toISOString() };
+        await storage.update(storeName, updated);
+      } else {
+        id = idOrRecord;
+        const existing = await storage.getById(storeName, id);
+        updated = { ...existing, ...changes };
+        await storage.update(storeName, updated);
+      }
 
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
         try {
           await apiFetch(apiUrl, `/api/${apiTable}/${id}`, {
             method: 'PUT',
-            body: JSON.stringify(changes),
+            body: JSON.stringify(changes || updated),
           });
           // Immediate push succeeded — no need to queue
         } catch {

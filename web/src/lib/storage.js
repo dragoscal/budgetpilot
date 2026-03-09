@@ -5,6 +5,16 @@ const DB_VERSION = 6;
 
 let dbPromise = null;
 
+// Close stale connections on HMR so version upgrades aren't blocked
+if (import.meta.hot) {
+  import.meta.hot.dispose(async () => {
+    if (dbPromise) {
+      try { const db = await dbPromise; db.close(); } catch {}
+      dbPromise = null;
+    }
+  });
+}
+
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
@@ -97,6 +107,11 @@ function getDB() {
             lpStore.createIndex('date', 'date');
           }
         }
+      },
+      blocked(currentVersion, blockedVersion) {
+        // Old connections are blocking the upgrade — force reload
+        console.warn(`IndexedDB upgrade blocked: v${currentVersion} → v${blockedVersion}. Reloading...`);
+        window.location.reload();
       },
     });
   }
