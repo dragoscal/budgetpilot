@@ -11,6 +11,7 @@ import {
 import {
   Shield, Users, Activity, AlertTriangle, Zap, RefreshCw,
   KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot, DollarSign,
+  MessageSquare, Bug, Lightbulb, Eye, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'errors', label: 'Errors', icon: AlertTriangle },
   { id: 'performance', label: 'Performance', icon: Zap },
+  { id: 'feedback', label: 'Feedback', icon: MessageSquare },
 ];
 
 const ACTION_LABELS = {
@@ -36,6 +38,8 @@ const ACTION_LABELS = {
   admin_activate_user: 'Activated user (admin)',
   admin_delete_user: 'Deleted user (admin)',
   admin_toggle_ai_access: 'Toggled AI access (admin)',
+  submit_feedback: 'Submitted feedback',
+  admin_update_feedback: 'Updated feedback (admin)',
 };
 
 function timeAgo(ts) {
@@ -62,6 +66,7 @@ export default function Admin() {
   const [errors, setErrors] = useState([]);
   const [performance, setPerformance] = useState(null);
   const [aiCosts, setAiCosts] = useState(null);
+  const [feedback, setFeedback] = useState({ data: [], counts: [] });
   const [resetModal, setResetModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -79,6 +84,11 @@ export default function Admin() {
         case 'ai-costs': setAiCosts(await adminApi.getAiCosts()); break;
         case 'errors': setErrors(await adminApi.getErrors()); break;
         case 'performance': setPerformance(await adminApi.getPerformance()); break;
+        case 'feedback': {
+          const fb = await adminApi.getFeedback();
+          setFeedback({ data: fb.data || [], counts: fb.counts || [] });
+          break;
+        }
       }
     } catch (err) {
       toast.error(err.message);
@@ -181,6 +191,7 @@ export default function Admin() {
           {tab === 'activity' && <ActivityTab activity={activity} />}
           {tab === 'errors' && <ErrorsTab errors={errors} />}
           {tab === 'performance' && performance && <PerformanceTab performance={performance} />}
+          {tab === 'feedback' && <FeedbackTab data={feedback.data} counts={feedback.counts} onUpdate={loadTabData} />}
         </>
       )}
 
@@ -609,6 +620,164 @@ function PerformanceTab({ performance }) {
             </BarChart>
           </ResponsiveContainer>
         ) : <p className="text-sm text-cream-500 text-center py-8">No data yet</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Feedback Tab ───────────────────────────────────────
+function FeedbackTab({ data, counts, onUpdate }) {
+  const toast = useToast();
+  const [filter, setFilter] = useState('all');
+  const [expandedId, setExpandedId] = useState(null);
+  const [noteInput, setNoteInput] = useState('');
+
+  const typeIcon = { bug: Bug, suggestion: Lightbulb, other: MessageSquare };
+  const typeColor = { bug: 'text-danger', suggestion: 'text-warning', other: 'text-info' };
+  const statusColors = {
+    open: 'bg-warning/10 text-warning',
+    in_progress: 'bg-info/10 text-info',
+    resolved: 'bg-success/10 text-success',
+    closed: 'bg-cream-200 dark:bg-dark-border text-cream-500',
+  };
+
+  const countMap = {};
+  for (const c of counts) countMap[c.status] = c.count;
+  const totalCount = data.length;
+  const openCount = countMap['open'] || 0;
+
+  const filtered = filter === 'all' ? data : data.filter(f => f.status === filter);
+
+  const handleStatusChange = async (id, status) => {
+    try {
+      await adminApi.updateFeedback(id, { status });
+      toast.success(`Status updated to ${status}`);
+      onUpdate();
+    } catch (err) { toast.error(err.message); }
+  };
+
+  const handleAddNote = async (id) => {
+    if (!noteInput.trim()) return;
+    try {
+      await adminApi.updateFeedback(id, { adminNote: noteInput.trim() });
+      toast.success('Note added');
+      setNoteInput('');
+      onUpdate();
+    } catch (err) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await adminApi.deleteFeedback(id);
+      toast.success('Feedback deleted');
+      onUpdate();
+    } catch (err) { toast.error(err.message); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', value: totalCount, onClick: () => setFilter('all'), active: filter === 'all' },
+          { label: 'Open', value: openCount, onClick: () => setFilter('open'), active: filter === 'open' },
+          { label: 'In Progress', value: countMap['in_progress'] || 0, onClick: () => setFilter('in_progress'), active: filter === 'in_progress' },
+          { label: 'Resolved', value: countMap['resolved'] || 0, onClick: () => setFilter('resolved'), active: filter === 'resolved' },
+        ].map((card) => (
+          <button key={card.label} onClick={card.onClick}
+            className={`card text-center transition-all ${card.active ? 'ring-2 ring-cream-900 dark:ring-cream-100' : ''}`}>
+            <p className="text-2xl font-heading font-bold">{card.value}</p>
+            <p className="text-xs text-cream-500">{card.label}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Feedback list */}
+      <div className="space-y-2">
+        {filtered.map((fb) => {
+          const Icon = typeIcon[fb.type] || MessageSquare;
+          const isExpanded = expandedId === fb.id;
+
+          return (
+            <div key={fb.id} className="card">
+              <div className="flex items-start gap-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : fb.id)}>
+                <Icon size={16} className={`mt-0.5 shrink-0 ${typeColor[fb.type]}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium">{fb.title}</span>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColors[fb.status]}`}>
+                      {fb.status?.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-cream-500 mt-0.5">
+                    {fb.userName || 'Unknown'} · {timeAgo(fb.createdAt)}
+                    {fb.page && ` · on ${fb.page}`}
+                  </p>
+                </div>
+                {isExpanded ? <ChevronUp size={14} className="text-cream-400 mt-1 shrink-0" /> : <ChevronDown size={14} className="text-cream-400 mt-1 shrink-0" />}
+              </div>
+
+              {isExpanded && (
+                <div className="mt-3 space-y-3 border-t border-cream-200 dark:border-dark-border pt-3">
+                  {fb.description && (
+                    <p className="text-sm text-cream-700 dark:text-cream-400 whitespace-pre-wrap">{fb.description}</p>
+                  )}
+
+                  {fb.adminNote && (
+                    <div className="p-2.5 rounded-lg bg-info/5 border border-info/20">
+                      <p className="text-[10px] font-medium text-info mb-0.5">Admin note:</p>
+                      <p className="text-xs text-cream-600 dark:text-cream-400">{fb.adminNote}</p>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-cream-400">
+                    From: {fb.userEmail || '—'} · User agent: {fb.userAgent?.slice(0, 60) || '—'}
+                  </p>
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2">
+                    {['open', 'in_progress', 'resolved', 'closed'].map(s => (
+                      <button key={s} onClick={() => handleStatusChange(fb.id, s)}
+                        disabled={fb.status === s}
+                        className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                          fb.status === s
+                            ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                            : 'bg-cream-200 dark:bg-dark-border text-cream-600 hover:bg-cream-300'
+                        }`}>
+                        {s.replace('_', ' ')}
+                      </button>
+                    ))}
+                    <button onClick={() => handleDelete(fb.id)}
+                      className="text-[11px] px-2.5 py-1 rounded-lg font-medium text-danger bg-danger/10 hover:bg-danger/20 transition-colors ml-auto">
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Add admin note */}
+                  <div className="flex gap-2">
+                    <input
+                      value={expandedId === fb.id ? noteInput : ''}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="Add admin note..."
+                      className="flex-1 text-xs px-3 py-2 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card"
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(fb.id); }}
+                    />
+                    <button onClick={() => handleAddNote(fb.id)}
+                      className="btn-primary text-xs px-3 py-2">
+                      Note
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-12">
+            <MessageSquare className="mx-auto text-cream-400 mb-3" size={32} />
+            <p className="text-cream-500 text-sm">No feedback {filter !== 'all' ? `with status "${filter.replace('_', ' ')}"` : 'yet'}</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'budgetpilot';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 let dbPromise = null;
 
@@ -75,8 +75,8 @@ function getDB() {
           receiptStore.createIndex('userId', 'userId');
         }
 
-        if (oldVersion < 3) {
-          // Receipt drafts — save-for-later feature
+        // Versions 3-4 consumed by HMR in dev — receipt drafts added at v5
+        if (oldVersion < 5) {
           if (!db.objectStoreNames.contains('receiptDrafts')) {
             const draftStore = db.createObjectStore('receiptDrafts', { keyPath: 'id' });
             draftStore.createIndex('savedAt', 'savedAt');

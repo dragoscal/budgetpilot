@@ -581,6 +581,15 @@ export default function SettingsPage() {
 
       <button onClick={saveSettings} className="btn-primary w-full">Save settings</button>
 
+      {/* Feedback link */}
+      <button
+        onClick={() => navigate('/feedback')}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-info hover:bg-info/8 transition-colors border border-info/20"
+      >
+        <MessageSquare size={16} />
+        Report bug or suggest a feature
+      </button>
+
       {/* Sign out — always visible, especially important on mobile where sidebar is hidden */}
       <button
         onClick={() => { logout(); navigate('/login'); }}

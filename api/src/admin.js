@@ -336,6 +336,79 @@ export function registerAdminRoutes(router) {
     });
   });
 
+  // ─── Feedback: admin list all ─────────────────────────
+  router.get('/api/admin/feedback', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { status, type, limit: limitStr, offset: offsetStr } = ctx.query;
+    const limit = Math.min(parseInt(limitStr) || 50, 200);
+    const offset = parseInt(offsetStr) || 0;
+
+    let query = `
+      SELECT f.*, u.name as userName, u.email as userEmail
+      FROM feedback f
+      LEFT JOIN users u ON f.userId = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status) { query += ' AND f.status = ?'; params.push(status); }
+    if (type) { query += ' AND f.type = ?'; params.push(type); }
+
+    query += ' ORDER BY f.createdAt DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const result = await ctx.env.DB.prepare(query).bind(...params).all();
+    const counts = await ctx.env.DB.prepare(`
+      SELECT status, COUNT(*) as count FROM feedback GROUP BY status
+    `).all();
+
+    return json({ data: result.results || [], counts: counts.results || [], meta: { limit, offset } });
+  });
+
+  // ─── Feedback: admin update status / add note ────────
+  router.put('/api/admin/feedback/:id', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+    const { status, adminNote } = ctx.body;
+
+    const existing = await ctx.env.DB.prepare('SELECT id FROM feedback WHERE id = ?').bind(id).first();
+    if (!existing) return json({ error: 'Feedback not found' }, 404);
+
+    const updates = [];
+    const params = [];
+
+    if (status) { updates.push('status = ?'); params.push(status); }
+    if (adminNote !== undefined) { updates.push('adminNote = ?'); params.push(adminNote); }
+
+    if (updates.length === 0) return json({ error: 'Nothing to update' }, 400);
+
+    updates.push('updatedAt = ?');
+    params.push(new Date().toISOString());
+    params.push(id);
+
+    await ctx.env.DB.prepare(
+      `UPDATE feedback SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...params).run();
+
+    await logActivity(ctx.env.DB, ctx.user.id, 'admin_update_feedback', { feedbackId: id, status });
+
+    return json({ success: true });
+  });
+
+  // ─── Feedback: admin delete ──────────────────────────
+  router.delete('/api/admin/feedback/:id', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+    await ctx.env.DB.prepare('DELETE FROM feedback WHERE id = ?').bind(id).run();
+    return json({ success: true });
+  });
+
   // ─── Log cleanup (retention) ───────────────────────────
   router.post('/api/admin/cleanup', async (ctx) => {
     const denied = requireAdmin(ctx);

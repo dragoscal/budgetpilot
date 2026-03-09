@@ -42,4 +42,19 @@ export const adminApi = {
   getPerformance: () => adminFetch('/api/admin/performance'),
   getAiCosts: () => adminFetch('/api/admin/ai-costs'),
   cleanupLogs: () => adminFetch('/api/admin/cleanup', { method: 'POST' }),
+  // Feedback
+  getFeedback: async (filters = {}) => {
+    const params = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
+    const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${apiUrl}/api/admin/feedback${params ? '?' + params : ''}`, { headers });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'API error'); }
+    return res.json(); // Return full { data, counts } without stripping
+  },
+  updateFeedback: (id, data) => adminFetch(`/api/admin/feedback/${id}`, {
+    method: 'PUT', body: JSON.stringify(data),
+  }),
+  deleteFeedback: (id) => adminFetch(`/api/admin/feedback/${id}`, { method: 'DELETE' }),
 };

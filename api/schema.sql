@@ -196,7 +196,28 @@ CREATE TABLE IF NOT EXISTS activity_log (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
+-- User feedback (bug reports & suggestions)
+CREATE TABLE IF NOT EXISTS feedback (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'bug',  -- 'bug', 'suggestion', 'other'
+  title TEXT NOT NULL,
+  description TEXT,
+  screenshot TEXT,  -- base64 or URL
+  status TEXT DEFAULT 'open',  -- 'open', 'in_progress', 'resolved', 'closed'
+  adminNote TEXT,
+  page TEXT,  -- which page the user was on
+  userAgent TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Indexes
+CREATE INDEX IF NOT EXISTS idx_feedback_userId ON feedback(userId);
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(type);
+CREATE INDEX IF NOT EXISTS idx_feedback_createdAt ON feedback(createdAt);
 CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions(userId);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);

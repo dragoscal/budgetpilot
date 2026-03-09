@@ -231,6 +231,40 @@ router.delete('/api/auth/account', async (ctx) => {
   return json({ success: true });
 });
 
+// ─── Feedback (Bug Reports & Suggestions) ─────────────────
+router.post('/api/feedback', async (ctx) => {
+  const { type, title, description, screenshot, page } = ctx.body;
+
+  if (!title || !type) return json({ error: 'Title and type are required' }, 400);
+  if (!['bug', 'suggestion', 'other'].includes(type)) return json({ error: 'Invalid feedback type' }, 400);
+
+  const now = new Date().toISOString();
+  const id = generateId();
+
+  await ctx.env.DB.prepare(
+    `INSERT INTO feedback (id, userId, type, title, description, screenshot, status, page, userAgent, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)`
+  ).bind(
+    id, ctx.user.id, type, title, description || null,
+    screenshot || null, page || null,
+    (ctx.request.headers.get('user-agent') || '').slice(0, 200),
+    now, now
+  ).run();
+
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'submit_feedback', { type, title }));
+
+  return json({ data: { id, type, title, status: 'open', createdAt: now } }, 201);
+});
+
+// GET /api/feedback — user's own feedback
+router.get('/api/feedback', async (ctx) => {
+  const result = await ctx.env.DB.prepare(
+    `SELECT id, type, title, description, status, adminNote, page, createdAt, updatedAt
+     FROM feedback WHERE userId = ? ORDER BY createdAt DESC LIMIT 50`
+  ).bind(ctx.user.id).all();
+  return json({ data: result.results || [] });
+});
+
 // ─── AI Proxy ─────────────────────────────────────────────
 router.post('/api/ai/process', async (ctx) => {
   const anthropicKey = ctx.env.ANTHROPIC_API_KEY;

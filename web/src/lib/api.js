@@ -165,6 +165,23 @@ export const settings = {
   },
 };
 
+// Feedback (bug reports & suggestions)
+export const feedbackApi = {
+  async submit(data) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to submit feedback.');
+    return apiFetch(apiUrl, '/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  async list() {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) return [];
+    return apiFetch(apiUrl, '/api/feedback');
+  },
+};
+
 // Data management
 export async function exportData() {
   return storage.exportAll();
