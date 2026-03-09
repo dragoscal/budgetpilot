@@ -1,5 +1,5 @@
 import { getSetting, add, getAll } from './storage';
-import { MERCHANT_CATEGORY_MAP, CATEGORIES, AI_PROVIDERS } from './constants';
+import { MERCHANT_CATEGORY_MAP, CATEGORIES, SUBCATEGORIES, AI_PROVIDERS } from './constants';
 import { generateId, formatDateISO } from './helpers';
 
 // ─── ENHANCED RECEIPT SYSTEM PROMPT ───────────────────────
@@ -21,6 +21,9 @@ STORE DETECTION — Identify the store type from the receipt header:
 
 ITEM-LEVEL CATEGORIZATION — For each item on the receipt, assign one of these categories:
 ${CATEGORIES.map((c) => `- ${c.id}: ${c.name} (${c.icon})`).join('\n')}
+
+SUBCATEGORIES — When possible, also assign a subcategory for more detail:
+${Object.entries(SUBCATEGORIES).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => `${s.id} (${s.name})`).join(', ')}`).join('\n')}
 
 Common item→category mappings:
 - Food items (bread, milk, meat, vegetables, fruit, cheese, eggs, pasta, rice, oil) → groceries
@@ -65,6 +68,7 @@ RETURN FORMAT:
       "amount": 123.45,
       "currency": "RON",
       "category": "groceries",
+      "subcategory": "groceries:dairy",
       "date": "YYYY-MM-DD",
       "type": "expense",
       "description": "Groceries from Store Name",
@@ -76,6 +80,7 @@ RETURN FORMAT:
           "price": 10.50,
           "unitPrice": 10.50,
           "category": "groceries",
+          "subcategory": "groceries:dairy",
           "confidence": 0.95,
           "needsReview": false
         }
@@ -102,6 +107,10 @@ CATEGORIES: ${CATEGORIES.map((c) => `${c.id} (${c.name})`).join(', ')}
 
 MERCHANT→CATEGORY: Lidl/Kaufland/Carrefour = groceries, Bolt/Uber = transport, Netflix/Spotify = subscriptions, Enel/Digi/Vodafone = utilities, restaurant/dinner/lunch = dining, salary/freelance = income
 
+SUBCATEGORIES (use when clear from context):
+${Object.entries(SUBCATEGORIES).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
+Examples: "coffee at starbucks" → dining, dining:cafe; "uber ride" → transport, transport:rideshare; "gym membership" → health, health:gym
+
 Return JSON:
 {
   "transactions": [{
@@ -109,6 +118,7 @@ Return JSON:
     "amount": 45.00,
     "currency": "RON",
     "category": "transport",
+    "subcategory": "transport:rideshare",
     "date": "YYYY-MM-DD",
     "type": "expense",
     "description": "Brief note",
@@ -313,6 +323,7 @@ function normalizeReceiptResult(result) {
       price: Math.abs(Number(item.price)) || 0,
       unitPrice: item.unitPrice || item.price || 0,
       category: item.category || t.category || 'other',
+      subcategory: item.subcategory || null,
       confidence: item.confidence || t.confidence || 0.8,
       needsReview: item.needsReview || (item.confidence || 0.8) < 0.7,
     }));
@@ -329,6 +340,7 @@ function normalizeReceiptResult(result) {
       amount: Math.abs(Number(t.amount)) || items.reduce((s, i) => s + (i.price * i.qty), 0),
       currency: (t.currency || receipt.currency || 'RON').toUpperCase(),
       category: t.category || inferCategory(t.merchant || receipt.store),
+      subcategory: t.subcategory || null,
       date: t.date || receipt.date || formatDateISO(new Date()),
       type: t.type || 'expense',
       description: t.description || `${items.length} items from ${t.merchant || receipt.store || 'receipt'}`,
@@ -361,6 +373,7 @@ function normalizeNLPResult(result) {
     amount: Math.abs(Number(t.amount)) || 0,
     currency: (t.currency || 'RON').toUpperCase(),
     category: t.category || inferCategory(t.merchant),
+    subcategory: t.subcategory || null,
     date: t.date || formatDateISO(new Date()),
     type: t.type || 'expense',
     description: t.description || '',

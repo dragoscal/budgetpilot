@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { recurring as recurringApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { CATEGORIES, CURRENCIES } from '../lib/constants';
-import { generateId, formatCurrency, sumBy, getCategoryById } from '../lib/helpers';
+import { CATEGORIES, CURRENCIES, RECURRING_FREQUENCIES } from '../lib/constants';
+import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
 import { detectRecurringPatterns } from '../lib/smartFeatures';
 import RecurringRow from '../components/RecurringRow';
+import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { RotateCcw, Plus, Sparkles, Check, X } from 'lucide-react';
@@ -20,7 +21,8 @@ export default function Recurring() {
   const [suggestions, setSuggestions] = useState([]);
   const [dismissedSuggestions, setDismissedSuggestions] = useState(new Set());
 
-  const [form, setForm] = useState({ name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1' });
+  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '' };
+  const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
 
@@ -31,8 +33,6 @@ export default function Recurring() {
     try {
       const data = await recurringApi.getAll({ userId: 'local' });
       setItems(data);
-
-      // Auto-detect recurring patterns
       const patterns = await detectRecurringPatterns();
       setSuggestions(patterns);
     } catch (err) {
@@ -44,10 +44,13 @@ export default function Recurring() {
 
   const activeItems = items.filter((i) => i.active !== false);
   const pausedItems = items.filter((i) => i.active === false);
-  const monthlyTotal = sumBy(activeItems, 'amount');
+
+  // Frequency-aware monthly total
+  const monthlyTotal = activeItems.reduce((sum, item) => {
+    return sum + calcMonthlyEquivalent(item.amount, item.frequency || 'monthly');
+  }, 0);
   const annualTotal = monthlyTotal * 12;
 
-  // Filter out dismissed and already-tracked suggestions
   const activeSuggestions = suggestions.filter(
     (s) => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6
   );
@@ -55,7 +58,15 @@ export default function Recurring() {
   const handleSave = async () => {
     if (!form.name || !form.amount) { toast.error('Name and amount required'); return; }
     try {
-      const data = { ...form, amount: Number(form.amount), billingDay: Number(form.billingDay) || 1, active: true, userId: 'local' };
+      const data = {
+        ...form,
+        amount: Number(form.amount),
+        billingDay: Number(form.billingDay) || 1,
+        frequency: form.frequency || 'monthly',
+        endDate: form.endDate || null,
+        active: true,
+        userId: 'local',
+      };
       if (editItem) {
         await recurringApi.update(editItem.id, data);
         toast.success('Updated');
@@ -63,8 +74,9 @@ export default function Recurring() {
         await recurringApi.create({ id: generateId(), ...data, createdAt: new Date().toISOString() });
         toast.success('Added');
       }
-      setShowForm(false); setEditItem(null);
-      setForm({ name: '', amount: '', currency, category: 'subscriptions', billingDay: '1' });
+      setShowForm(false);
+      setEditItem(null);
+      setForm({ ...defaultForm, currency });
       loadItems();
     } catch (err) { toast.error(err.message); }
   };
@@ -82,7 +94,15 @@ export default function Recurring() {
 
   const handleEdit = (item) => {
     setEditItem(item);
-    setForm({ name: item.name, amount: item.amount.toString(), currency: item.currency || currency, category: item.category, billingDay: (item.billingDay || 1).toString() });
+    setForm({
+      name: item.name,
+      amount: item.amount.toString(),
+      currency: item.currency || currency,
+      category: item.category,
+      billingDay: (item.billingDay || 1).toString(),
+      frequency: item.frequency || 'monthly',
+      endDate: item.endDate || '',
+    });
     setShowForm(true);
   };
 
@@ -96,6 +116,7 @@ export default function Recurring() {
         currency: suggestion.currency,
         category: suggestion.category,
         billingDay: suggestion.billingDay,
+        frequency: 'monthly',
         active: true,
         userId: 'local',
         autoDetected: true,
@@ -111,20 +132,35 @@ export default function Recurring() {
     setDismissedSuggestions((prev) => new Set([...prev, suggestion.merchant.toLowerCase()]));
   };
 
+  const openNewForm = () => {
+    setEditItem(null);
+    setForm({ ...defaultForm, currency });
+    setShowForm(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="page-title mb-0">Recurring & Subscriptions</h1>
-        <button onClick={() => { setEditItem(null); setForm({ name: '', amount: '', currency, category: 'subscriptions', billingDay: '1' }); setShowForm(true); }} className="btn-primary text-xs flex items-center gap-1">
+        <button onClick={openNewForm} className="btn-primary text-xs flex items-center gap-1">
           <Plus size={14} /> Add
         </button>
       </div>
 
-      {/* Summary */}
+      {/* Summary — frequency-aware */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Active</p><p className="text-xl font-heading font-bold">{activeItems.length}</p></div>
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Monthly</p><p className="text-xl font-heading font-bold money">{formatCurrency(monthlyTotal, currency)}</p></div>
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Annual</p><p className="text-xl font-heading font-bold money">{formatCurrency(annualTotal, currency)}</p></div>
+        <div className="card text-center">
+          <p className="text-xs text-cream-500 mb-1">Active</p>
+          <p className="text-xl font-heading font-bold">{activeItems.length}</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-xs text-cream-500 mb-1">Monthly</p>
+          <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(monthlyTotal * 100) / 100, currency)}</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-xs text-cream-500 mb-1">Annual</p>
+          <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(annualTotal * 100) / 100, currency)}</p>
+        </div>
       </div>
 
       {/* Auto-detected suggestions */}
@@ -135,7 +171,7 @@ export default function Recurring() {
             <h3 className="text-sm font-semibold">Detected recurring payments</h3>
           </div>
           <p className="text-xs text-cream-600 dark:text-cream-400 mb-3">
-            We noticed these payments repeat monthly. Add them to track automatically.
+            We noticed these payments repeat. Add them to track automatically.
           </p>
           <div className="space-y-2">
             {activeSuggestions.map((s, i) => {
@@ -152,18 +188,10 @@ export default function Recurring() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => acceptSuggestion(s)}
-                      className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
-                      title="Add as recurring"
-                    >
+                    <button onClick={() => acceptSuggestion(s)} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors" title="Add as recurring">
                       <Check size={14} />
                     </button>
-                    <button
-                      onClick={() => dismissSuggestion(s)}
-                      className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors"
-                      title="Dismiss"
-                    >
+                    <button onClick={() => dismissSuggestion(s)} className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors" title="Dismiss">
                       <X size={14} />
                     </button>
                   </div>
@@ -197,17 +225,51 @@ export default function Recurring() {
           )}
         </>
       ) : !loading && activeSuggestions.length === 0 ? (
-        <EmptyState icon={RotateCcw} title="No recurring items" description="Track subscriptions and recurring bills" action="Add recurring" onAction={() => setShowForm(true)} />
+        <EmptyState icon={RotateCcw} title="No recurring items" description="Track subscriptions and recurring bills" action="Add recurring" onAction={openNewForm} />
       ) : null}
 
+      {/* Form Modal */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} title={editItem ? 'Edit recurring' : 'New recurring'}>
         <div className="space-y-4">
-          <div><label className="label">Name</label><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Netflix" /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Amount</label><input type="number" className="input" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" inputMode="decimal" /></div>
-            <div><label className="label">Billing day</label><input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => setForm((f) => ({ ...f, billingDay: e.target.value }))} /></div>
+          <div>
+            <label className="label">Name</label>
+            <input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Netflix" />
           </div>
-          <div><label className="label">Category</label><select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>{CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Amount</label>
+              <input type="number" className="input" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" inputMode="decimal" />
+            </div>
+            <div>
+              <label className="label">Billing day</label>
+              <input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => setForm((f) => ({ ...f, billingDay: e.target.value }))} />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Frequency</label>
+            <select className="input" value={form.frequency} onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}>
+              {RECURRING_FREQUENCIES.map((freq) => (
+                <option key={freq.id} value={freq.id}>{freq.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <CategoryPicker
+              label="Category"
+              value={form.category}
+              onChange={(catId) => setForm((f) => ({ ...f, category: catId }))}
+              exclude={['income', 'transfer']}
+            />
+          </div>
+
+          <div>
+            <label className="label">End date (optional)</label>
+            <input type="date" className="input" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+          </div>
+
           <button onClick={handleSave} className="btn-primary w-full">{editItem ? 'Update' : 'Add'}</button>
         </div>
       </Modal>

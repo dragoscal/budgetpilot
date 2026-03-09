@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CATEGORIES, CURRENCIES } from '../lib/constants';
 import { generateId, formatCurrency, percentOf, sumBy, getDaysRemaining, formatDateISO } from '../lib/helpers';
 import BudgetBar from '../components/BudgetBar';
+import CategoryPicker from '../components/CategoryPicker';
 import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -215,16 +216,19 @@ export default function Budgets() {
       <Modal open={showAdd} onClose={() => { setShowAdd(false); setEditBudget(null); }} title={editBudget ? 'Edit budget' : 'New budget'}>
         <div className="space-y-4">
           <div>
-            <label className="label">Category</label>
             {editBudget ? (
-              <p className="text-sm font-medium">{CATEGORIES.find((c) => c.id === formCategory)?.icon} {CATEGORIES.find((c) => c.id === formCategory)?.name}</p>
+              <>
+                <label className="label">Category</label>
+                <p className="text-sm font-medium">{CATEGORIES.find((c) => c.id === formCategory)?.icon} {CATEGORIES.find((c) => c.id === formCategory)?.name}</p>
+              </>
             ) : (
-              <select className="input" value={formCategory} onChange={(e) => setFormCategory(e.target.value)}>
-                <option value="">Select category</option>
-                {availableCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                ))}
-              </select>
+              <CategoryPicker
+                label="Category"
+                value={formCategory || 'other'}
+                onChange={(catId) => setFormCategory(catId)}
+                showSubcategories={false}
+                exclude={['income', 'transfer', ...Array.from(usedCategories)]}
+              />
             )}
           </div>
           <div>

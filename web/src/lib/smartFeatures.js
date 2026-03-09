@@ -144,7 +144,7 @@ export async function checkDuplicate(newTx) {
 
 const LEARNED_CATEGORIES_KEY = 'learnedCategories';
 
-export async function learnCategory(merchant, category) {
+export async function learnCategory(merchant, category, subcategory = null) {
   if (!merchant || !category) return;
   const key = merchant.toLowerCase().trim();
   const learned = await getLearnedCategories();
@@ -152,7 +152,18 @@ export async function learnCategory(merchant, category) {
   if (!learned[key]) {
     learned[key] = {};
   }
-  learned[key][category] = (learned[key][category] || 0) + 1;
+  // Store as object with count and optional subcategory
+  const existing = learned[key][category];
+  if (typeof existing === 'object' && existing !== null && !Array.isArray(existing)) {
+    existing.count = (existing.count || 0) + 1;
+    if (subcategory) existing.subcategory = subcategory;
+  } else {
+    // Migrate from old number format
+    learned[key][category] = {
+      count: (typeof existing === 'number' ? existing : 0) + 1,
+      subcategory: subcategory || null,
+    };
+  }
 
   await setSetting(LEARNED_CATEGORIES_KEY, learned);
 }
@@ -162,33 +173,47 @@ export async function getLearnedCategories() {
 }
 
 export async function inferCategorySmart(merchant) {
-  if (!merchant) return 'other';
+  if (!merchant) return { category: 'other', subcategory: null };
   const lower = merchant.toLowerCase().trim();
 
   // 1. Check hardcoded map first
   for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
-    if (lower.includes(key)) return cat;
+    if (lower.includes(key)) return { category: cat, subcategory: null };
   }
+
+  // Helper to extract count from learned entry (supports old number format and new object format)
+  const getCount = (entry) => {
+    if (typeof entry === 'number') return entry;
+    if (typeof entry === 'object' && entry !== null) return entry.count || 0;
+    return 0;
+  };
+  const getSubcat = (entry) => {
+    if (typeof entry === 'object' && entry !== null) return entry.subcategory || null;
+    return null;
+  };
 
   // 2. Check learned categories
   const learned = await getLearnedCategories();
   if (learned[lower]) {
-    // Return the category with the highest count
     const entries = Object.entries(learned[lower]);
-    entries.sort((a, b) => b[1] - a[1]);
-    if (entries[0][1] >= 2) return entries[0][0]; // need at least 2 occurrences
+    entries.sort((a, b) => getCount(b[1]) - getCount(a[1]));
+    if (getCount(entries[0][1]) >= 2) {
+      return { category: entries[0][0], subcategory: getSubcat(entries[0][1]) };
+    }
   }
 
   // 3. Partial match on learned categories
   for (const [key, cats] of Object.entries(learned)) {
     if (lower.includes(key) || key.includes(lower)) {
       const entries = Object.entries(cats);
-      entries.sort((a, b) => b[1] - a[1]);
-      if (entries[0][1] >= 2) return entries[0][0];
+      entries.sort((a, b) => getCount(b[1]) - getCount(a[1]));
+      if (getCount(entries[0][1]) >= 2) {
+        return { category: entries[0][0], subcategory: getSubcat(entries[0][1]) };
+      }
     }
   }
 
-  return 'other';
+  return { category: 'other', subcategory: null };
 }
 
 

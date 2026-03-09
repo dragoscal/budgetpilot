@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { format, startOfMonth, endOfMonth, differenceInDays, isToday, parseISO } from 'date-fns';
-import { CURRENCIES, CATEGORIES } from './constants';
+import { CURRENCIES, CATEGORIES, SUBCATEGORIES, RECURRING_FREQUENCIES } from './constants';
 
 export function generateId() {
   return uuidv4();
@@ -120,4 +120,44 @@ export function trendIndicator(current, previous) {
 
 export function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
+}
+
+// ─── SUBCATEGORY HELPERS ─────────────────────────────────
+
+export function getParentCategory(subcatId) {
+  if (!subcatId || !subcatId.includes(':')) return subcatId || 'other';
+  return subcatId.split(':')[0];
+}
+
+export function getSubcategories(categoryId) {
+  return SUBCATEGORIES[categoryId] || [];
+}
+
+export function getSubcategoryById(subcatId) {
+  if (!subcatId || !subcatId.includes(':')) return null;
+  const parentId = subcatId.split(':')[0];
+  const subs = SUBCATEGORIES[parentId] || [];
+  return subs.find((s) => s.id === subcatId) || null;
+}
+
+export function formatCategoryLabel(categoryId, subcategoryId) {
+  const cat = getCategoryById(categoryId);
+  if (!subcategoryId) return cat.name;
+  const sub = getSubcategoryById(subcategoryId);
+  return sub ? `${cat.name} > ${sub.name}` : cat.name;
+}
+
+// ─── RECURRING FREQUENCY HELPERS ─────────────────────────
+
+export function getFrequencyById(freqId) {
+  return RECURRING_FREQUENCIES.find((f) => f.id === freqId) || RECURRING_FREQUENCIES.find((f) => f.id === 'monthly');
+}
+
+export function calcMonthlyEquivalent(amount, freqId) {
+  const freq = getFrequencyById(freqId);
+  return amount * freq.multiplierToMonthly;
+}
+
+export function calcAnnualEquivalent(amount, freqId) {
+  return calcMonthlyEquivalent(amount, freqId) * 12;
 }

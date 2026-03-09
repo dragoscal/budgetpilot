@@ -1,4 +1,4 @@
-import { getCategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
+import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
 import { TRANSACTION_SOURCES } from '../lib/constants';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { Trash2, Edit3 } from 'lucide-react';
@@ -6,6 +6,7 @@ import { Trash2, Edit3 } from 'lucide-react';
 export default function TransactionRow({ transaction, onEdit, onDelete, selected, onSelect, hide: hideProp }) {
   const { shouldHide } = useHideAmounts();
   const cat = getCategoryById(transaction.category);
+  const subcat = transaction.subcategory ? getSubcategoryById(transaction.subcategory) : null;
   const source = TRANSACTION_SOURCES[transaction.source] || TRANSACTION_SOURCES.manual;
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
@@ -22,7 +23,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, selected
         />
       )}
       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-cream-100 dark:bg-dark-border shrink-0">
-        {cat.icon}
+        {subcat?.icon || cat.icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -30,7 +31,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, selected
           <span className="text-xs" title={source.label}>{source.icon}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-cream-500">
-          <span>{cat.name}</span>
+          <span>{subcat ? `${cat.name} > ${subcat.name}` : cat.name}</span>
           <span>·</span>
           <span>{formatDate(transaction.date, 'dd MMM')}</span>
           {transaction.tags?.length > 0 && (

@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { transactions as txApi } from '../lib/api';
-import { formatCurrency, getCategoryById, getMonthRange } from '../lib/helpers';
+import { formatCurrency, getCategoryById, getMonthRange, generateId } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange } from '../lib/storage';
 import ReceiptScanner from '../components/ReceiptScanner';
 import QuickAdd from '../components/QuickAdd';
 import ManualForm from '../components/ManualForm';
-import Modal from '../components/Modal';
-import { Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X, AlertTriangle, ShoppingBag, AlertCircle, Info, Eye } from 'lucide-react';
+import CategoryPicker from '../components/CategoryPicker';
+import {
+  Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
+  AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
+  Plus, Minus, Trash2, Undo2, Pencil,
+} from 'lucide-react';
 
 export default function AddTransaction() {
   const navigate = useNavigate();
@@ -18,16 +22,32 @@ export default function AddTransaction() {
   const [activeTab, setActiveTab] = useState('quick');
   const [showManual, setShowManual] = useState(false);
   const [pendingResults, setPendingResults] = useState(null);
-  const [receiptMeta, setReceiptMeta] = useState(null); // receipt info, warnings, summary
-  const [editingIdx, setEditingIdx] = useState(null);
+  const [receiptMeta, setReceiptMeta] = useState(null);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [pendingSave, setPendingSave] = useState(null);
   const [expandedItems, setExpandedItems] = useState({});
 
-  const handleAIResult = (results) => {
-    // Handle enhanced receipt result format
+  // Inline editing state
+  const [editingField, setEditingField] = useState(null); // { txIdx, field, itemIdx? }
+  const [editValue, setEditValue] = useState('');
+  const editRef = useRef(null);
+
+  // Undo state for deleted items
+  const [deletedItem, setDeletedItem] = useState(null); // { txIdx, itemIdx, item, timeout }
+
+  // Add new item state
+  const [addingItem, setAddingItem] = useState(null); // txIdx or null
+  const [newItem, setNewItem] = useState({ name: '', price: '', qty: '1', category: 'other' });
+
+  // Focus edit input when it appears
+  useEffect(() => {
+    if (editRef.current) editRef.current.focus();
+  }, [editingField]);
+
+  const handleAIResult = async (results) => {
+    let txns;
     if (results.transactions) {
-      setPendingResults(results.transactions);
+      txns = results.transactions;
       setReceiptMeta({
         receipt: results.receipt,
         warnings: results.warnings || [],
@@ -35,22 +55,36 @@ export default function AddTransaction() {
         hasItemsToReview: results.hasItemsToReview || false,
       });
     } else if (Array.isArray(results)) {
-      setPendingResults(results);
+      txns = results;
       setReceiptMeta(null);
     } else {
-      setPendingResults([results]);
+      txns = [results];
       setReceiptMeta(null);
     }
+
+    // Check duplicates for each transaction
+    const enriched = [];
+    for (const tx of txns) {
+      const dupes = await checkDuplicate(tx);
+      enriched.push({
+        ...tx,
+        _duplicate: dupes.length > 0 && dupes[0].confidence >= 0.6 ? dupes[0] : null,
+        _dismissed: false,
+      });
+    }
+    setPendingResults(enriched);
   };
 
   const handleSaveResults = async () => {
     if (!pendingResults) return;
     try {
-      for (const tx of pendingResults) {
-        await txApi.create(tx);
-        if (tx.merchant) learnCategory(tx.merchant, tx.category);
+      const toSave = pendingResults.filter((tx) => !tx._dismissed);
+      for (const tx of toSave) {
+        const { _duplicate, _dismissed, ...clean } = tx;
+        await txApi.create(clean);
+        if (clean.merchant) learnCategory(clean.merchant, clean.category, clean.subcategory || null);
       }
-      toast.success(`${pendingResults.length} transaction${pendingResults.length > 1 ? 's' : ''} added!`);
+      toast.success(`${toSave.length} transaction${toSave.length > 1 ? 's' : ''} added!`);
       await showBudgetAlerts();
       setPendingResults(null);
       setReceiptMeta(null);
@@ -100,19 +134,58 @@ export default function AddTransaction() {
       const monthTx = await getTransactionsByDateRange(start, end);
       const alerts = await checkBudgetAlerts(monthTx);
       for (const alert of alerts) {
-        if (alert.type === 'over') {
-          toast.error(alert.message);
-        } else {
-          toast.warning(alert.message);
-        }
+        if (alert.type === 'over') toast.error(alert.message);
+        else toast.warning(alert.message);
       }
     } catch (e) { /* silently fail */ }
   };
 
-  const handleError = (msg) => {
-    toast.error(msg);
+  const handleError = (msg) => toast.error(msg);
+
+  // ─── INLINE EDITING ────────────────────────────────────
+  const startEdit = (txIdx, field, currentValue, itemIdx = undefined) => {
+    setEditingField({ txIdx, field, itemIdx });
+    setEditValue(String(currentValue ?? ''));
   };
 
+  const commitEdit = () => {
+    if (!editingField) return;
+    const { txIdx, field, itemIdx } = editingField;
+
+    if (itemIdx !== undefined) {
+      // Editing an item field
+      const val = field === 'price' || field === 'qty' ? Number(editValue) || 0 : editValue;
+      updatePendingItem(txIdx, itemIdx, { [field]: val });
+      // Recalculate transaction total from items
+      recalcTxTotal(txIdx);
+    } else {
+      // Editing a transaction field
+      const val = field === 'amount' ? Number(editValue) || 0 : editValue;
+      updatePending(txIdx, { [field]: val });
+    }
+
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const cancelEdit = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter') commitEdit();
+    if (e.key === 'Escape') cancelEdit();
+  };
+
+  const isEditing = (txIdx, field, itemIdx) => {
+    if (!editingField) return false;
+    return editingField.txIdx === txIdx &&
+           editingField.field === field &&
+           editingField.itemIdx === itemIdx;
+  };
+
+  // ─── UPDATE HELPERS ────────────────────────────────────
   const updatePending = (idx, changes) => {
     setPendingResults((prev) =>
       prev.map((t, i) => (i === idx ? { ...t, ...changes } : t))
@@ -131,30 +204,96 @@ export default function AddTransaction() {
     );
   };
 
+  const recalcTxTotal = (txIdx) => {
+    setPendingResults((prev) =>
+      prev.map((t, i) => {
+        if (i !== txIdx || !t.items?.length) return t;
+        const total = t.items.reduce((s, item) => s + (item.price * (item.qty || 1)), 0);
+        return { ...t, amount: Math.round(total * 100) / 100 };
+      })
+    );
+  };
+
   const removePending = (idx) => {
     setPendingResults((prev) => {
       const next = prev.filter((_, i) => i !== idx);
-      if (next.length === 0) { setReceiptMeta(null); }
+      if (next.length === 0) setReceiptMeta(null);
       return next.length > 0 ? next : null;
     });
+  };
+
+  // ─── ITEM CRUD ─────────────────────────────────────────
+  const deleteItem = (txIdx, itemIdx) => {
+    const item = pendingResults[txIdx].items[itemIdx];
+    // Store for undo
+    if (deletedItem?.timeout) clearTimeout(deletedItem.timeout);
+
+    const timeout = setTimeout(() => {
+      setDeletedItem(null);
+    }, 5000);
+
+    setDeletedItem({ txIdx, itemIdx, item, timeout });
+
+    // Remove from items
+    setPendingResults((prev) =>
+      prev.map((t, i) => {
+        if (i !== txIdx) return t;
+        const newItems = t.items.filter((_, j) => j !== itemIdx);
+        const total = newItems.reduce((s, it) => s + (it.price * (it.qty || 1)), 0);
+        return { ...t, items: newItems, amount: Math.round(total * 100) / 100 };
+      })
+    );
+  };
+
+  const undoDelete = () => {
+    if (!deletedItem) return;
+    const { txIdx, itemIdx, item, timeout } = deletedItem;
+    clearTimeout(timeout);
+
+    setPendingResults((prev) =>
+      prev.map((t, i) => {
+        if (i !== txIdx) return t;
+        const newItems = [...t.items];
+        newItems.splice(itemIdx, 0, item);
+        const total = newItems.reduce((s, it) => s + (it.price * (it.qty || 1)), 0);
+        return { ...t, items: newItems, amount: Math.round(total * 100) / 100 };
+      })
+    );
+    setDeletedItem(null);
+  };
+
+  const addItem = (txIdx) => {
+    if (!newItem.name || !newItem.price) return;
+    setPendingResults((prev) =>
+      prev.map((t, i) => {
+        if (i !== txIdx) return t;
+        const item = {
+          name: newItem.name,
+          price: Number(newItem.price) || 0,
+          qty: Number(newItem.qty) || 1,
+          unitPrice: Number(newItem.price) || 0,
+          category: newItem.category,
+          confidence: 1,
+          needsReview: false,
+        };
+        const newItems = [...t.items, item];
+        const total = newItems.reduce((s, it) => s + (it.price * (it.qty || 1)), 0);
+        return { ...t, items: newItems, amount: Math.round(total * 100) / 100 };
+      })
+    );
+    setNewItem({ name: '', price: '', qty: '1', category: 'other' });
+    setAddingItem(null);
   };
 
   const toggleItemsExpand = (idx) => {
     setExpandedItems((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
-  const getConfidenceColor = (conf) => {
-    if (conf >= 0.95) return 'text-success';
-    if (conf >= 0.80) return 'text-info';
-    if (conf >= 0.60) return 'text-warning';
-    return 'text-danger';
-  };
-
-  const getConfidenceLabel = (conf) => {
-    if (conf >= 0.95) return 'Very certain';
-    if (conf >= 0.80) return 'Confident';
-    if (conf >= 0.60) return 'Uncertain';
-    return 'Low confidence';
+  // ─── CONFIDENCE HELPERS ────────────────────────────────
+  const getConfidenceDot = (conf) => {
+    if (conf >= 0.80) return { color: 'bg-success', label: 'High confidence' };
+    if (conf >= 0.60) return { color: 'bg-warning', label: 'Uncertain' };
+    return { color: 'bg-danger', label: 'Low confidence' };
   };
 
   const tabs = [
@@ -165,6 +304,35 @@ export default function AddTransaction() {
   const reviewItemsCount = pendingResults
     ? pendingResults.reduce((sum, tx) => sum + (tx.items?.filter(i => i.needsReview)?.length || 0), 0)
     : 0;
+
+  // ─── RENDER INLINE EDIT ────────────────────────────────
+  const renderEditableText = (txIdx, field, value, className = '', itemIdx = undefined) => {
+    if (isEditing(txIdx, field, itemIdx)) {
+      const type = field === 'amount' || field === 'price' || field === 'qty' ? 'number' : field === 'date' ? 'date' : 'text';
+      return (
+        <input
+          ref={editRef}
+          type={type}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleEditKeyDown}
+          className={`bg-cream-50 dark:bg-dark-bg border border-cream-300 dark:border-dark-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-400 ${className}`}
+          step={type === 'number' ? '0.01' : undefined}
+          inputMode={type === 'number' ? 'decimal' : undefined}
+        />
+      );
+    }
+    return (
+      <span
+        onClick={() => startEdit(txIdx, field, value, itemIdx)}
+        className={`cursor-pointer hover:bg-cream-100 dark:hover:bg-dark-border rounded px-1 py-0.5 transition-colors ${className}`}
+        title="Click to edit"
+      >
+        {value || '—'}
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -207,7 +375,6 @@ export default function AddTransaction() {
       {/* Receipt Summary & Warnings */}
       {receiptMeta && (
         <div className="space-y-3">
-          {/* Store info */}
           {receiptMeta.receipt?.store && (
             <div className="card bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
               <div className="flex items-center gap-3">
@@ -229,7 +396,6 @@ export default function AddTransaction() {
             </div>
           )}
 
-          {/* Summary */}
           {receiptMeta.summary && (
             <div className="flex items-start gap-2 p-3 rounded-xl bg-info/5 border border-info/20">
               <Info size={14} className="text-info mt-0.5 shrink-0" />
@@ -237,7 +403,6 @@ export default function AddTransaction() {
             </div>
           )}
 
-          {/* Warnings */}
           {receiptMeta.warnings?.length > 0 && (
             <div className="space-y-2">
               {receiptMeta.warnings.map((w, i) => (
@@ -249,7 +414,6 @@ export default function AddTransaction() {
             </div>
           )}
 
-          {/* Items needing review badge */}
           {receiptMeta.hasItemsToReview && reviewItemsCount > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/5 border border-warning/20">
               <Eye size={14} className="text-warning" />
@@ -261,7 +425,22 @@ export default function AddTransaction() {
         </div>
       )}
 
-      {/* AI Review with Enhanced Receipt Items */}
+      {/* Undo delete banner */}
+      {deletedItem && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-cream-100 dark:bg-dark-border border border-cream-200 dark:border-dark-border animate-fadeUp">
+          <span className="text-sm text-cream-600 dark:text-cream-400">
+            Removed "{deletedItem.item.name}"
+          </span>
+          <button
+            onClick={undoDelete}
+            className="flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            <Undo2 size={14} /> Undo
+          </button>
+        </div>
+      )}
+
+      {/* ═══════ AI REVIEW WITH ENHANCED RECEIPT ═══════ */}
       {pendingResults && pendingResults.length > 0 && (
         <div className="card border-success/30 bg-success-light/30">
           <div className="flex items-center justify-between mb-4">
@@ -271,58 +450,88 @@ export default function AddTransaction() {
                 <X size={14} /> Discard
               </button>
               <button onClick={handleSaveResults} className="btn-primary text-xs flex items-center gap-1">
-                <Check size={14} /> Save {pendingResults.length > 1 ? `all (${pendingResults.length})` : ''}
+                <Check size={14} /> Save {pendingResults.filter(t => !t._dismissed).length > 1 ? `all (${pendingResults.filter(t => !t._dismissed).length})` : ''}
               </button>
             </div>
           </div>
+
           <div className="space-y-3">
             {pendingResults.map((tx, idx) => {
+              if (tx._dismissed) return null;
               const cat = getCategoryById(tx.category);
               const hasItems = tx.items && tx.items.length > 0;
               const needsReviewItems = hasItems ? tx.items.filter(i => i.needsReview) : [];
+
+              // Running total for items
+              const itemsTotal = hasItems ? tx.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0) : 0;
+              const receiptTotal = receiptMeta?.receipt?.total;
+              const mismatch = receiptTotal && hasItems && Math.abs(itemsTotal - receiptTotal) / receiptTotal > 0.02;
+
               return (
                 <div key={idx} className={`bg-white dark:bg-dark-card rounded-xl p-4 border ${
                   tx.needsReview ? 'border-warning/40' : 'border-cream-200 dark:border-dark-border'
                 }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{cat.icon}</span>
-                      <div>
-                        <p className="text-sm font-medium">{tx.merchant || 'Unknown'}</p>
-                        <p className="text-xs text-cream-500">{cat.name} · {tx.date}</p>
+                  {/* Transaction header - editable */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0">{cat.icon}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">
+                          {renderEditableText(idx, 'merchant', tx.merchant || 'Unknown')}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-cream-500">
+                          {renderEditableText(idx, 'date', tx.date, 'text-xs')}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <p className={`font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
-                      </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className={`font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
+                        {tx.type === 'income' ? '+' : '-'}
+                        {renderEditableText(idx, 'amount', tx.amount, 'text-sm font-bold w-20 text-right')}
+                        {!isEditing(idx, 'amount') && (
+                          <span className="text-xs font-normal text-cream-400 ml-0.5">{tx.currency}</span>
+                        )}
+                      </div>
                       <button onClick={() => removePending(idx)} className="p-1 rounded hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400">
                         <X size={14} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Confidence indicator */}
-                  {tx.confidence && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <div className="flex-1 h-1 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            tx.confidence >= 0.80 ? 'bg-success' : tx.confidence >= 0.60 ? 'bg-warning' : 'bg-danger'
-                          }`}
-                          style={{ width: `${Math.round(tx.confidence * 100)}%` }}
-                        />
-                      </div>
-                      <span className={`text-[10px] font-medium ${getConfidenceColor(tx.confidence)}`}>
-                        {getConfidenceLabel(tx.confidence)}
-                      </span>
+                  {/* Confidence dot */}
+                  {tx.confidence && tx.confidence < 0.95 && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <div className={`w-2 h-2 rounded-full ${getConfidenceDot(tx.confidence).color}`} title={getConfidenceDot(tx.confidence).label} />
+                      <span className="text-[10px] text-cream-400">{getConfidenceDot(tx.confidence).label}</span>
                     </div>
                   )}
 
                   {tx.description && <p className="text-xs text-cream-500 mt-1">{tx.description}</p>}
 
+                  {/* Duplicate warning */}
+                  {tx._duplicate && (
+                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/8 border border-warning/20">
+                      <AlertTriangle size={12} className="text-warning shrink-0" />
+                      <span className="text-[11px] text-warning flex-1">
+                        Possible duplicate: {tx._duplicate.reason}
+                      </span>
+                      <button
+                        onClick={() => updatePending(idx, { _dismissed: true })}
+                        className="text-[10px] font-medium text-danger hover:underline"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={() => updatePending(idx, { _duplicate: null })}
+                        className="text-[10px] font-medium text-cream-500 hover:underline"
+                      >
+                        Keep
+                      </button>
+                    </div>
+                  )}
+
                   {/* Needs review badge */}
-                  {tx.needsReview && (
+                  {tx.needsReview && needsReviewItems.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-warning/10 w-fit">
                       <AlertCircle size={12} className="text-warning" />
                       <span className="text-[10px] font-medium text-warning">
@@ -331,7 +540,7 @@ export default function AddTransaction() {
                     </div>
                   )}
 
-                  {/* Receipt Items Detail */}
+                  {/* Receipt Items */}
                   {hasItems && (
                     <div className="mt-2">
                       <button
@@ -345,54 +554,142 @@ export default function AddTransaction() {
                         )}
                         {expandedItems[idx] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       </button>
+
                       {expandedItems[idx] && (
-                        <div className="mt-2 bg-cream-50 dark:bg-dark-bg rounded-lg p-3 space-y-2">
-                          {tx.items.map((item, itemIdx) => (
-                            <div key={itemIdx} className={`flex items-center gap-2 text-xs p-1.5 rounded-lg ${
-                              item.needsReview ? 'bg-warning/5 border border-warning/20' : ''
-                            }`}>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  {item.needsReview && <AlertCircle size={10} className="text-warning shrink-0" />}
-                                  <span className="text-cream-700 dark:text-cream-400 truncate">
-                                    {item.qty > 1 ? `${item.qty}x ` : ''}{item.name}
-                                  </span>
+                        <div className="mt-2 bg-cream-50 dark:bg-dark-bg rounded-lg p-3 space-y-1">
+                          {tx.items.map((item, itemIdx) => {
+                            const dot = getConfidenceDot(item.confidence || 0.8);
+                            return (
+                              <div key={itemIdx} className={`flex items-center gap-2 text-xs p-2 rounded-lg group ${
+                                item.needsReview ? 'bg-warning/5 border border-warning/20' : 'hover:bg-cream-100 dark:hover:bg-dark-border'
+                              }`}>
+                                {/* Confidence dot */}
+                                {item.needsReview && (
+                                  <div className={`w-1.5 h-1.5 rounded-full ${dot.color} shrink-0`} title={dot.label} />
+                                )}
+
+                                {/* Qty */}
+                                <span className="text-cream-400 shrink-0 w-6 text-center">
+                                  {isEditing(idx, 'qty', itemIdx) ? (
+                                    <input
+                                      ref={editRef}
+                                      type="number"
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      onBlur={commitEdit}
+                                      onKeyDown={handleEditKeyDown}
+                                      className="w-8 bg-cream-50 dark:bg-dark-bg border border-cream-300 dark:border-dark-border rounded px-1 py-0.5 text-xs text-center"
+                                      min="1"
+                                    />
+                                  ) : (
+                                    <span
+                                      onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)}
+                                      className="cursor-pointer hover:text-cream-700 dark:hover:text-cream-300"
+                                      title="Click to edit quantity"
+                                    >
+                                      {item.qty > 1 ? `${item.qty}x` : ''}
+                                    </span>
+                                  )}
+                                </span>
+
+                                {/* Name - editable */}
+                                <div className="flex-1 min-w-0">
+                                  {renderEditableText(idx, 'name', item.name, 'text-xs text-cream-700 dark:text-cream-400 truncate block', itemIdx)}
                                 </div>
+
+                                {/* Item category */}
+                                <CategoryPicker
+                                  value={item.category || tx.category}
+                                  onChange={(catId, subId) => updatePendingItem(idx, itemIdx, {
+                                    category: catId,
+                                    subcategory: subId || null,
+                                    needsReview: false,
+                                  })}
+                                  compact
+                                  exclude={['income', 'transfer']}
+                                />
+
+                                {/* Price - editable */}
+                                <div className="shrink-0 w-16 text-right">
+                                  {renderEditableText(idx, 'price', item.price, 'text-xs font-medium money w-14 text-right', itemIdx)}
+                                </div>
+
+                                {/* Delete item */}
+                                <button
+                                  onClick={() => deleteItem(idx, itemIdx)}
+                                  className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
+                                  title="Remove item"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
                               </div>
-                              {/* Per-item category selector */}
-                              <select
-                                value={item.category}
-                                onChange={(e) => updatePendingItem(idx, itemIdx, { category: e.target.value, needsReview: false })}
-                                className={`text-[10px] bg-transparent border rounded px-1 py-0.5 max-w-[100px] ${
-                                  item.needsReview ? 'border-warning/40' : 'border-cream-200 dark:border-dark-border'
-                                }`}
-                              >
-                                {CATEGORIES.map((c) => (
-                                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                                ))}
-                              </select>
-                              <span className="font-medium money whitespace-nowrap">
-                                {formatCurrency(item.price * (item.qty || 1), tx.currency)}
-                              </span>
+                            );
+                          })}
+
+                          {/* Add item button / form */}
+                          {addingItem === idx ? (
+                            <div className="flex items-center gap-2 p-2 border-t border-cream-200 dark:border-dark-border mt-1 pt-2">
+                              <input
+                                value={newItem.name}
+                                onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))}
+                                placeholder="Item name"
+                                className="flex-1 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); if (e.key === 'Escape') setAddingItem(null); }}
+                              />
+                              <input
+                                type="number"
+                                value={newItem.price}
+                                onChange={(e) => setNewItem(n => ({ ...n, price: e.target.value }))}
+                                placeholder="Price"
+                                className="w-16 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
+                                step="0.01"
+                                inputMode="decimal"
+                                onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); }}
+                              />
+                              <button onClick={() => addItem(idx)} className="p-1 rounded bg-success/10 text-success hover:bg-success/20">
+                                <Check size={14} />
+                              </button>
+                              <button onClick={() => setAddingItem(null)} className="p-1 rounded bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300">
+                                <X size={14} />
+                              </button>
                             </div>
-                          ))}
+                          ) : (
+                            <button
+                              onClick={() => setAddingItem(idx)}
+                              className="flex items-center gap-1 text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 mt-1 px-2 py-1"
+                            >
+                              <Plus size={12} /> Add missed item
+                            </button>
+                          )}
+
+                          {/* Running total */}
+                          <div className="border-t border-cream-200 dark:border-dark-border mt-2 pt-2 flex items-center justify-between text-xs">
+                            <span className="text-cream-500">Items total</span>
+                            <span className="font-medium money">
+                              {formatCurrency(itemsTotal, tx.currency)}
+                            </span>
+                          </div>
+                          {mismatch && (
+                            <div className="flex items-center gap-1 text-[10px] text-warning mt-1">
+                              <AlertTriangle size={10} />
+                              Items total doesn't match receipt total ({formatCurrency(receiptTotal, receiptMeta?.receipt?.currency || 'RON')})
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Editable transaction category */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] text-cream-400">Category:</label>
-                    <select
+                  {/* Transaction category - CategoryPicker */}
+                  <div className="mt-3 flex items-center gap-2">
+                    <label className="text-[10px] text-cream-400 shrink-0">Category:</label>
+                    <CategoryPicker
                       value={tx.category}
-                      onChange={(e) => updatePending(idx, { category: e.target.value })}
-                      className="text-xs bg-transparent border border-cream-200 dark:border-dark-border rounded px-1.5 py-0.5"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                      ))}
-                    </select>
+                      subcategoryValue={tx.subcategory || null}
+                      onChange={(catId, subId) => updatePending(idx, { category: catId, subcategory: subId || null })}
+                      exclude={['income', 'transfer']}
+                    />
                   </div>
                 </div>
               );

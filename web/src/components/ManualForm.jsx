@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
 import { generateId, formatDateISO } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
+import CategoryPicker from './CategoryPicker';
 
 export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add transaction' }) {
   const [type, setType] = useState(initial.type || 'expense');
@@ -9,6 +10,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
   const [amount, setAmount] = useState(initial.amount || '');
   const [currency, setCurrency] = useState(initial.currency || 'RON');
   const [category, setCategory] = useState(initial.category || 'other');
+  const [subcategory, setSubcategory] = useState(initial.subcategory || null);
   const [date, setDate] = useState(initial.date || formatDateISO(new Date()));
   const [description, setDescription] = useState(initial.description || '');
   const [tags, setTags] = useState(initial.tags?.join(', ') || '');
@@ -40,8 +42,9 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
     let cancelled = false;
     const timer = setTimeout(async () => {
       const inferred = await inferCategorySmart(merchant);
-      if (!cancelled && inferred !== 'other' && !categoryAutoSet) {
-        setCategory(inferred);
+      if (!cancelled && inferred.category !== 'other' && !categoryAutoSet) {
+        setCategory(inferred.category);
+        if (inferred.subcategory) setSubcategory(inferred.subcategory);
         setCategoryAutoSet(true);
       }
     }, 300);
@@ -69,13 +72,24 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
     setShowSuggestions(false);
   };
 
+  const handleCategoryChange = (catId, subId) => {
+    setCategory(catId);
+    setSubcategory(subId || null);
+    setCategoryAutoSet(false);
+  };
+
+  // Compute exclude list based on type
+  const categoryExclude = type === 'income' ? CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id) :
+                           type === 'transfer' ? CATEGORIES.filter(c => c.id !== 'transfer').map(c => c.id) :
+                           ['income', 'transfer'];
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!amount || Number(amount) <= 0) return;
 
     // Learn the category for this merchant
     if (merchant.trim()) {
-      learnCategory(merchant.trim(), category);
+      learnCategory(merchant.trim(), category, subcategory);
     }
 
     const transaction = {
@@ -85,6 +99,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       amount: Number(amount),
       currency,
       category,
+      subcategory: subcategory || null,
       date,
       description: description.trim(),
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
@@ -99,6 +114,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       setAmount('');
       setDescription('');
       setTags('');
+      setSubcategory(null);
       setCategoryAutoSet(false);
     }
   };
@@ -168,16 +184,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
         </div>
 
         <div>
-          <label className="label">Category</label>
-          <select className="input" value={category} onChange={(e) => { setCategory(e.target.value); setCategoryAutoSet(false); }}>
-            {CATEGORIES.filter((c) => {
-              if (type === 'income') return c.id === 'income' || c.id === 'other';
-              if (type === 'transfer') return c.id === 'transfer';
-              return c.id !== 'income' && c.id !== 'transfer';
-            }).map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <CategoryPicker
+            label="Category"
+            value={category}
+            subcategoryValue={subcategory}
+            onChange={handleCategoryChange}
+            exclude={categoryExclude}
+          />
         </div>
         <div>
           <label className="label">Date</label>

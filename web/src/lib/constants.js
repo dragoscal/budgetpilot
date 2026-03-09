@@ -20,6 +20,95 @@ export const CATEGORIES = [
   { id: 'other', name: 'Other', icon: '📦', color: '#95a5a6' },
 ];
 
+export const SUBCATEGORIES = {
+  groceries: [
+    { id: 'groceries:produce', name: 'Produce', icon: '🥬' },
+    { id: 'groceries:dairy', name: 'Dairy', icon: '🥛' },
+    { id: 'groceries:meat', name: 'Meat & Fish', icon: '🥩' },
+    { id: 'groceries:bakery', name: 'Bakery', icon: '🍞' },
+    { id: 'groceries:snacks', name: 'Snacks & Sweets', icon: '🍫' },
+    { id: 'groceries:beverages', name: 'Beverages', icon: '🥤' },
+    { id: 'groceries:frozen', name: 'Frozen', icon: '🧊' },
+    { id: 'groceries:pantry', name: 'Pantry Staples', icon: '🫙' },
+  ],
+  dining: [
+    { id: 'dining:restaurant', name: 'Restaurant', icon: '🍽' },
+    { id: 'dining:fast_food', name: 'Fast Food', icon: '🍔' },
+    { id: 'dining:cafe', name: 'Cafe & Coffee', icon: '☕' },
+    { id: 'dining:delivery', name: 'Delivery', icon: '🛵' },
+    { id: 'dining:bar', name: 'Bar & Drinks', icon: '🍺' },
+  ],
+  transport: [
+    { id: 'transport:fuel', name: 'Fuel', icon: '⛽' },
+    { id: 'transport:rideshare', name: 'Rideshare', icon: '🚕' },
+    { id: 'transport:public', name: 'Public Transit', icon: '🚌' },
+    { id: 'transport:parking', name: 'Parking', icon: '🅿️' },
+    { id: 'transport:maintenance', name: 'Car Maintenance', icon: '🔧' },
+  ],
+  shopping: [
+    { id: 'shopping:clothing', name: 'Clothing', icon: '👕' },
+    { id: 'shopping:electronics', name: 'Electronics', icon: '📱' },
+    { id: 'shopping:home', name: 'Home & Decor', icon: '🏡' },
+    { id: 'shopping:online', name: 'Online Shopping', icon: '📦' },
+  ],
+  health: [
+    { id: 'health:pharmacy', name: 'Pharmacy', icon: '💊' },
+    { id: 'health:doctor', name: 'Doctor Visit', icon: '🩺' },
+    { id: 'health:dental', name: 'Dental', icon: '🦷' },
+    { id: 'health:gym', name: 'Gym & Fitness', icon: '💪' },
+  ],
+  subscriptions: [
+    { id: 'subscriptions:streaming', name: 'Streaming', icon: '📺' },
+    { id: 'subscriptions:music', name: 'Music', icon: '🎵' },
+    { id: 'subscriptions:software', name: 'Software', icon: '💻' },
+    { id: 'subscriptions:gaming', name: 'Gaming', icon: '🎮' },
+    { id: 'subscriptions:news', name: 'News & Media', icon: '📰' },
+  ],
+  utilities: [
+    { id: 'utilities:electricity', name: 'Electricity', icon: '⚡' },
+    { id: 'utilities:water', name: 'Water', icon: '💧' },
+    { id: 'utilities:gas', name: 'Gas', icon: '🔥' },
+    { id: 'utilities:internet', name: 'Internet', icon: '🌐' },
+    { id: 'utilities:phone', name: 'Phone', icon: '📱' },
+  ],
+  entertainment: [
+    { id: 'entertainment:movies', name: 'Movies', icon: '🎬' },
+    { id: 'entertainment:games', name: 'Games', icon: '🎮' },
+    { id: 'entertainment:concerts', name: 'Concerts & Events', icon: '🎵' },
+    { id: 'entertainment:sports', name: 'Sports', icon: '⚽' },
+  ],
+  housing: [
+    { id: 'housing:rent', name: 'Rent', icon: '🏠' },
+    { id: 'housing:repairs', name: 'Repairs', icon: '🔨' },
+    { id: 'housing:cleaning', name: 'Cleaning', icon: '🧹' },
+    { id: 'housing:furniture', name: 'Furniture', icon: '🛋' },
+  ],
+  personal: [
+    { id: 'personal:haircare', name: 'Hair & Beauty', icon: '💇' },
+    { id: 'personal:skincare', name: 'Skincare', icon: '🧴' },
+    { id: 'personal:items', name: 'Personal Items', icon: '👤' },
+  ],
+  education: [
+    { id: 'education:courses', name: 'Courses', icon: '🎓' },
+    { id: 'education:books', name: 'Books', icon: '📖' },
+    { id: 'education:supplies', name: 'Supplies', icon: '✏️' },
+  ],
+  travel: [
+    { id: 'travel:flights', name: 'Flights', icon: '✈️' },
+    { id: 'travel:hotels', name: 'Hotels', icon: '🏨' },
+    { id: 'travel:activities', name: 'Activities', icon: '🗺' },
+  ],
+};
+
+export const RECURRING_FREQUENCIES = [
+  { id: 'weekly', label: 'Weekly', multiplierToMonthly: 4.33 },
+  { id: 'biweekly', label: 'Every 2 weeks', multiplierToMonthly: 2.17 },
+  { id: 'monthly', label: 'Monthly', multiplierToMonthly: 1 },
+  { id: 'quarterly', label: 'Quarterly', multiplierToMonthly: 1 / 3 },
+  { id: 'semiannual', label: 'Every 6 months', multiplierToMonthly: 1 / 6 },
+  { id: 'annual', label: 'Annually', multiplierToMonthly: 1 / 12 },
+];
+
 export const CURRENCIES = [
   { code: 'RON', symbol: 'lei', name: 'Romanian Leu', position: 'suffix', locale: 'ro-RO' },
   { code: 'EUR', symbol: '€', name: 'Euro', position: 'prefix', locale: 'de-DE' },
