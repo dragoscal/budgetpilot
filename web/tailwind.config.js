@@ -75,6 +75,7 @@ export default {
       animation: {
         fadeUp: 'fadeUp 0.3s ease-out',
         slideIn: 'slideIn 0.25s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
         shimmer: 'shimmer 1.5s infinite',
         'pulse-slow': 'pulse 3s infinite',
         float: 'float 6s ease-in-out infinite',
@@ -87,6 +88,10 @@ export default {
         slideIn: {
           '0%': { opacity: '0', transform: 'translateX(100%)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
         },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },

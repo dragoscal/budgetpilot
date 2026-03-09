@@ -14,6 +14,7 @@ All notable changes to BudgetPilot are documented here.
 - **Loan Payment Quick Fill** — Payment form pre-fills the monthly payment amount for faster recording.
 - **Screenshot Upload in Bug Reports** — Attach screenshots when reporting bugs. Images are compressed client-side (JPEG, max 1200px) before submission. Admin panel displays attached screenshots with click-to-zoom.
 - **More Recurring Frequencies** — Added Daily, Every 2 months, Every 2 years. Quarterly label clarified to "Quarterly (3 months)". Full range: Daily → Weekly → Biweekly → Monthly → Bimonthly → Quarterly → Semiannual → Annual → Biannual.
+- **Mobile Full Navigation** — Replaced limited 5-tab bottom bar with 4-tab bar + "More" button. Tapping "More" opens a slide-up panel showing all 14+ pages organized by section (Main, Planning, Insights, More, Settings) plus theme toggle, feedback, and sign out.
 
 ### Fixed
 - **api.js update() crash** — CRUD `update()` now supports both `update(id, changes)` and `update(fullRecord)` calling conventions. Previously passing a full record object caused "Failed to execute 'get' on IDBObjectStore" error.

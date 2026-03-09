@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import SyncIndicator from './SyncIndicator';
@@ -7,7 +7,7 @@ import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Wallet, Shield,
-  Building2,
+  Building2, Menu, X, MessageSquare,
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -49,9 +49,11 @@ const NAV_SECTIONS = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { dark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -177,6 +179,122 @@ export default function Sidebar() {
         </div>
       </aside>
 
+      {/* Mobile slide-up menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+
+          {/* Panel */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-2xl max-h-[80vh] overflow-y-auto animate-slide-up safe-bottom">
+            {/* Handle + close */}
+            <div className="sticky top-0 bg-white dark:bg-dark-card z-10 pt-3 pb-2 px-4 border-b border-cream-100 dark:border-dark-border">
+              <div className="w-8 h-1 bg-cream-300 dark:bg-cream-600 rounded-full mx-auto mb-3" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-heading font-bold">Menu</span>
+                <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-cream-800/50">
+                  <X size={18} className="text-cream-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Nav sections */}
+            <div className="px-3 py-2 space-y-3">
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.label}>
+                  <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
+                    {section.label}
+                  </p>
+                  <div className="space-y-px">
+                    {section.items.map((item) => {
+                      const isActive = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+                      return (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.to === '/'}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                            isActive
+                              ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                              : 'text-cream-600 dark:text-cream-400'
+                          }`}
+                        >
+                          <item.icon size={18} className="shrink-0" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Extras */}
+              <div>
+                <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
+                  Settings
+                </p>
+                <div className="space-y-px">
+                  <NavLink
+                    to="/feedback"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                      location.pathname === '/feedback'
+                        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                        : 'text-cream-600 dark:text-cream-400'
+                    }`}
+                  >
+                    <MessageSquare size={18} className="shrink-0" />
+                    <span>Report Bug / Suggest</span>
+                  </NavLink>
+                  <NavLink
+                    to="/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                      location.pathname === '/settings'
+                        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                        : 'text-cream-600 dark:text-cream-400'
+                    }`}
+                  >
+                    <Settings size={18} className="shrink-0" />
+                    <span>Settings</span>
+                  </NavLink>
+                  {user?.role === 'admin' && (
+                    <NavLink
+                      to="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                        location.pathname === '/admin'
+                          ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                          : 'text-accent-600 dark:text-accent-400'
+                      }`}
+                    >
+                      <Shield size={18} className="shrink-0" />
+                      <span>Admin Panel</span>
+                    </NavLink>
+                  )}
+                  <button
+                    onClick={toggleTheme}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 w-full"
+                  >
+                    {dark ? <Sun size={18} /> : <Moon size={18} />}
+                    <span>{dark ? 'Light Mode' : 'Dark Mode'}</span>
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-danger w-full"
+                  >
+                    <LogOut size={18} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="h-4" />
+          </div>
+        </div>
+      )}
+
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-1 py-1 safe-bottom">
         {[
@@ -184,7 +302,6 @@ export default function Sidebar() {
           { to: '/transactions', icon: Receipt, label: 'History' },
           { to: '/add', icon: PlusCircle, label: 'Add', special: true },
           { to: '/budgets', icon: PiggyBank, label: 'Budgets' },
-          { to: '/settings', icon: Settings, label: 'More' },
         ].map((item) => (
           <NavLink
             key={item.to}
@@ -208,6 +325,16 @@ export default function Sidebar() {
             <span>{item.label}</span>
           </NavLink>
         ))}
+        {/* More button — opens slide-up menu */}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
+            mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400'
+          }`}
+        >
+          <Menu size={20} />
+          <span>More</span>
+        </button>
       </nav>
     </>
   );
