@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   amount REAL NOT NULL,
   currency TEXT DEFAULT 'RON',
   category TEXT DEFAULT 'other',
+  subcategory TEXT,
   date TEXT NOT NULL,
   description TEXT,
   tags TEXT DEFAULT '[]',
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS budgets (
   category TEXT NOT NULL,
   amount REAL NOT NULL,
   currency TEXT DEFAULT 'RON',
+  month TEXT,
   rollover INTEGER DEFAULT 0,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
@@ -84,7 +86,9 @@ CREATE TABLE IF NOT EXISTS recurring (
   amount REAL NOT NULL,
   currency TEXT DEFAULT 'RON',
   category TEXT DEFAULT 'subscriptions',
+  frequency TEXT DEFAULT 'monthly',
   billingDay INTEGER DEFAULT 1,
+  endDate TEXT,
   active INTEGER DEFAULT 1,
   autoDetected INTEGER DEFAULT 0,
   createdAt TEXT NOT NULL,
@@ -123,12 +127,15 @@ CREATE TABLE IF NOT EXISTS debts (
 
 CREATE TABLE IF NOT EXISTS debt_payments (
   id TEXT PRIMARY KEY,
+  userId TEXT,
   debtId TEXT NOT NULL,
   amount REAL NOT NULL,
   date TEXT NOT NULL,
   note TEXT,
   createdAt TEXT NOT NULL,
-  FOREIGN KEY (debtId) REFERENCES debts(id)
+  updatedAt TEXT,
+  FOREIGN KEY (debtId) REFERENCES debts(id),
+  FOREIGN KEY (userId) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS wishlist (
@@ -206,3 +213,6 @@ CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(status);
 CREATE INDEX IF NOT EXISTS idx_activity_log_userId ON activity_log(userId);
 CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_activity_log_action ON activity_log(action);
+CREATE INDEX IF NOT EXISTS idx_transactions_subcategory ON transactions(subcategory);
+CREATE INDEX IF NOT EXISTS idx_recurring_frequency ON recurring(frequency);
+CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month);

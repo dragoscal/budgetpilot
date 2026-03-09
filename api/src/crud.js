@@ -5,6 +5,13 @@ import { logActivity } from './index.js';
 
 const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist'];
 
+// Map client-side store names to D1 table names (for sync compatibility)
+const TABLE_ALIASES = { debtPayments: 'debt_payments' };
+
+function resolveTable(name) {
+  return TABLE_ALIASES[name] || name;
+}
+
 // JSON columns that need to be serialized/deserialized
 const JSON_COLUMNS = { transactions: ['tags', 'items'], };
 
@@ -32,6 +39,114 @@ function deserializeRow(table, row) {
 }
 
 export function registerCrudRoutes(router) {
+  // ─── SPECIFIC routes FIRST (before generic :table routes) ───
+
+  // POST /api/sync/push — bulk push from client
+  router.post('/api/sync/push', async (ctx) => {
+    const { changes } = ctx.body; // [{ table, action, data }]
+    if (!Array.isArray(changes)) return json({ error: 'Invalid payload' }, 400);
+
+    const results = [];
+    for (const change of changes) {
+      try {
+        const rawTable = change.table;
+        const table = resolveTable(rawTable);
+        const { action, data } = change;
+        if (!ALLOWED_TABLES.includes(table)) {
+          results.push({ id: data?.id, status: 'error', message: `Unknown table: ${rawTable}` });
+          continue;
+        }
+
+        const now = new Date().toISOString();
+        if (action === 'create' || action === 'update') {
+          const row = serializeRow(table, { ...data, userId: ctx.user.id, updatedAt: now });
+          if (action === 'create') row.createdAt = row.createdAt || now;
+
+          const columns = Object.keys(row);
+          const placeholders = columns.map(() => '?').join(', ');
+          const updates = columns.filter(c => c !== 'id').map(c => `${c} = excluded.${c}`).join(', ');
+
+          await ctx.env.DB.prepare(
+            `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updates}`
+          ).bind(...columns.map(c => row[c])).run();
+        } else if (action === 'delete') {
+          if (table === 'transactions') {
+            await ctx.env.DB.prepare(`UPDATE transactions SET deletedAt = ? WHERE id = ? AND userId = ?`)
+              .bind(now, data.id, ctx.user.id).run();
+          } else {
+            await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE id = ? AND userId = ?`)
+              .bind(data.id, ctx.user.id).run();
+          }
+        }
+
+        results.push({ id: data.id, status: 'ok' });
+      } catch (err) {
+        results.push({ id: change.data?.id, status: 'error', message: err.message });
+      }
+    }
+
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'sync_push', { count: changes.length }));
+    return json({ results });
+  });
+
+  // GET /api/sync/pull — pull all data since timestamp
+  router.get('/api/sync/pull', async (ctx) => {
+    const since = ctx.query.since || '1970-01-01T00:00:00.000Z';
+    const userId = ctx.user.id;
+
+    const tables = {};
+    for (const table of ALLOWED_TABLES) {
+      const result = await ctx.env.DB.prepare(
+        `SELECT * FROM ${table} WHERE userId = ? AND updatedAt > ?`
+      ).bind(userId, since).all();
+      tables[table] = (result.results || []).map(r => deserializeRow(table, r));
+    }
+
+    return json({ data: tables, syncedAt: new Date().toISOString() });
+  });
+
+  // GET /api/data/export — export all user data
+  router.get('/api/data/export', async (ctx) => {
+    const userId = ctx.user.id;
+    const data = {};
+    for (const table of ALLOWED_TABLES) {
+      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE userId = ?`).bind(userId).all();
+      data[table] = (result.results || []).map(r => deserializeRow(table, r));
+    }
+
+    // Settings
+    const settingsResult = await ctx.env.DB.prepare(`SELECT key, value FROM settings WHERE userId = ?`).bind(userId).all();
+    data.settings = {};
+    for (const row of settingsResult.results || []) {
+      try { data.settings[row.key] = JSON.parse(row.value); } catch { data.settings[row.key] = row.value; }
+    }
+
+    return json({ data, exportedAt: new Date().toISOString() });
+  });
+
+  // Settings
+  router.get('/api/settings', async (ctx) => {
+    const result = await ctx.env.DB.prepare(`SELECT key, value FROM settings WHERE userId = ?`).bind(ctx.user.id).all();
+    const settings = {};
+    for (const row of result.results || []) {
+      try { settings[row.key] = JSON.parse(row.value); } catch { settings[row.key] = row.value; }
+    }
+    return json({ data: settings });
+  });
+
+  router.put('/api/settings', async (ctx) => {
+    const entries = Object.entries(ctx.body || {});
+    for (const [key, value] of entries) {
+      const val = typeof value === 'string' ? value : JSON.stringify(value);
+      await ctx.env.DB.prepare(
+        `INSERT INTO settings (userId, key, value) VALUES (?, ?, ?) ON CONFLICT(userId, key) DO UPDATE SET value = ?`
+      ).bind(ctx.user.id, key, val, val).run();
+    }
+    return json({ success: true });
+  });
+
+  // ─── GENERIC CRUD routes (after specific routes) ───
+
   // GET /api/:table — list all for user
   router.get('/api/:table', async (ctx) => {
     const { table } = ctx.params;
@@ -161,105 +276,6 @@ export function registerCrudRoutes(router) {
     await logSync(ctx.env.DB, ctx.user.id, table, id, 'delete');
     ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'delete_record', { table }));
 
-    return json({ success: true });
-  });
-
-  // POST /api/sync/push — bulk push from client
-  router.post('/api/sync/push', async (ctx) => {
-    const { changes } = ctx.body; // [{ table, action, data }]
-    if (!Array.isArray(changes)) return json({ error: 'Invalid payload' }, 400);
-
-    const results = [];
-    for (const change of changes) {
-      try {
-        const { table, action, data } = change;
-        if (!ALLOWED_TABLES.includes(table)) continue;
-
-        const now = new Date().toISOString();
-        if (action === 'create' || action === 'update') {
-          const row = serializeRow(table, { ...data, userId: ctx.user.id, updatedAt: now });
-          if (action === 'create') row.createdAt = row.createdAt || now;
-
-          const columns = Object.keys(row);
-          const placeholders = columns.map(() => '?').join(', ');
-          const updates = columns.filter(c => c !== 'id').map(c => `${c} = excluded.${c}`).join(', ');
-
-          await ctx.env.DB.prepare(
-            `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updates}`
-          ).bind(...columns.map(c => row[c])).run();
-        } else if (action === 'delete') {
-          if (table === 'transactions') {
-            await ctx.env.DB.prepare(`UPDATE transactions SET deletedAt = ? WHERE id = ? AND userId = ?`)
-              .bind(now, data.id, ctx.user.id).run();
-          } else {
-            await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE id = ? AND userId = ?`)
-              .bind(data.id, ctx.user.id).run();
-          }
-        }
-
-        results.push({ id: data.id, status: 'ok' });
-      } catch (err) {
-        results.push({ id: change.data?.id, status: 'error', message: err.message });
-      }
-    }
-
-    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'sync_push', { count: changes.length }));
-    return json({ results });
-  });
-
-  // GET /api/sync/pull — pull all data since timestamp
-  router.get('/api/sync/pull', async (ctx) => {
-    const since = ctx.query.since || '1970-01-01T00:00:00.000Z';
-    const userId = ctx.user.id;
-
-    const tables = {};
-    for (const table of ALLOWED_TABLES) {
-      const result = await ctx.env.DB.prepare(
-        `SELECT * FROM ${table} WHERE userId = ? AND updatedAt > ?`
-      ).bind(userId, since).all();
-      tables[table] = (result.results || []).map(r => deserializeRow(table, r));
-    }
-
-    return json({ data: tables, syncedAt: new Date().toISOString() });
-  });
-
-  // POST /api/data/export — export all user data
-  router.get('/api/data/export', async (ctx) => {
-    const userId = ctx.user.id;
-    const data = {};
-    for (const table of ALLOWED_TABLES) {
-      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE userId = ?`).bind(userId).all();
-      data[table] = (result.results || []).map(r => deserializeRow(table, r));
-    }
-
-    // Settings
-    const settingsResult = await ctx.env.DB.prepare(`SELECT key, value FROM settings WHERE userId = ?`).bind(userId).all();
-    data.settings = {};
-    for (const row of settingsResult.results || []) {
-      try { data.settings[row.key] = JSON.parse(row.value); } catch { data.settings[row.key] = row.value; }
-    }
-
-    return json({ data, exportedAt: new Date().toISOString() });
-  });
-
-  // Settings
-  router.get('/api/settings', async (ctx) => {
-    const result = await ctx.env.DB.prepare(`SELECT key, value FROM settings WHERE userId = ?`).bind(ctx.user.id).all();
-    const settings = {};
-    for (const row of result.results || []) {
-      try { settings[row.key] = JSON.parse(row.value); } catch { settings[row.key] = row.value; }
-    }
-    return json({ data: settings });
-  });
-
-  router.put('/api/settings', async (ctx) => {
-    const entries = Object.entries(ctx.body || {});
-    for (const [key, value] of entries) {
-      const val = typeof value === 'string' ? value : JSON.stringify(value);
-      await ctx.env.DB.prepare(
-        `INSERT INTO settings (userId, key, value) VALUES (?, ?, ?) ON CONFLICT(userId, key) DO UPDATE SET value = ?`
-      ).bind(ctx.user.id, key, val, val).run();
-    }
     return json({ success: true });
   });
 }

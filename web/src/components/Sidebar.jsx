@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import SyncIndicator from './SyncIndicator';
 import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
@@ -124,6 +125,8 @@ export default function Sidebar() {
 
         {/* Bottom controls */}
         <div className="border-t border-cream-200 dark:border-dark-border px-3 py-2 space-y-px shrink-0">
+          <SyncIndicator collapsed={collapsed} />
+
           <button
             onClick={toggleTheme}
             className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}

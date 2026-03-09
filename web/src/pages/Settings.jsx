@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
+import { useSync } from '../contexts/SyncContext';
 import { getSetting, setSetting, getAllSettings } from '../lib/storage';
 import { exportData, importData, clearData } from '../lib/api';
 import { deleteAccount } from '../lib/auth';
@@ -14,6 +15,7 @@ export default function SettingsPage() {
   const { dark, toggleTheme } = useTheme();
   const { toast } = useToast();
   const { hideAmounts, updateHideAmounts } = useHideAmounts();
+  const { refreshStatus: refreshSyncStatus, syncNow } = useSync();
   const fileRef = useRef(null);
 
   const [apiUrl, setApiUrl] = useState('');
@@ -77,6 +79,8 @@ export default function SettingsPage() {
       if (user) {
         await updateProfile({ name: userName, defaultCurrency });
       }
+      // Refresh sync status (starts auto-sync if backend URL was just configured)
+      await refreshSyncStatus();
       toast.success('Settings saved');
     } catch (err) {
       toast.error(err.message);
@@ -309,14 +313,34 @@ export default function SettingsPage() {
               <input type="password" className="input" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="off" placeholder="Bearer token" />
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {apiUrl && (
               <button onClick={testConnection} className="btn-secondary text-xs">Test connection</button>
+            )}
+            {apiUrl && (
+              <button
+                onClick={async () => {
+                  try {
+                    await syncNow();
+                    toast.success('Sync completed');
+                  } catch {
+                    toast.error('Sync failed');
+                  }
+                }}
+                className="btn-secondary text-xs"
+              >
+                Sync now
+              </button>
             )}
             {testResult && (
               <span className={`text-xs self-center ${testResult.ok ? 'text-success' : 'text-danger'}`}>{testResult.msg}</span>
             )}
           </div>
+          {apiUrl && (
+            <p className="text-xs text-cream-400 mt-1">
+              Data syncs automatically every 60 seconds when a backend is configured. Your API keys (AI, Telegram) stay local and are never synced to the server.
+            </p>
+          )}
         </div>
       </div>
 

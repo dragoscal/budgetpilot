@@ -2,6 +2,15 @@ import * as storage from './storage';
 import { getSetting } from './storage';
 import { addToSyncQueue } from './sync';
 
+// Table name mapping: IndexedDB store names → API path names
+const TABLE_MAP = {
+  debtPayments: 'debt_payments',
+};
+
+function toApiTable(storeName) {
+  return TABLE_MAP[storeName] || storeName;
+}
+
 async function getApiUrl() {
   return (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
 }
@@ -40,28 +49,17 @@ async function apiFetch(apiUrl, path, options = {}) {
 
 // Generic CRUD that works in both modes
 // In local mode: operates on IndexedDB + queues changes for sync
+// In API mode: saves locally first (offline-first) + pushes to API + queues as fallback
 function createCrud(storeName) {
+  const apiTable = toApiTable(storeName);
+
   return {
     async getAll(filters = {}) {
-      const apiUrl = await getApiUrl();
-      if (isApiMode(apiUrl)) {
-        try {
-          const params = new URLSearchParams(filters).toString();
-          return await apiFetch(apiUrl, `/api/${storeName}?${params}`);
-        } catch {
-          // Fallback to local on network error
-          return storage.getAll(storeName, filters);
-        }
-      }
+      // Always read from local IndexedDB (offline-first, instant)
       return storage.getAll(storeName, filters);
     },
 
     async getById(id) {
-      const apiUrl = await getApiUrl();
-      if (isApiMode(apiUrl)) {
-        try { return await apiFetch(apiUrl, `/api/${storeName}/${id}`); }
-        catch { return storage.getById(storeName, id); }
-      }
       return storage.getById(storeName, id);
     },
 
@@ -69,19 +67,22 @@ function createCrud(storeName) {
       // Always save locally first (offline-first)
       const result = await storage.add(storeName, record);
 
-      // Queue for sync
-      addToSyncQueue('create', storeName, record).catch(() => {});
-
       // Try to push to API immediately if available
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
         try {
-          await apiFetch(apiUrl, `/api/${storeName}`, {
+          // Send to server — remove 'local' userId, server sets it from auth
+          const serverRecord = { ...record };
+          if (serverRecord.userId === 'local') delete serverRecord.userId;
+
+          await apiFetch(apiUrl, `/api/${apiTable}`, {
             method: 'POST',
-            body: JSON.stringify(record),
+            body: JSON.stringify(serverRecord),
           });
+          // Immediate push succeeded — no need to queue
         } catch {
-          // Will sync later via queue
+          // Immediate push failed — queue for later sync
+          addToSyncQueue('create', storeName, record).catch(() => {});
         }
       }
 
@@ -94,17 +95,18 @@ function createCrud(storeName) {
       const updated = { ...existing, ...changes };
       await storage.update(storeName, updated);
 
-      // Queue for sync
-      addToSyncQueue('update', storeName, updated).catch(() => {});
-
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
         try {
-          await apiFetch(apiUrl, `/api/${storeName}/${id}`, {
+          await apiFetch(apiUrl, `/api/${apiTable}/${id}`, {
             method: 'PUT',
             body: JSON.stringify(changes),
           });
-        } catch { /* Will sync later */ }
+          // Immediate push succeeded — no need to queue
+        } catch {
+          // Queue for later sync
+          addToSyncQueue('update', storeName, updated).catch(() => {});
+        }
       }
 
       return updated;
@@ -113,13 +115,15 @@ function createCrud(storeName) {
     async remove(id) {
       await storage.remove(storeName, id);
 
-      addToSyncQueue('delete', storeName, { id }).catch(() => {});
-
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
         try {
-          await apiFetch(apiUrl, `/api/${storeName}/${id}`, { method: 'DELETE' });
-        } catch { /* Will sync later */ }
+          await apiFetch(apiUrl, `/api/${apiTable}/${id}`, { method: 'DELETE' });
+          // Immediate push succeeded — no need to queue
+        } catch {
+          // Queue for later sync
+          addToSyncQueue('delete', storeName, { id }).catch(() => {});
+        }
       }
     },
   };

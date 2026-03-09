@@ -1,7 +1,28 @@
-import { getAll, add, update, clearStore, getSetting, setSetting, importAll, exportAll } from './storage';
+import { getAll, getById, add, update, remove, clearStore, getSetting, setSetting } from './storage';
 
 // ─── SYNC ENGINE ──────────────────────────────────────────
 // Handles bidirectional sync between IndexedDB and the backend API
+
+// Table name mapping: IndexedDB store names ↔ D1 table names
+const TABLE_MAP = {
+  debtPayments: 'debt_payments',
+};
+
+const REVERSE_TABLE_MAP = {
+  debt_payments: 'debtPayments',
+};
+
+function toServerTable(storeName) {
+  return TABLE_MAP[storeName] || storeName;
+}
+
+function toLocalStore(tableName) {
+  return REVERSE_TABLE_MAP[tableName] || tableName;
+}
+
+function hasAuthToken() {
+  return !!(sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token'));
+}
 
 async function getAuthHeaders() {
   const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
@@ -20,6 +41,7 @@ export async function addToSyncQueue(action, store, data) {
     store,
     data,
     timestamp: new Date().toISOString(),
+    retries: 0,
     synced: false,
   });
 }
@@ -27,7 +49,7 @@ export async function addToSyncQueue(action, store, data) {
 // Push all queued changes to the backend
 export async function processSyncQueue() {
   const apiUrl = await getSetting('apiUrl');
-  if (!apiUrl) return { synced: 0, failed: 0 };
+  if (!apiUrl || !hasAuthToken()) return { synced: 0, failed: 0 };
 
   const queue = await getAll('syncQueue');
   const pending = queue.filter((q) => !q.synced);
@@ -35,11 +57,19 @@ export async function processSyncQueue() {
 
   try {
     const headers = await getAuthHeaders();
-    const changes = pending.map((item) => ({
-      table: item.store,
-      action: item.action,
-      data: item.data,
-    }));
+
+    // Map table names for the server and clean up data
+    const changes = pending.map((item) => {
+      const serverData = { ...item.data };
+      // Remove 'local' userId — server will inject the real one
+      if (serverData.userId === 'local') delete serverData.userId;
+
+      return {
+        table: toServerTable(item.store),
+        action: item.action,
+        data: serverData,
+      };
+    });
 
     const res = await fetch(`${apiUrl}/api/sync/push`, {
       method: 'POST',
@@ -47,20 +77,52 @@ export async function processSyncQueue() {
       body: JSON.stringify({ changes }),
     });
 
-    if (!res.ok) throw new Error('Sync push failed');
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      console.error('Sync push failed:', res.status, errBody);
+      // Increment retry count for all pending items
+      for (const item of pending) {
+        await update('syncQueue', { ...item, retries: (item.retries || 0) + 1 });
+      }
+      return { synced: 0, failed: pending.length };
+    }
 
     const result = await res.json();
-    const synced = result.results?.filter(r => r.status === 'ok').length || 0;
-    const failed = result.results?.filter(r => r.status === 'error').length || 0;
+    const results = result.results || [];
 
-    // Clear successfully synced items
-    if (synced > 0) {
-      await clearStore('syncQueue');
+    let synced = 0;
+    let failed = 0;
+
+    // Process results individually — only remove successfully synced items
+    for (let i = 0; i < pending.length; i++) {
+      const serverResult = results[i];
+      if (serverResult?.status === 'ok') {
+        // Remove this item from the sync queue
+        await remove('syncQueue', pending[i].id);
+        synced++;
+      } else {
+        // Mark as failed with incremented retry count
+        const retries = (pending[i].retries || 0) + 1;
+        if (retries >= 5) {
+          // Give up after 5 retries — remove to prevent infinite loop
+          console.warn('Sync item failed 5 times, discarding:', pending[i]);
+          await remove('syncQueue', pending[i].id);
+        } else {
+          await update('syncQueue', { ...pending[i], retries });
+        }
+        failed++;
+      }
     }
 
     return { synced, failed };
   } catch (err) {
     console.error('Sync push error:', err);
+    // Increment retry count for all pending items
+    for (const item of pending) {
+      try {
+        await update('syncQueue', { ...item, retries: (item.retries || 0) + 1 });
+      } catch {}
+    }
     return { synced: 0, failed: pending.length };
   }
 }
@@ -68,26 +130,45 @@ export async function processSyncQueue() {
 // Pull all changes from the backend since the last sync
 export async function pullFromServer() {
   const apiUrl = await getSetting('apiUrl');
-  if (!apiUrl) return null;
+  if (!apiUrl || !hasAuthToken()) return null;
 
   try {
     const lastSync = await getSetting('lastSyncAt') || '1970-01-01T00:00:00.000Z';
     const headers = await getAuthHeaders();
 
     const res = await fetch(`${apiUrl}/api/sync/pull?since=${encodeURIComponent(lastSync)}`, { headers });
-    if (!res.ok) throw new Error('Sync pull failed');
+    if (!res.ok) {
+      console.error('Sync pull failed:', res.status);
+      return null;
+    }
 
     const result = await res.json();
+    let importedCount = 0;
 
     // Import pulled data (merge, don't overwrite)
     if (result.data) {
-      for (const [storeName, records] of Object.entries(result.data)) {
+      for (const [serverTable, records] of Object.entries(result.data)) {
+        const storeName = toLocalStore(serverTable);
         for (const record of records) {
           try {
-            // Upsert: try update first, then add
-            await update(storeName, record).catch(() => add(storeName, record));
+            // Remap server userId to 'local' for local storage compatibility
+            const localRecord = { ...record, userId: 'local' };
+
+            // Conflict resolution: server wins if updatedAt is newer
+            const existing = await getById(storeName, localRecord.id).catch(() => null);
+            if (existing) {
+              // Server record is newer or equal — update
+              if (!existing.updatedAt || localRecord.updatedAt >= existing.updatedAt) {
+                await update(storeName, localRecord);
+                importedCount++;
+              }
+            } else {
+              // New record from server — add locally
+              await add(storeName, localRecord);
+              importedCount++;
+            }
           } catch (e) {
-            // Ignore conflicts
+            console.warn('Pull import error for record:', record.id, e);
           }
         }
       }
@@ -99,7 +180,10 @@ export async function pullFromServer() {
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData.data) {
+          // Don't overwrite local-only settings
+          const skipKeys = new Set(['apiUrl', 'apiKey', 'anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'lastSyncAt']);
           for (const [key, value] of Object.entries(settingsData.data)) {
+            if (skipKeys.has(key)) continue;
             const local = await getSetting(key);
             if (!local) await setSetting(key, typeof value === 'string' ? value : JSON.stringify(value));
           }
@@ -112,6 +196,7 @@ export async function pullFromServer() {
       await setSetting('lastSyncAt', result.syncedAt);
     }
 
+    console.log(`Sync pull: imported ${importedCount} records`);
     return result;
   } catch (err) {
     console.error('Sync pull error:', err);
@@ -124,11 +209,18 @@ export async function fullSync() {
   const pushResult = await processSyncQueue();
   const pullResult = await pullFromServer();
 
-  return {
+  const result = {
     pushed: pushResult,
     pulled: pullResult ? 'success' : 'skipped',
     timestamp: new Date().toISOString(),
   };
+
+  // Notify listeners
+  syncListeners.forEach((fn) => {
+    try { fn(result); } catch {}
+  });
+
+  return result;
 }
 
 // Get sync status
@@ -145,11 +237,20 @@ export async function getSyncStatus() {
   };
 }
 
-// Auto-sync: runs periodically in background
+// ─── Sync Event System ──────────────────────────────────
+const syncListeners = new Set();
+
+export function onSyncComplete(fn) {
+  syncListeners.add(fn);
+  return () => syncListeners.delete(fn);
+}
+
+// ─── Auto-sync: runs periodically in background ─────────
 let syncInterval = null;
 
 export function startAutoSync(intervalMs = 60000) {
   if (syncInterval) clearInterval(syncInterval);
+
   syncInterval = setInterval(async () => {
     try {
       await fullSync();
@@ -159,12 +260,19 @@ export function startAutoSync(intervalMs = 60000) {
   }, intervalMs);
 
   // Also sync immediately
-  fullSync().catch(() => {});
+  fullSync().catch((e) => console.error('Initial sync error:', e));
+
+  console.log('Auto-sync started (interval:', intervalMs, 'ms)');
 }
 
 export function stopAutoSync() {
   if (syncInterval) {
     clearInterval(syncInterval);
     syncInterval = null;
+    console.log('Auto-sync stopped');
   }
+}
+
+export function isAutoSyncRunning() {
+  return syncInterval !== null;
 }

@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { SyncProvider } from './contexts/SyncContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <ToastProvider>
           <AuthProvider>
             <SettingsProvider>
-              <App />
+              <SyncProvider>
+                <App />
+              </SyncProvider>
             </SettingsProvider>
           </AuthProvider>
         </ToastProvider>

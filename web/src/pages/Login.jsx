@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import { Eye, EyeOff, Wallet } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
+  const { refreshStatus } = useSync();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,8 @@ export default function Login() {
     setLoading(true);
     try {
       await login({ email, password, remember });
+      // Trigger sync after successful login
+      refreshStatus();
     } catch (err) {
       setError(err.message);
     } finally {
