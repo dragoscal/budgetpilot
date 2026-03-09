@@ -40,5 +40,6 @@ export const adminApi = {
   },
   getErrors: (limit = 50) => adminFetch(`/api/admin/errors?limit=${limit}`),
   getPerformance: () => adminFetch('/api/admin/performance'),
+  getAiCosts: () => adminFetch('/api/admin/ai-costs'),
   cleanupLogs: () => adminFetch('/api/admin/cleanup', { method: 'POST' }),
 };

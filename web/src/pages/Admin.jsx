@@ -10,12 +10,13 @@ import {
 } from 'recharts';
 import {
   Shield, Users, Activity, AlertTriangle, Zap, RefreshCw,
-  KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot,
+  KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot, DollarSign,
 } from 'lucide-react';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Shield },
   { id: 'users', label: 'Users', icon: Users },
+  { id: 'ai-costs', label: 'AI Costs', icon: DollarSign },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'errors', label: 'Errors', icon: AlertTriangle },
   { id: 'performance', label: 'Performance', icon: Zap },
@@ -60,6 +61,7 @@ export default function Admin() {
   const [activity, setActivity] = useState([]);
   const [errors, setErrors] = useState([]);
   const [performance, setPerformance] = useState(null);
+  const [aiCosts, setAiCosts] = useState(null);
   const [resetModal, setResetModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -74,6 +76,7 @@ export default function Admin() {
         case 'overview': setStats(await adminApi.getStats()); break;
         case 'users': setUsers(await adminApi.getUsers()); break;
         case 'activity': setActivity(await adminApi.getActivity({ limit: 100 })); break;
+        case 'ai-costs': setAiCosts(await adminApi.getAiCosts()); break;
         case 'errors': setErrors(await adminApi.getErrors()); break;
         case 'performance': setPerformance(await adminApi.getPerformance()); break;
       }
@@ -174,6 +177,7 @@ export default function Admin() {
         <>
           {tab === 'overview' && stats && <OverviewTab stats={stats} />}
           {tab === 'users' && <UsersTab users={users} onResetPassword={setResetModal} onToggle={handleToggleUser} onToggleAi={handleToggleAiAccess} onDelete={setDeleteModal} currentUserId={user.id} />}
+          {tab === 'ai-costs' && aiCosts && <AiCostsTab data={aiCosts} />}
           {tab === 'activity' && <ActivityTab activity={activity} />}
           {tab === 'errors' && <ErrorsTab errors={errors} />}
           {tab === 'performance' && performance && <PerformanceTab performance={performance} />}
@@ -371,6 +375,127 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
         </table>
         {users.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">No users yet</p>}
       </div>
+    </div>
+  );
+}
+
+// ─── AI Costs Tab ───────────────────────────────────────
+function AiCostsTab({ data }) {
+  const { users, grandTotal } = data;
+
+  function formatCost(usd) {
+    if (usd === 0) return '$0.00';
+    if (usd < 0.01) return `$${usd.toFixed(4)}`;
+    return `$${usd.toFixed(2)}`;
+  }
+
+  function formatTokens(n) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toString();
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card">
+          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Cost</p>
+          <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{formatCost(grandTotal)}</p>
+          <p className="text-xs text-cream-500 mt-1">estimated from token usage</p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-cream-500 uppercase tracking-wide">Active AI Users</p>
+          <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{users.length}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Requests</p>
+          <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">
+            {users.reduce((sum, u) => sum + u.totalRequests, 0)}
+          </p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Tokens</p>
+          <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">
+            {formatTokens(users.reduce((sum, u) => sum + u.totalInputTokens + u.totalOutputTokens, 0))}
+          </p>
+        </div>
+      </div>
+
+      {/* Cost breakdown chart */}
+      {users.length > 0 && (
+        <div className="card">
+          <h3 className="section-title mb-4">Cost by User</h3>
+          <ResponsiveContainer width="100%" height={Math.max(120, users.length * 45)}>
+            <BarChart data={users} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+              <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `$${v.toFixed(3)}`} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={100} />
+              <Tooltip
+                contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [`$${v.toFixed(4)}`, 'Cost (USD)']}
+              />
+              <Bar dataKey="totalCostUSD" fill="#059669" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Per-user table */}
+      <div className="card overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg">
+                <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">User</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Requests</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Input Tokens</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Output Tokens</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Est. Cost</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Last Used</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-cream-100 dark:divide-dark-border">
+              {users.map(u => (
+                <tr key={u.userId} className="hover:bg-cream-50 dark:hover:bg-dark-border/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="font-medium text-cream-900 dark:text-dark-text">{u.name}</p>
+                      <p className="text-xs text-cream-500">{u.email}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-cream-700 dark:text-cream-400 font-mono">{u.totalRequests}</td>
+                  <td className="px-4 py-3 text-right text-cream-700 dark:text-cream-400 font-mono">{formatTokens(u.totalInputTokens)}</td>
+                  <td className="px-4 py-3 text-right text-cream-700 dark:text-cream-400 font-mono">{formatTokens(u.totalOutputTokens)}</td>
+                  <td className="px-4 py-3 text-right font-medium font-mono text-cream-900 dark:text-dark-text">{formatCost(u.totalCostUSD)}</td>
+                  <td className="px-4 py-3 text-right text-cream-500 text-xs">{u.lastUsed ? timeAgo(u.lastUsed) : '—'}</td>
+                </tr>
+              ))}
+              {users.length > 1 && (
+                <tr className="bg-cream-50 dark:bg-dark-bg font-semibold">
+                  <td className="px-4 py-3 text-cream-900 dark:text-dark-text">Total</td>
+                  <td className="px-4 py-3 text-right font-mono">{users.reduce((s, u) => s + u.totalRequests, 0)}</td>
+                  <td className="px-4 py-3 text-right font-mono">{formatTokens(users.reduce((s, u) => s + u.totalInputTokens, 0))}</td>
+                  <td className="px-4 py-3 text-right font-mono">{formatTokens(users.reduce((s, u) => s + u.totalOutputTokens, 0))}</td>
+                  <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-dark-text">{formatCost(grandTotal)}</td>
+                  <td className="px-4 py-3"></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {users.length === 0 && (
+            <div className="text-center py-12">
+              <Bot className="mx-auto text-cream-400 mb-3" size={32} />
+              <p className="text-cream-500 text-sm">No AI usage tracked yet</p>
+              <p className="text-cream-400 text-xs mt-1">Cost tracking starts with the next AI request</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <p className="text-xs text-cream-400 text-center">
+        Costs are estimated based on Anthropic's published pricing. Actual billing may differ slightly.
+      </p>
     </div>
   );
 }

@@ -250,8 +250,7 @@ router.post('/api/ai/process', async (ctx) => {
   }
 
   const { messages, maxTokens, system, model } = ctx.body;
-
-  ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {}));
+  const usedModel = model || 'claude-sonnet-4-20250514';
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -261,7 +260,7 @@ router.post('/api/ai/process', async (ctx) => {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: model || 'claude-sonnet-4-20250514',
+      model: usedModel,
       max_tokens: maxTokens || 2000,
       system: system || undefined,
       messages,
@@ -275,6 +274,14 @@ router.post('/api/ai/process', async (ctx) => {
 
   const data = await res.json();
   const text = data.content?.[0]?.text || '';
+
+  // Log token usage for cost tracking
+  const usage = data.usage || {};
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {
+    model: usedModel,
+    inputTokens: usage.input_tokens || 0,
+    outputTokens: usage.output_tokens || 0,
+  }));
 
   // Try to extract JSON
   const jsonMatch = text.match(/\{[\s\S]*\}/);

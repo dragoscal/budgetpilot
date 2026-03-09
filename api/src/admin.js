@@ -266,6 +266,76 @@ export function registerAdminRoutes(router) {
     });
   });
 
+  // ─── AI usage & cost per user ─────────────────────────
+  router.get('/api/admin/ai-costs', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    // Pricing per million tokens (USD)
+    const MODEL_PRICING = {
+      'claude-sonnet-4-20250514': { input: 3, output: 15 },
+      'claude-haiku-3-20240307':  { input: 0.25, output: 1.25 },
+      'claude-haiku-3.5':         { input: 1, output: 5 },
+    };
+    const DEFAULT_PRICING = { input: 3, output: 15 }; // fallback to Sonnet pricing
+
+    const result = await ctx.env.DB.prepare(`
+      SELECT a.userId, u.name, u.email, a.metadata, a.timestamp
+      FROM activity_log a
+      LEFT JOIN users u ON a.userId = u.id
+      WHERE a.action = 'ai_process' AND a.metadata != '{}'
+      ORDER BY a.timestamp DESC
+    `).all();
+
+    const rows = result.results || [];
+    const byUser = {};
+
+    for (const row of rows) {
+      let meta = {};
+      try { meta = JSON.parse(row.metadata || '{}'); } catch {}
+      if (!meta.inputTokens && !meta.outputTokens) continue;
+
+      const pricing = MODEL_PRICING[meta.model] || DEFAULT_PRICING;
+      const inputCost = (meta.inputTokens || 0) / 1_000_000 * pricing.input;
+      const outputCost = (meta.outputTokens || 0) / 1_000_000 * pricing.output;
+
+      if (!byUser[row.userId]) {
+        byUser[row.userId] = {
+          userId: row.userId,
+          name: row.name || 'Unknown',
+          email: row.email || '',
+          totalRequests: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          totalCostUSD: 0,
+          lastUsed: null,
+        };
+      }
+
+      const u = byUser[row.userId];
+      u.totalRequests++;
+      u.totalInputTokens += meta.inputTokens || 0;
+      u.totalOutputTokens += meta.outputTokens || 0;
+      u.totalCostUSD += inputCost + outputCost;
+      if (!u.lastUsed) u.lastUsed = row.timestamp;
+    }
+
+    // Round costs and sort by cost descending
+    const users = Object.values(byUser).map(u => ({
+      ...u,
+      totalCostUSD: Math.round(u.totalCostUSD * 10000) / 10000, // 4 decimal places
+    })).sort((a, b) => b.totalCostUSD - a.totalCostUSD);
+
+    const grandTotal = users.reduce((sum, u) => sum + u.totalCostUSD, 0);
+
+    return json({
+      data: {
+        users,
+        grandTotal: Math.round(grandTotal * 10000) / 10000,
+      }
+    });
+  });
+
   // ─── Log cleanup (retention) ───────────────────────────
   router.post('/api/admin/cleanup', async (ctx) => {
     const denied = requireAdmin(ctx);
