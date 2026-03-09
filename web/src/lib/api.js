@@ -138,6 +138,8 @@ export const people = createCrud('people');
 export const debts = createCrud('debts');
 export const debtPayments = createCrud('debtPayments');
 export const wishlistApi = createCrud('wishlist');
+export const loans = createCrud('loans');
+export const loanPayments = createCrud('loanPayments');
 
 // Settings
 export const settings = {

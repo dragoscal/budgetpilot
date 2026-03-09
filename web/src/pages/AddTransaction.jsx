@@ -10,10 +10,11 @@ import ReceiptScanner from '../components/ReceiptScanner';
 import QuickAdd from '../components/QuickAdd';
 import ManualForm from '../components/ManualForm';
 import CategoryPicker from '../components/CategoryPicker';
+import BankStatementUpload from '../components/BankStatementUpload';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
-  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText,
+  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -364,6 +365,7 @@ export default function AddTransaction() {
   const tabs = [
     { id: 'quick', label: 'Quick Add', icon: Zap },
     { id: 'receipt', label: 'Receipt', icon: Camera },
+    { id: 'bank', label: 'Statement', icon: Building2 },
   ];
 
   const reviewItemsCount = pendingResults
@@ -506,6 +508,14 @@ export default function AddTransaction() {
         <div className="card">
           <h3 className="text-sm font-semibold mb-3">Scan receipt</h3>
           <ReceiptScanner onResult={handleAIResult} onError={handleError} />
+        </div>
+      )}
+
+      {/* Bank Statement Upload */}
+      {activeTab === 'bank' && (
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">Import bank statement</h3>
+          <BankStatementUpload onResult={handleAIResult} onError={handleError} />
         </div>
       )}
 
@@ -715,7 +725,7 @@ export default function AddTransaction() {
                                 <div className="flex items-center gap-0.5 shrink-0">
                                   <button
                                     onClick={() => adjustQty(idx, itemIdx, -1)}
-                                    className="w-5 h-5 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
+                                    className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
                                     title="Decrease quantity"
                                   >
                                     <Minus size={10} />
@@ -742,7 +752,7 @@ export default function AddTransaction() {
                                   </span>
                                   <button
                                     onClick={() => adjustQty(idx, itemIdx, 1)}
-                                    className="w-5 h-5 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
+                                    className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
                                     title="Increase quantity"
                                   >
                                     <Plus size={10} />
@@ -774,7 +784,7 @@ export default function AddTransaction() {
                                 {/* Delete item */}
                                 <button
                                   onClick={() => deleteItem(idx, itemIdx)}
-                                  className="p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0"
+                                  className="p-1.5 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0"
                                   title="Remove item"
                                 >
                                   <Trash2 size={12} />

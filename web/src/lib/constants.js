@@ -142,6 +142,24 @@ export const GOAL_TYPES = {
   pay_down: { label: 'Pay Down', icon: '💳' },
 };
 
+export const LOAN_TYPES = [
+  { id: 'mortgage', name: 'Mortgage', icon: '🏠', description: 'Home loan' },
+  { id: 'auto', name: 'Auto Loan', icon: '🚗', description: 'Vehicle financing' },
+  { id: 'personal', name: 'Personal Loan', icon: '💰', description: 'Personal / consumer loan' },
+  { id: 'student', name: 'Student Loan', icon: '🎓', description: 'Education loan' },
+  { id: 'credit_card', name: 'Credit Card', icon: '💳', description: 'Credit card balance' },
+  { id: 'business', name: 'Business Loan', icon: '🏢', description: 'Business financing' },
+  { id: 'medical', name: 'Medical Loan', icon: '🏥', description: 'Medical / healthcare' },
+  { id: 'other', name: 'Other Loan', icon: '📋', description: 'Other type of loan' },
+];
+
+export const LOAN_STATUSES = [
+  { id: 'active', name: 'Active', color: 'text-info', bg: 'bg-info/10' },
+  { id: 'paid_off', name: 'Paid Off', color: 'text-success', bg: 'bg-success/10' },
+  { id: 'defaulted', name: 'Defaulted', color: 'text-danger', bg: 'bg-danger/10' },
+  { id: 'refinanced', name: 'Refinanced', color: 'text-warning', bg: 'bg-warning/10' },
+];
+
 export const MERCHANT_CATEGORY_MAP = {
   lidl: 'groceries', kaufland: 'groceries', carrefour: 'groceries',
   'mega image': 'groceries', auchan: 'groceries', profi: 'groceries',

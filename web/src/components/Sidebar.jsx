@@ -7,6 +7,7 @@ import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Wallet, Shield,
+  Building2,
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -24,6 +25,7 @@ const NAV_SECTIONS = [
       { to: '/budgets', icon: PiggyBank, label: 'Budgets' },
       { to: '/goals', icon: Target, label: 'Goals' },
       { to: '/recurring', icon: RotateCcw, label: 'Recurring' },
+      { to: '/loans', icon: Building2, label: 'Loans' },
     ],
   },
   {

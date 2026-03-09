@@ -3,10 +3,10 @@ import { json } from './router.js';
 import { generateId } from './auth.js';
 import { logActivity } from './index.js';
 
-const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist'];
+const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments'];
 
 // Map client-side store names to D1 table names (for sync compatibility)
-const TABLE_ALIASES = { debtPayments: 'debt_payments' };
+const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments' };
 
 function resolveTable(name) {
   return TABLE_ALIASES[name] || name;
@@ -26,6 +26,8 @@ const TABLE_COLUMNS = {
   debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
   debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),
   wishlist: new Set(['id','userId','name','estimatedPrice','currency','category','priority','url','notes','purchased','purchasedDate','createdAt','updatedAt']),
+  loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
+  loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
 };
 
 // Strip unknown columns so D1 doesn't throw "table X has no column named Y"

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'budgetpilot';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let dbPromise = null;
 
@@ -82,6 +82,21 @@ function getDB() {
             draftStore.createIndex('savedAt', 'savedAt');
           }
         }
+
+        // v6: Bank loans
+        if (oldVersion < 6) {
+          if (!db.objectStoreNames.contains('loans')) {
+            const loanStore = db.createObjectStore('loans', { keyPath: 'id' });
+            loanStore.createIndex('type', 'type');
+            loanStore.createIndex('status', 'status');
+            loanStore.createIndex('userId', 'userId');
+          }
+          if (!db.objectStoreNames.contains('loanPayments')) {
+            const lpStore = db.createObjectStore('loanPayments', { keyPath: 'id' });
+            lpStore.createIndex('loanId', 'loanId');
+            lpStore.createIndex('date', 'date');
+          }
+        }
       },
     });
   }
@@ -153,10 +168,12 @@ export async function clearStore(store) {
 
 export async function exportAll() {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist'];
+  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
   const data = {};
   for (const store of stores) {
-    data[store] = await db.getAll(store);
+    if (db.objectStoreNames.contains(store)) {
+      data[store] = await db.getAll(store);
+    }
   }
   data._exportDate = new Date().toISOString();
   data._version = DB_VERSION;
@@ -165,7 +182,7 @@ export async function exportAll() {
 
 export async function importAll(data) {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist'];
+  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
   for (const store of stores) {
     if (data[store] && Array.isArray(data[store])) {
       const tx = db.transaction(store, 'readwrite');
@@ -180,7 +197,7 @@ export async function importAll(data) {
 
 export async function clearAllData() {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debtPayments', 'wishlist'];
+  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
   for (const store of stores) {
     await db.clear(store);
   }

@@ -213,7 +213,50 @@ CREATE TABLE IF NOT EXISTS feedback (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
+-- Bank loans
+CREATE TABLE IF NOT EXISTS loans (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'personal',
+  lender TEXT,
+  principalAmount REAL NOT NULL,
+  remainingBalance REAL NOT NULL,
+  interestRate REAL DEFAULT 0,
+  interestType TEXT DEFAULT 'fixed',
+  monthlyPayment REAL DEFAULT 0,
+  currency TEXT DEFAULT 'RON',
+  startDate TEXT NOT NULL,
+  endDate TEXT,
+  paymentDay INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'active',
+  notes TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS loan_payments (
+  id TEXT PRIMARY KEY,
+  userId TEXT,
+  loanId TEXT NOT NULL,
+  amount REAL NOT NULL,
+  principalPortion REAL DEFAULT 0,
+  interestPortion REAL DEFAULT 0,
+  date TEXT NOT NULL,
+  note TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT,
+  FOREIGN KEY (loanId) REFERENCES loans(id),
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Indexes
+CREATE INDEX IF NOT EXISTS idx_loans_userId ON loans(userId);
+CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
+CREATE INDEX IF NOT EXISTS idx_loans_type ON loans(type);
+CREATE INDEX IF NOT EXISTS idx_loan_payments_loanId ON loan_payments(loanId);
+CREATE INDEX IF NOT EXISTS idx_loan_payments_date ON loan_payments(date);
 CREATE INDEX IF NOT EXISTS idx_feedback_userId ON feedback(userId);
 CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
 CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(type);

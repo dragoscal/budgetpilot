@@ -294,6 +294,122 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
   return normalized;
 }
 
+// ─── BANK STATEMENT PROCESSING ───────────────────────────
+const BANK_STATEMENT_PROMPT = `You are an expert bank statement parser for a Romanian budgeting app called BudgetPilot. You extract individual transactions from PDF bank statements.
+
+BANK STATEMENT RULES:
+- Parse EVERY transaction from the statement — debits, credits, transfers, fees
+- Romanian banks: BRD, BCR, ING, Raiffeisen, Banca Transilvania, CEC, UniCredit, OTP, Alpha Bank
+- Date format: convert any format to YYYY-MM-DD
+- Amounts: always POSITIVE numbers. Use "type" to indicate expense/income
+- Currency: detect from statement (RON/EUR/USD/GBP). Default RON if unclear
+- Debits/withdrawals/payments = "expense", Credits/deposits/salary = "income"
+- Transfer between own accounts = "transfer"
+
+CATEGORIZATION — Assign categories based on merchant/description:
+${CATEGORIES.map((c) => `- ${c.id}: ${c.name}`).join('\n')}
+
+COMMON MERCHANT MAPPINGS:
+- POS/card payments at stores → groceries/shopping/etc based on store name
+- ATM withdrawal → "other" (cash withdrawal)
+- Salary/salariu/venit → income
+- Netflix/Spotify/YouTube/Apple → subscriptions
+- Enel/Engie/Digi/RCS-RDS/Vodafone/Orange → utilities
+- Bolt/Uber/FreeNow → transport
+- Glovo/Tazz/Bolt Food → dining
+- Bank fees/comision → "other" (bank fee)
+- Loan payment/rata credit → "other" (loan payment)
+- Insurance/asigurare → "other" (insurance)
+- Interest/dobanda → income (if credit) or "other" (if debit)
+
+RETURN FORMAT:
+{
+  "bankName": "Bank Name",
+  "accountNumber": "XXXX (last 4 digits only)",
+  "statementPeriod": { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" },
+  "currency": "RON",
+  "openingBalance": 1234.56,
+  "closingBalance": 1234.56,
+  "transactions": [
+    {
+      "date": "YYYY-MM-DD",
+      "merchant": "Store/Company Name",
+      "description": "Brief description",
+      "amount": 45.00,
+      "currency": "RON",
+      "type": "expense",
+      "category": "groceries",
+      "subcategory": null,
+      "confidence": 0.9,
+      "reference": "optional transaction ref from statement"
+    }
+  ],
+  "summary": "Brief summary: X transactions, Y expenses totaling Z, W income totaling V"
+}
+
+IMPORTANT:
+- Include ALL transactions, even small fees
+- Do NOT include opening/closing balance rows as transactions
+- Merge multi-line descriptions into one transaction
+- If a transaction description is unclear, set category to "other" and confidence low
+- For card payments, extract the actual merchant name from "POS <merchant>" format`;
+
+export async function processBankStatement(pdfBase64) {
+  const result = await callAI([
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+        },
+        {
+          type: 'text',
+          text: 'Parse this bank statement PDF completely. Extract EVERY transaction with date, merchant, amount, category. Return the full JSON structure with all transactions found.',
+        },
+      ],
+    },
+  ], BANK_STATEMENT_PROMPT, 8000);
+
+  return normalizeBankStatementResult(result);
+}
+
+function normalizeBankStatementResult(result) {
+  const txns = result.transactions || [];
+  const today = formatDateISO(new Date());
+
+  const normalized = txns.map((t) => ({
+    id: generateId(),
+    merchant: t.merchant || t.description || 'Unknown',
+    amount: Math.abs(Number(t.amount)) || 0,
+    currency: t.currency || result.currency || 'RON',
+    category: t.category || 'other',
+    subcategory: t.subcategory || null,
+    date: t.date || today,
+    type: t.type || 'expense',
+    description: t.description || '',
+    source: 'bank_statement',
+    confidence: t.confidence || 0.7,
+    needsReview: (t.confidence || 0.7) < 0.7,
+    reference: t.reference || null,
+  }));
+
+  return {
+    transactions: normalized,
+    bankInfo: {
+      bankName: result.bankName || 'Unknown Bank',
+      accountNumber: result.accountNumber || '',
+      period: result.statementPeriod || null,
+      currency: result.currency || 'RON',
+      openingBalance: result.openingBalance,
+      closingBalance: result.closingBalance,
+    },
+    summary: result.summary || `${normalized.length} transactions extracted`,
+    hasItemsToReview: normalized.some((t) => t.needsReview),
+    warnings: [],
+  };
+}
+
 // ─── NLP PROCESSING ───────────────────────────────────────
 export async function processNaturalLanguage(text) {
   const today = formatDateISO(new Date());
