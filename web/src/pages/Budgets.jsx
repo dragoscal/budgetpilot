@@ -130,11 +130,11 @@ export default function Budgets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="page-title mb-0">Budgets</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <MonthPicker value={month} onChange={setMonth} />
-          <button onClick={() => { resetForm(); setEditBudget(null); setShowAdd(true); }} className="btn-primary text-xs flex items-center gap-1">
+          <button onClick={() => { resetForm(); setEditBudget(null); setShowAdd(true); }} className="btn-primary text-xs flex items-center gap-1 shrink-0">
             <Plus size={14} /> Add
           </button>
         </div>
