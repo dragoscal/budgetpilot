@@ -15,6 +15,30 @@ function resolveTable(name) {
 // JSON columns that need to be serialized/deserialized
 const JSON_COLUMNS = { transactions: ['tags', 'items'], };
 
+// Valid D1 columns per table — client may send extra fields that don't exist in the schema
+const TABLE_COLUMNS = {
+  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','items','splitFrom','createdAt','updatedAt','deletedAt']),
+  budgets: new Set(['id','userId','category','amount','currency','month','rollover','createdAt','updatedAt']),
+  goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
+  accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
+  recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','endDate','active','autoDetected','createdAt','updatedAt']),
+  people: new Set(['id','userId','name','emoji','phone','notes','createdAt','updatedAt']),
+  debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
+  debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),
+  wishlist: new Set(['id','userId','name','estimatedPrice','currency','category','priority','url','notes','purchased','purchasedDate','createdAt','updatedAt']),
+};
+
+// Strip unknown columns so D1 doesn't throw "table X has no column named Y"
+function filterColumns(table, data) {
+  const allowed = TABLE_COLUMNS[table];
+  if (!allowed) return data;
+  const filtered = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (allowed.has(key)) filtered[key] = value;
+  }
+  return filtered;
+}
+
 function serializeRow(table, data) {
   const jsonCols = JSON_COLUMNS[table] || [];
   const out = { ...data };
@@ -59,8 +83,10 @@ export function registerCrudRoutes(router) {
 
         const now = new Date().toISOString();
         if (action === 'create' || action === 'update') {
-          const row = serializeRow(table, { ...data, userId: ctx.user.id, updatedAt: now });
-          if (action === 'create') row.createdAt = row.createdAt || now;
+          const raw = serializeRow(table, { ...data, userId: ctx.user.id, updatedAt: now });
+          if (action === 'create') raw.createdAt = raw.createdAt || now;
+          // Strip client-only fields that don't exist in D1 schema
+          const row = filterColumns(table, raw);
 
           const columns = Object.keys(row);
           const placeholders = columns.map(() => '?').join(', ');
@@ -206,13 +232,15 @@ export function registerCrudRoutes(router) {
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
     const now = new Date().toISOString();
-    const data = serializeRow(table, {
+    const raw = serializeRow(table, {
       ...ctx.body,
       id: ctx.body.id || generateId(),
       userId: ctx.user.id,
       createdAt: now,
       updatedAt: now,
     });
+    // Strip unknown client-only fields
+    const data = filterColumns(table, raw);
 
     const columns = Object.keys(data);
     const placeholders = columns.map(() => '?').join(', ');
@@ -239,10 +267,12 @@ export function registerCrudRoutes(router) {
       .bind(id, ctx.user.id).first();
     if (!existing) return json({ error: 'Not found' }, 404);
 
-    const data = serializeRow(table, { ...ctx.body, updatedAt: new Date().toISOString() });
-    delete data.id;
-    delete data.userId;
-    delete data.createdAt;
+    const raw = serializeRow(table, { ...ctx.body, updatedAt: new Date().toISOString() });
+    delete raw.id;
+    delete raw.userId;
+    delete raw.createdAt;
+    // Strip unknown client-only fields
+    const data = filterColumns(table, raw);
 
     const sets = Object.keys(data).map((k) => `${k} = ?`).join(', ');
     const values = [...Object.values(data), id, ctx.user.id];
