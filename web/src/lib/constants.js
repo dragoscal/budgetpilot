@@ -101,12 +101,15 @@ export const SUBCATEGORIES = {
 };
 
 export const RECURRING_FREQUENCIES = [
+  { id: 'daily', label: 'Daily', multiplierToMonthly: 30.44 },
   { id: 'weekly', label: 'Weekly', multiplierToMonthly: 4.33 },
   { id: 'biweekly', label: 'Every 2 weeks', multiplierToMonthly: 2.17 },
   { id: 'monthly', label: 'Monthly', multiplierToMonthly: 1 },
-  { id: 'quarterly', label: 'Quarterly', multiplierToMonthly: 1 / 3 },
+  { id: 'bimonthly', label: 'Every 2 months', multiplierToMonthly: 0.5 },
+  { id: 'quarterly', label: 'Quarterly (3 months)', multiplierToMonthly: 1 / 3 },
   { id: 'semiannual', label: 'Every 6 months', multiplierToMonthly: 1 / 6 },
   { id: 'annual', label: 'Annually', multiplierToMonthly: 1 / 12 },
+  { id: 'biannual', label: 'Every 2 years', multiplierToMonthly: 1 / 24 },
 ];
 
 export const CURRENCIES = [
