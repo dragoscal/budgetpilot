@@ -305,6 +305,14 @@ export default function AddTransaction() {
     ? pendingResults.reduce((sum, tx) => sum + (tx.items?.filter(i => i.needsReview)?.length || 0), 0)
     : 0;
 
+  // ─── QTY +/- HELPERS ─────────────────────────────────────
+  const adjustQty = (txIdx, itemIdx, delta) => {
+    const item = pendingResults[txIdx].items[itemIdx];
+    const newQty = Math.max(1, (item.qty || 1) + delta);
+    updatePendingItem(txIdx, itemIdx, { qty: newQty });
+    recalcTxTotal(txIdx);
+  };
+
   // ─── RENDER INLINE EDIT ────────────────────────────────
   const renderEditableText = (txIdx, field, value, className = '', itemIdx = undefined) => {
     if (isEditing(txIdx, field, itemIdx)) {
@@ -317,7 +325,7 @@ export default function AddTransaction() {
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={handleEditKeyDown}
-          className={`bg-cream-50 dark:bg-dark-bg border border-cream-300 dark:border-dark-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-400 ${className}`}
+          className={`bg-white dark:bg-dark-card border-2 border-indigo-400 dark:border-indigo-500 rounded-lg px-2 py-1 outline-none shadow-sm ${className}`}
           step={type === 'number' ? '0.01' : undefined}
           inputMode={type === 'number' ? 'decimal' : undefined}
         />
@@ -326,10 +334,11 @@ export default function AddTransaction() {
     return (
       <span
         onClick={() => startEdit(txIdx, field, value, itemIdx)}
-        className={`cursor-pointer hover:bg-cream-100 dark:hover:bg-dark-border rounded px-1 py-0.5 transition-colors ${className}`}
-        title="Click to edit"
+        className={`cursor-pointer group/edit inline-flex items-center gap-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 rounded-lg px-1.5 py-0.5 transition-all ${className}`}
+        title="Tap to edit"
       >
         {value || '—'}
+        <Pencil size={10} className="text-cream-300 dark:text-cream-600 group-hover/edit:text-indigo-400 shrink-0 transition-colors" />
       </span>
     );
   };
@@ -443,7 +452,7 @@ export default function AddTransaction() {
       {/* ═══════ AI REVIEW WITH ENHANCED RECEIPT ═══════ */}
       {pendingResults && pendingResults.length > 0 && (
         <div className="card border-success/30 bg-success-light/30">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">Review & confirm</h3>
             <div className="flex gap-2">
               <button onClick={() => { setPendingResults(null); setReceiptMeta(null); }} className="btn-ghost text-xs flex items-center gap-1">
@@ -454,6 +463,9 @@ export default function AddTransaction() {
               </button>
             </div>
           </div>
+          <p className="text-[10px] text-cream-400 dark:text-cream-600 mb-3 flex items-center gap-1">
+            <Pencil size={10} /> Tap any value to edit — merchant, date, amount, item names, prices, quantities
+          </p>
 
           <div className="space-y-3">
             {pendingResults.map((tx, idx) => {
@@ -568,29 +580,43 @@ export default function AddTransaction() {
                                   <div className={`w-1.5 h-1.5 rounded-full ${dot.color} shrink-0`} title={dot.label} />
                                 )}
 
-                                {/* Qty */}
-                                <span className="text-cream-400 shrink-0 w-6 text-center">
-                                  {isEditing(idx, 'qty', itemIdx) ? (
-                                    <input
-                                      ref={editRef}
-                                      type="number"
-                                      value={editValue}
-                                      onChange={(e) => setEditValue(e.target.value)}
-                                      onBlur={commitEdit}
-                                      onKeyDown={handleEditKeyDown}
-                                      className="w-8 bg-cream-50 dark:bg-dark-bg border border-cream-300 dark:border-dark-border rounded px-1 py-0.5 text-xs text-center"
-                                      min="1"
-                                    />
-                                  ) : (
-                                    <span
-                                      onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)}
-                                      className="cursor-pointer hover:text-cream-700 dark:hover:text-cream-300"
-                                      title="Click to edit quantity"
-                                    >
-                                      {item.qty > 1 ? `${item.qty}x` : ''}
-                                    </span>
-                                  )}
-                                </span>
+                                {/* Qty with +/- */}
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <button
+                                    onClick={() => adjustQty(idx, itemIdx, -1)}
+                                    className="w-5 h-5 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
+                                    title="Decrease quantity"
+                                  >
+                                    <Minus size={10} />
+                                  </button>
+                                  <span
+                                    onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)}
+                                    className="w-7 text-center text-xs font-medium text-cream-600 dark:text-cream-400 cursor-pointer hover:text-indigo-500 transition-colors"
+                                    title="Tap to type quantity"
+                                  >
+                                    {isEditing(idx, 'qty', itemIdx) ? (
+                                      <input
+                                        ref={editRef}
+                                        type="number"
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onBlur={commitEdit}
+                                        onKeyDown={handleEditKeyDown}
+                                        className="w-7 bg-white dark:bg-dark-card border-2 border-indigo-400 rounded text-xs text-center py-0.5"
+                                        min="1"
+                                      />
+                                    ) : (
+                                      `${item.qty || 1}x`
+                                    )}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustQty(idx, itemIdx, 1)}
+                                    className="w-5 h-5 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
+                                    title="Increase quantity"
+                                  >
+                                    <Plus size={10} />
+                                  </button>
+                                </div>
 
                                 {/* Name - editable */}
                                 <div className="flex-1 min-w-0">
@@ -617,7 +643,7 @@ export default function AddTransaction() {
                                 {/* Delete item */}
                                 <button
                                   onClick={() => deleteItem(idx, itemIdx)}
-                                  className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
+                                  className="p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0"
                                   title="Remove item"
                                 >
                                   <Trash2 size={12} />
