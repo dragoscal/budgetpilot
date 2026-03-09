@@ -91,12 +91,29 @@ RETURN FORMAT:
   "summary": "Brief human-readable summary of the receipt"
 }
 
+CRITICAL AMOUNT RULES:
+- The transaction "amount" MUST equal the TOTAL printed on the receipt (look for "Total", "Total general", "TOTAL", "De plata")
+- When items are listed, transaction amount MUST equal the sum of (item.price × item.qty) — NEVER guess or fabricate a total
+- If you see a "Total general" or similar line, use EXACTLY that number
+- Double-check your math: sum the items and verify it matches the receipt total
+
+ROMANIAN UTILITY BILLS ("Listă de întreținere" / "Cheltuieli întreținere"):
+- These are monthly apartment maintenance bills, NOT regular store receipts
+- Category = "housing" (not utilities or electricity)
+- Merchant = the building administrator name (e.g. "Asociația de Proprietari", "Admin Locuinte X")
+- Each line item (apă, energie, curățenie, lift, fond reparații, iluminat, etc.) is an item
+- "Cota parte" = per-apartment share, "Nr persoane" = per-person share
+- Use the TOTAL column values as item prices (the final amount per line, not unit price)
+- The "Total general" at the bottom is the transaction total
+- These are ALWAYS a single "housing" transaction — do NOT split into multiple transactions
+
 SPLITTING RULES:
 - If a receipt has items from DIFFERENT categories (e.g., groceries + personal care + pet food), create SEPARATE transactions for each category group
 - Each transaction's amount = sum of its items
 - If all items are the same category, keep as ONE transaction
 - Restaurant receipts: always one transaction (dining category)
-- Gas station: fuel = transport, shop items = groceries/personal`;
+- Gas station: fuel = transport, shop items = groceries/personal
+- Utility/maintenance bills: always ONE transaction (housing category)`;
 
 // ─── NLP SYSTEM PROMPT ────────────────────────────────────
 const NLP_SYSTEM_PROMPT = `You parse natural language expense/income inputs for a Romanian budgeting app.
@@ -340,10 +357,26 @@ function normalizeReceiptResult(result) {
       ? items.reduce((s, i) => s + i.confidence, 0) / items.length
       : t.confidence || 0.8;
 
+    // Amount validation: prefer items sum when items exist, fallback to AI amount
+    const aiAmount = Math.abs(Number(t.amount)) || 0;
+    const itemsTotal = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const receiptTotal = Math.abs(Number(receipt.total)) || 0;
+
+    let amount;
+    if (items.length > 0 && itemsTotal > 0) {
+      // When items exist, use items sum — it's more reliable than AI's total
+      // But cross-check: if AI amount is very close to items total, trust it
+      const aiCloseToItems = aiAmount > 0 && Math.abs(aiAmount - itemsTotal) / itemsTotal < 0.02;
+      amount = aiCloseToItems ? aiAmount : itemsTotal;
+    } else {
+      amount = aiAmount || receiptTotal;
+    }
+
     return {
       id: generateId(),
       merchant: t.merchant || receipt.store || 'Unknown',
-      amount: Math.abs(Number(t.amount)) || items.reduce((s, i) => s + (i.price * i.qty), 0),
+      amount,
+      receiptTotal: receiptTotal || aiAmount, // store original for mismatch display
       currency: (t.currency || receipt.currency || 'RON').toUpperCase(),
       category: t.category || inferCategory(t.merchant || receipt.store),
       subcategory: t.subcategory || null,
