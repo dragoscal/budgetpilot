@@ -3,8 +3,8 @@ import { budgets as budgetsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { CATEGORIES, CURRENCIES, BUDGET_TEMPLATES } from '../lib/constants';
-import { generateId, formatCurrency, percentOf, sumBy, getDaysRemaining, formatDateISO } from '../lib/helpers';
+import { CATEGORIES, BUDGET_TEMPLATES } from '../lib/constants';
+import { generateId, formatCurrency, percentOf, sumBy, getDaysRemaining } from '../lib/helpers';
 import BudgetBar from '../components/BudgetBar';
 import CategoryPicker from '../components/CategoryPicker';
 import MonthPicker from '../components/MonthPicker';
@@ -376,7 +376,7 @@ export default function Budgets() {
             <span>{t('budgets.pctUsed', { pct: overallPct })}</span>
             <span>{t('budgets.daysRemaining', { count: daysLeft })}</span>
           </div>
-          {totalBudget > totalSpent && (
+          {totalBudget > totalSpent && daysLeft > 0 && (
             <p className="text-xs text-cream-500 mt-1">
               {t('budgets.safeToSpendPerDay', { amount: formatCurrency((totalBudget - totalSpent) / daysLeft, currency) })}
             </p>

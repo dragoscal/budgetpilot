@@ -3,7 +3,7 @@ import { recurring as recurringApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { CATEGORIES, CURRENCIES, RECURRING_FREQUENCIES } from '../lib/constants';
+import { RECURRING_FREQUENCIES } from '../lib/constants';
 import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { detectRecurringPatterns, auditSubscriptions } from '../lib/smartFeatures';

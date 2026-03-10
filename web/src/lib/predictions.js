@@ -3,7 +3,7 @@
  * Uses moving averages — no external ML library needed.
  */
 
-import { startOfMonth, endOfMonth, differenceInDays, format, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, differenceInDays, format } from 'date-fns';
 
 /**
  * Group transactions by month (YYYY-MM) and return per-month expense totals.

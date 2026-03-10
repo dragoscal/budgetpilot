@@ -16,24 +16,29 @@ export function getNotificationPermission() {
 
 export function sendNotification(title, body, options = {}) {
   if (Notification.permission !== 'granted') return null;
-  const notification = new Notification(title, {
-    body,
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
-    tag: options.tag || 'budgetpilot',
-    renotify: !!options.tag,
-    ...options
-  });
-  notification.onclick = () => {
-    window.focus();
-    if (options.url) window.location.href = options.url;
-    notification.close();
-  };
-  return notification;
+  try {
+    const notification = new Notification(title, {
+      body,
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      tag: options.tag || 'budgetpilot',
+      renotify: !!options.tag,
+      ...options
+    });
+    notification.onclick = () => {
+      window.focus();
+      if (options.url) window.location.href = options.url;
+      notification.close();
+    };
+    return notification;
+  } catch (err) {
+    console.warn('Failed to send notification:', err);
+    return null;
+  }
 }
 
 // Check budget alerts and send OS notifications (deduped per day)
-export async function checkAndNotifyBudgetAlerts(transactions, budgets) {
+export async function checkAndNotifyBudgetAlerts(transactions) {
   const { getSetting, setSetting } = await import('./storage.js');
   const enabled = await getSetting('notificationsEnabled');
   if (!enabled || Notification.permission !== 'granted') return;

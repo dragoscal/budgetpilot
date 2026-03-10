@@ -9,7 +9,6 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Landmark, Plus, Edit3, Trash2 } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const LIABILITY_TYPES = ['credit_card', 'loan'];
 

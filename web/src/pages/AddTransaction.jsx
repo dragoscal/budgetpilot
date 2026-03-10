@@ -25,7 +25,9 @@ export default function AddTransaction() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const sharedText = searchParams.get('text') || searchParams.get('title') || '';
-  const [activeTab, setActiveTab] = useState(sharedText ? 'quick' : 'quick');
+  const tabParam = searchParams.get('tab');
+  const TAB_ALIASES = { nlp: 'quick', import: 'csv', quick: 'quick', receipt: 'receipt', bank: 'bank', csv: 'csv' };
+  const [activeTab, setActiveTab] = useState(TAB_ALIASES[tabParam] || 'quick');
   const [showManual, setShowManual] = useState(false);
   const [pendingResults, setPendingResults] = useState(null);
   const [receiptMeta, setReceiptMeta] = useState(null);

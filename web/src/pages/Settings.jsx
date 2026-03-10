@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { getSetting, setSetting, getAllSettings } from '../lib/storage';
+import { setSetting, getAllSettings } from '../lib/storage';
 import { exportData, importData, clearData } from '../lib/api';
 import { deleteAccount, changePassword } from '../lib/auth';
 import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
@@ -13,7 +13,7 @@ import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants
 import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
 import { requestNotificationPermission, getNotificationPermission } from '../lib/notifications';
-import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
 import { CATEGORIES } from '../lib/constants';
 

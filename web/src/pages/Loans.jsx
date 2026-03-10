@@ -6,9 +6,9 @@ import { loans as loansApi, loanPayments as lpApi } from '../lib/api';
 import { formatCurrency, generateId, formatDate, formatDateISO } from '../lib/helpers';
 import { LOAN_TYPES, LOAN_STATUSES, CURRENCIES } from '../lib/constants';
 import {
-  Plus, Building2, Percent, Calendar, CreditCard, TrendingDown, DollarSign,
+  Plus, Building2, Percent, Calendar, TrendingDown, DollarSign,
   ChevronDown, ChevronUp, Edit3, Trash2, Check, X, Loader2, Clock,
-  AlertTriangle, CheckCircle, PiggyBank, BarChart3, CircleDollarSign,
+  AlertTriangle, CheckCircle, BarChart3, CircleDollarSign,
 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 
@@ -23,8 +23,9 @@ const EMPTY_PAYMENT = { amount: '', principalPortion: '', interestPortion: '', d
 
 export default function Loans() {
   const { toast } = useToast();
-  const { effectiveUserId } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { t } = useTranslation();
+  const currency = user?.defaultCurrency || 'RON';
   const [loansList, setLoansList] = useState([]);
   const [payments, setPayments] = useState({});
   const [loading, setLoading] = useState(true);
@@ -41,11 +42,11 @@ export default function Loans() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const allLoans = await loansApi.getAll();
+      const allLoans = await loansApi.getAll({ userId: effectiveUserId });
       setLoansList(Array.isArray(allLoans) ? allLoans : []);
 
       // Load payments for all loans
-      const allPayments = await lpApi.getAll();
+      const allPayments = await lpApi.getAll({ userId: effectiveUserId });
       const grouped = {};
       (Array.isArray(allPayments) ? allPayments : []).forEach((p) => {
         if (!grouped[p.loanId]) grouped[p.loanId] = [];

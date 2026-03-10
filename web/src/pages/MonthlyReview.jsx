@@ -6,7 +6,6 @@ import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndica
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { FileText } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 

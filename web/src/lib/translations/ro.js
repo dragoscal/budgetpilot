@@ -173,6 +173,8 @@ const ro = {
 
   // ─── Personalizare widgeturi panou ─────────────────────
   'dashboard.customizeWidgets': 'Personalizează widgeturile',
+  'dashboard.customizeStats': 'Personalizează statisticile',
+  'dashboard.statCards': 'Carduri statistici',
   'dashboard.showWidget': 'Afișează',
   'dashboard.hideWidget': 'Ascunde',
   'dashboard.widgetOrder': 'Ordine widgeturi',

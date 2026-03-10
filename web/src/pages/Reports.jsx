@@ -5,9 +5,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById } from '../lib/helpers';
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
-import { getTagStats } from '../lib/tagHelpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { FileText, Download, Printer, Filter, Calendar, ClipboardList } from 'lucide-react';
+import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 
@@ -47,7 +46,7 @@ export default function Reports() {
         toast.error(t('reports.failedLoad') || 'Failed to load report data');
       } finally { setLoading(false); }
     })();
-  }, []);
+  }, [effectiveUserId]);
 
   // Filter by date range
   const filtered = useMemo(() => {

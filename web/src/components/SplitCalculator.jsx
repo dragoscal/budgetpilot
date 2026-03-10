@@ -24,6 +24,7 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
 
   const handleTypeChange = (type) => {
     setSplitType(type);
+    if (members.length === 0) return;
 
     if (type === 'equal') {
       const perPerson = Math.round((totalAmount / members.length) * 100) / 100;

@@ -52,6 +52,7 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
             learnCategory(merchant, newCategory);
             toast.success(t('categories.learnConfirm'));
           },
+          duration: 6000,
         }
       );
     }

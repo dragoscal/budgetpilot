@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
-import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getDaysRemaining, formatDate, getCategoryById, sortByDate, getRecurringDueToday, generateId, todayLocal, getDisplayAmount } from '../lib/helpers';
+import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getCategoryById, sortByDate, getRecurringDueToday, generateId } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { predictMonthlySpending, predictEndOfMonthBalance, getSpendingAnomalies } from '../lib/predictions';
 import { getBillSuggestions, dismissSuggestion } from '../lib/billSuggestions';
@@ -18,14 +18,15 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical } from 'lucide-react';
-import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical } from 'lucide-react';
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, effectiveUserId } = useAuth();
-  const { hideAmounts, updateHideAmounts, shouldHide } = useHideAmounts();
+  // eslint-disable-next-line no-unused-vars -- context available for future use
+  const hideAmountsCtx = useHideAmounts();
   const { t } = useTranslation();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
@@ -114,6 +115,58 @@ export default function Dashboard() {
   // Bill suggestion dismissals trigger re-render
   const [billSuggestionVersion, setBillSuggestionVersion] = useState(0);
 
+  // ─── Stat card ordering + visibility (draggable) ──────
+  const STAT_CARD_ALL = [
+    { id: 'totalSpent', visible: true },
+    { id: 'totalIncome', visible: true },
+    { id: 'net', visible: true },
+    { id: 'budgetLeft', visible: true },
+    { id: 'dailyAvg', visible: true },
+    { id: 'netWorth', visible: true },
+  ];
+
+  const STAT_CARD_LABELS = {
+    totalSpent: 'dashboard.totalSpent',
+    totalIncome: 'dashboard.totalIncome',
+    net: 'dashboard.net',
+    budgetLeft: 'dashboard.budgetLeft',
+    dailyAvg: 'dashboard.dailyAvg',
+    netWorth: 'dashboard.netWorth',
+  };
+
+  const [statCardConfig, setStatCardConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bp_statCardConfig');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id) {
+          // Merge: ensure any new cards from defaults are added
+          const ids = parsed.map(s => s.id);
+          const missing = STAT_CARD_ALL.filter(s => !ids.includes(s.id));
+          return [...parsed, ...missing];
+        }
+      }
+    } catch {}
+    return STAT_CARD_ALL;
+  });
+  const [draggedStat, setDraggedStat] = useState(null);
+  const [dragOverStat, setDragOverStat] = useState(null);
+  const [showStatSettings, setShowStatSettings] = useState(false);
+
+  const saveStatCardConfig = useCallback((config) => {
+    setStatCardConfig(config);
+    localStorage.setItem('bp_statCardConfig', JSON.stringify(config));
+  }, []);
+
+  const toggleStatCard = useCallback((id) => {
+    const updated = statCardConfig.map(s => s.id === id ? { ...s, visible: !s.visible } : s);
+    saveStatCardConfig(updated);
+  }, [statCardConfig, saveStatCardConfig]);
+
+  const resetStatCards = useCallback(() => {
+    saveStatCardConfig(STAT_CARD_ALL);
+  }, [saveStatCardConfig]);
+
   useEffect(() => {
     loadData();
   }, [month, effectiveUserId]);
@@ -170,7 +223,7 @@ export default function Dashboard() {
     const runNotificationChecks = async () => {
       try {
         // Check budget alerts and send OS notifications
-        await checkAndNotifyBudgetAlerts(transactions, budgetsList);
+        await checkAndNotifyBudgetAlerts(transactions);
         // Store budget alerts in notification center
         const { checkBudgetAlerts } = await import('../lib/smartFeatures');
         const alerts = await checkBudgetAlerts(transactions);
@@ -676,17 +729,88 @@ export default function Dashboard() {
         if (!w.visible) return null;
 
         switch (w.id) {
-          case 'quickStats':
+          case 'quickStats': {
+            const STAT_CARDS = {
+              totalSpent: { label: t('dashboard.totalSpent'), value: formatCurrency(stats.totalSpent, currency), trend: stats.spentTrend, icon: TrendingDown, accent: '#e11d48' },
+              totalIncome: { label: t('dashboard.totalIncome'), value: formatCurrency(stats.totalIncome, currency), icon: TrendingUp, accent: '#059669' },
+              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#6366f1' },
+              budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#d97706' },
+              dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0ea5e9' },
+              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#6366f1' },
+            };
             return (
               <div key="quickStats">
-                {/* Stat cards — horizontal scroll on mobile, grid on desktop */}
+                {/* Stat card settings toggle */}
+                <div className="relative flex items-center justify-end mb-1.5">
+                  <button
+                    onClick={() => setShowStatSettings(v => !v)}
+                    className="flex items-center gap-1 text-[11px] text-cream-500 dark:text-cream-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
+                  >
+                    <Settings size={12} />
+                    {t('dashboard.customizeStats')}
+                  </button>
+                  {showStatSettings && (
+                    <div className="absolute top-6 right-0 z-50 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg p-3 w-56">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-cream-700 dark:text-cream-200">{t('dashboard.statCards')}</p>
+                        <button onClick={resetStatCards} className="text-[10px] text-accent-600 dark:text-accent-400 hover:underline">{t('common.reset')}</button>
+                      </div>
+                      {statCardConfig.map(s => (
+                        <label key={s.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                          <input type="checkbox" checked={s.visible} onChange={() => toggleStatCard(s.id)} className="accent-accent-600" />
+                          <span className="text-xs text-cream-700 dark:text-cream-200">{t(STAT_CARD_LABELS[s.id] || s.id)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Stat cards — draggable, horizontal scroll on mobile, grid on desktop */}
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
-                  <StatCard label={t('dashboard.totalSpent')} value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-                  <StatCard label={t('dashboard.totalIncome')} value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-                  <StatCard label={t('dashboard.net')} value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-                  <StatCard label={t('dashboard.budgetLeft')} value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-                  <StatCard label={t('dashboard.dailyAvg')} value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-                  <StatCard label={t('dashboard.netWorth')} value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+                  {statCardConfig.filter(s => s.visible).map((statItem) => {
+                    const card = STAT_CARDS[statItem.id];
+                    if (!card) return null;
+                    return (
+                      <div
+                        key={statItem.id}
+                        draggable="true"
+                        onDragStart={(e) => {
+                          setDraggedStat(statItem.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', statItem.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (draggedStat && draggedStat !== statItem.id) setDragOverStat(statItem.id);
+                        }}
+                        onDragLeave={() => setDragOverStat((prev) => prev === statItem.id ? null : prev)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedStat && draggedStat !== statItem.id) {
+                            const fromIdx = statCardConfig.findIndex(s => s.id === draggedStat);
+                            const toIdx = statCardConfig.findIndex(s => s.id === statItem.id);
+                            if (fromIdx >= 0 && toIdx >= 0) {
+                              const updated = [...statCardConfig];
+                              const [moved] = updated.splice(fromIdx, 1);
+                              updated.splice(toIdx, 0, moved);
+                              saveStatCardConfig(updated);
+                            }
+                          }
+                          setDraggedStat(null);
+                          setDragOverStat(null);
+                        }}
+                        onDragEnd={() => { setDraggedStat(null); setDragOverStat(null); }}
+                        className={`min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start transition-all ${
+                          draggedStat === statItem.id ? 'opacity-40 scale-95' :
+                          dragOverStat === statItem.id ? 'ring-2 ring-accent-400/50 ring-offset-2 dark:ring-offset-dark-bg scale-[1.02]' :
+                          'cursor-grab active:cursor-grabbing'
+                        }`}
+                      >
+                        <StatCard {...card} hide={hidden} compact />
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Spending velocity indicator */}
@@ -729,6 +853,7 @@ export default function Dashboard() {
                 </div>
               </div>
             );
+          }
 
           case 'healthScore':
             return (

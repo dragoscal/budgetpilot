@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { formatCurrency, getCategoryById, sumBy, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
+import { formatCurrency, getCategoryById, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';

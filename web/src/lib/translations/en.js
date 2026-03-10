@@ -173,6 +173,8 @@ const en = {
 
   // ─── Dashboard Widget Customization ────────────────────
   'dashboard.customizeWidgets': 'Customize widgets',
+  'dashboard.customizeStats': 'Customize stats',
+  'dashboard.statCards': 'Stat Cards',
   'dashboard.showWidget': 'Show',
   'dashboard.hideWidget': 'Hide',
   'dashboard.widgetOrder': 'Widget order',

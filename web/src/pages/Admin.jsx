@@ -11,8 +11,8 @@ import {
 } from 'recharts';
 import {
   Shield, Users, Activity, AlertTriangle, Zap, RefreshCw,
-  KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot, DollarSign,
-  MessageSquare, Bug, Lightbulb, Eye, ChevronDown, ChevronUp,
+  KeyRound, Ban, CheckCircle, Trash2, UserX, UserCheck, Bot, DollarSign,
+  MessageSquare, Bug, Lightbulb, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -51,7 +51,7 @@ function useTimeAgo() {
 
 export default function Admin() {
   const { user } = useAuth();
-  const toast = useToast();
+  const { toast } = useToast();
   const { t } = useTranslation();
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -648,7 +648,7 @@ function PerformanceTab({ performance }) {
 
 // ─── Feedback Tab ───────────────────────────────────────
 function FeedbackTab({ data, counts, onUpdate }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const { t } = useTranslation();
   const timeAgo = useTimeAgo();
   const [filter, setFilter] = useState('all');

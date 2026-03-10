@@ -4,12 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { generateId, formatCurrency, getCategoryById, formatDateISO } from '../lib/helpers';
-import { CATEGORIES } from '../lib/constants';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { Trophy, Plus, Flame, Target, Ban, PiggyBank, Check, X, Calendar, TrendingDown } from 'lucide-react';
+import { Trophy, Plus, Flame, Target, Ban, Check, X } from 'lucide-react';
 
 const getChallengePresets = (t) => [
   { type: 'no_spend', title: t('challenges.presetNoSpendWeekend'), icon: '🚫', description: t('challenges.presetNoSpendWeekendDesc'), durationDays: 2, category: null },

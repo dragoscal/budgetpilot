@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getNotifications, getUnreadCount, markRead, markAllRead, clearOldNotifications } from '../lib/notificationStore';
-import { Bell, BellDot, Check, CheckCheck, AlertTriangle, TrendingUp, RotateCcw, Info, Trophy, X } from 'lucide-react';
+import { Bell, BellDot, CheckCheck, AlertTriangle, TrendingUp, RotateCcw, Info, Trophy, X } from 'lucide-react';
 
 const TYPE_ICONS = {
   budget_warning: AlertTriangle,

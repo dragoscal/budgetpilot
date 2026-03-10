@@ -552,7 +552,7 @@ export default function Family() {
                 onBlur={(e) => {
                   if (myMembership) {
                     updateMemberIncome(myMembership.id, e.target.value);
-                    toast.success(t('family.displayNameUpdated'));
+                    toast.success(t('family.roleUpdated'));
                   }
                 }}
               />

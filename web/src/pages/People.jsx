@@ -3,11 +3,11 @@ import { people as peopleApi, debts as debtsApi, debtPayments as paymentsApi, tr
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { generateId, formatCurrency, sumBy, formatDate, todayLocal, calculateSettlements } from '../lib/helpers';
+import { generateId, formatCurrency, sumBy, todayLocal, calculateSettlements } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import {
-  Users, Plus, ArrowUpRight, ArrowDownLeft, Check, Trash2,
+  Users, ArrowUpRight, ArrowDownLeft, Check, Trash2,
   ChevronRight, Wallet, TrendingUp, TrendingDown, Clock,
   HandCoins, Banknote, UserPlus, DollarSign, CalendarClock, AlertTriangle, Info,
   Scale, ArrowRight,
@@ -49,7 +49,7 @@ export default function People() {
       const [people, debts, payments] = await Promise.all([
         peopleApi.getAll({ userId: effectiveUserId }),
         debtsApi.getAll({ userId: effectiveUserId }),
-        paymentsApi.getAll(),
+        paymentsApi.getAll({ userId: effectiveUserId }),
       ]);
       setPeople(people);
       setDebts(debts);
