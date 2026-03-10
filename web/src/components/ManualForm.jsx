@@ -274,7 +274,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
             <div className="space-y-2">
               {familyMembers.map((m) => (
                 <div key={m.userId} className="flex items-center gap-2">
-                  <span className="text-sm w-24 truncate">{m.emoji} {m.displayName}</span>
+                  <span className="text-sm min-w-0 w-20 sm:w-24 truncate shrink-0">{m.emoji} {m.displayName}</span>
                   <input
                     type="number"
                     step="0.01"

@@ -203,6 +203,13 @@ export async function pullFromServer() {
         const storeName = toLocalStore(serverTable);
         for (const record of records) {
           try {
+            // If server record is soft-deleted, remove it locally
+            if (record.deletedAt) {
+              try { await remove(storeName, record.id); } catch {}
+              importedCount++;
+              continue;
+            }
+
             // Keep server userId for proper multi-user isolation
             const localRecord = { ...record };
 

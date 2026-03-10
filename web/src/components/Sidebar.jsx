@@ -338,7 +338,7 @@ export default function Sidebar() {
       )}
 
       {/* Mobile bottom tab bar */}
-      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-1 py-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-0.5 py-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { to: '/', icon: LayoutDashboard, label: t('nav.home') },
           { to: '/transactions', icon: Receipt, label: t('nav.history') },
@@ -351,7 +351,7 @@ export default function Sidebar() {
             end={item.to === '/'}
             onClick={() => navigator.vibrate?.(10)}
             className={({ isActive }) =>
-              `relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
+              `relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
                 isActive
                   ? 'text-accent-600 dark:text-accent-400'
                   : 'text-cream-400'
@@ -367,7 +367,7 @@ export default function Sidebar() {
                 ) : (
                   <item.icon size={20} />
                 )}
-                <span>{item.label}</span>
+                <span className="truncate max-w-full">{item.label}</span>
                 {isActive && !item.special && (
                   <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
                 )}
@@ -380,18 +380,18 @@ export default function Sidebar() {
           onClick={() => { navigator.vibrate?.(10); setMobileMenuOpen(true); }}
           aria-label={t('nav.openMenu') || 'Open menu'}
           aria-expanded={mobileMenuOpen}
-          className={`relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
             mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400'
           }`}
         >
           <Menu size={20} />
-          <span>{t('nav.more')}</span>
+          <span className="truncate max-w-full">{t('nav.more')}</span>
           {mobileMenuOpen && (
             <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
           )}
           {/* Sync indicator dot */}
           {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
-            <span className={`absolute top-1 right-2 w-2 h-2 rounded-full ${
+            <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
               syncError ? 'bg-warning' : syncing ? 'bg-accent-500 animate-pulse' : 'bg-accent-500'
             }`} />
           )}

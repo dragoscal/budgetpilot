@@ -450,18 +450,18 @@ export default function AddTransaction() {
       <h1 className="page-title">{t('addTransaction.title')}</h1>
 
       {/* Tab selector */}
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                 : 'bg-cream-200 text-cream-700 hover:bg-cream-300 dark:bg-dark-border dark:text-cream-500'
             }`}
           >
-            <tab.icon size={16} />
+            <tab.icon size={14} className="sm:w-4 sm:h-4" />
             {tab.label}
           </button>
         ))}

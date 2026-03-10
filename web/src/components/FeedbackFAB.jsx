@@ -97,7 +97,7 @@ export default function FeedbackFAB() {
       {/* FAB Button */}
       <button
         onClick={() => setOpen(true)}
-        className={`fixed z-50 bottom-24 right-4 md:bottom-6 md:right-6 w-12 h-12 rounded-full bg-accent-600 hover:bg-accent-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
+        className={`fixed z-50 bottom-[5.5rem] right-3 md:bottom-6 md:right-6 w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-600 hover:bg-accent-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
         aria-label={t('feedback.title')}
         title={t('feedback.title')}
       >

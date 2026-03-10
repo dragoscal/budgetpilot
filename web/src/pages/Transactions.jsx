@@ -344,9 +344,9 @@ export default function Transactions() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-cream-500">{t('transactions.period')}</span>
-        <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-cream-500 shrink-0">{t('transactions.period')}</span>
+        <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-x-auto scrollbar-hide">
           {[
             { id: 'all', label: t('common.all') },
             { id: 'thisMonth', label: t('transactions.thisMonth') },
@@ -357,7 +357,7 @@ export default function Transactions() {
             <button
               key={f.id}
               onClick={() => setDateFilter(f.id)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                 dateFilter === f.id
                   ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                   : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'

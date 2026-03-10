@@ -141,8 +141,10 @@ export function registerCrudRoutes(router) {
     const tables = {};
     for (const table of ALLOWED_TABLES) {
       const userCol = getUserColumn(table);
+      // Exclude soft-deleted transactions (they have deletedAt set)
+      const deletedFilter = table === 'transactions' ? ' AND (deletedAt IS NULL OR deletedAt = "")' : '';
       const result = await ctx.env.DB.prepare(
-        `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ? ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
+        `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ?${deletedFilter} ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
       ).bind(userId, since, limit, offset).all();
       tables[table] = (result.results || []).map(r => deserializeRow(table, r));
     }
@@ -156,7 +158,9 @@ export function registerCrudRoutes(router) {
     const data = {};
     for (const table of ALLOWED_TABLES) {
       const userCol = getUserColumn(table);
-      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE ${userCol} = ?`).bind(userId).all();
+      // Exclude soft-deleted transactions from exports
+      const deletedFilter = table === 'transactions' ? ' AND (deletedAt IS NULL OR deletedAt = "")' : '';
+      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE ${userCol} = ?${deletedFilter}`).bind(userId).all();
       data[table] = (result.results || []).map(r => deserializeRow(table, r));
     }
 
