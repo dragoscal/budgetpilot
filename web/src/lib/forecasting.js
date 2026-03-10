@@ -8,7 +8,7 @@
  */
 
 import { getAll } from './storage';
-import { calcMonthlyEquivalent } from './helpers';
+import { calcMonthlyEquivalent, dateToLocalISO } from './helpers';
 
 /**
  * Forecast cash flow for the next N days
@@ -78,24 +78,91 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
   const recurringEvents = [];
   for (const r of userRecurring) {
     const isIncome = r.category === 'income';
-    const monthlyAmount = calcMonthlyEquivalent(r.amount, r.frequency || 'monthly');
+    const frequency = r.frequency || 'monthly';
     const billingDay = r.billingDay || 1;
 
-    // For simplicity, schedule monthly on billing day
-    // For non-monthly, spread the monthly equivalent across the month
-    for (let d = 0; d < days; d++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() + d);
-
-      if (date.getDate() === billingDay || (billingDay > 28 && date.getDate() === new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate() && billingDay >= date.getDate())) {
+    if (frequency === 'daily') {
+      // Schedule every day
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
         recurringEvents.push({
           day: d,
-          date: date.toISOString().slice(0, 10),
+          date: dateToLocalISO(date),
           amount: r.amount,
           name: r.name || r.merchant || 'Recurring',
           isIncome,
           category: r.category,
         });
+      }
+    } else if (frequency === 'weekly') {
+      // Schedule every 7 days starting from the nearest occurrence
+      // Find the first occurrence: use billingDay as day-of-week (0=Sun..6=Sat), default to today's DOW
+      const targetDow = billingDay <= 6 ? billingDay : now.getDay();
+      const todayDow = now.getDay();
+      let firstOffset = (targetDow - todayDow + 7) % 7;
+      for (let d = firstOffset; d < days; d += 7) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        recurringEvents.push({
+          day: d,
+          date: dateToLocalISO(date),
+          amount: r.amount,
+          name: r.name || r.merchant || 'Recurring',
+          isIncome,
+          category: r.category,
+        });
+      }
+    } else if (frequency === 'yearly') {
+      // Schedule once if billingDay and month match within the forecast window
+      const billingMonth = r.billingMonth || (now.getMonth() + 1); // 1-indexed month
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        if (date.getDate() === billingDay && (date.getMonth() + 1) === billingMonth) {
+          recurringEvents.push({
+            day: d,
+            date: dateToLocalISO(date),
+            amount: r.amount,
+            name: r.name || r.merchant || 'Recurring',
+            isIncome,
+            category: r.category,
+          });
+        }
+      }
+    } else if (frequency === 'quarterly') {
+      // Schedule on billingDay in quarter-boundary months (Jan, Apr, Jul, Oct)
+      const quarterMonths = [1, 4, 7, 10];
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        if (date.getDate() === billingDay && quarterMonths.includes(date.getMonth() + 1)) {
+          recurringEvents.push({
+            day: d,
+            date: dateToLocalISO(date),
+            amount: r.amount,
+            name: r.name || r.merchant || 'Recurring',
+            isIncome,
+            category: r.category,
+          });
+        }
+      }
+    } else {
+      // monthly (default): keep existing billingDay logic
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+
+        if (date.getDate() === billingDay || (billingDay > 28 && date.getDate() === new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate() && billingDay >= date.getDate())) {
+          recurringEvents.push({
+            day: d,
+            date: dateToLocalISO(date),
+            amount: r.amount,
+            name: r.name || r.merchant || 'Recurring',
+            isIncome,
+            category: r.category,
+          });
+        }
       }
     }
   }
@@ -108,7 +175,7 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
   for (let d = 0; d < days; d++) {
     const date = new Date(now);
     date.setDate(date.getDate() + d);
-    const dateStr = date.toISOString().slice(0, 10);
+    const dateStr = dateToLocalISO(date);
     const dow = date.getDay();
 
     // Known recurring on this day

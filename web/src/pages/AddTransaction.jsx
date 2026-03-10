@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { transactions as txApi } from '../lib/api';
-import { formatCurrency, getCategoryById, getMonthRange, generateId } from '../lib/helpers';
+import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
@@ -171,7 +171,7 @@ export default function AddTransaction() {
     if (!pendingResults) return;
     try {
       const merchant = pendingResults[0]?.merchant || 'Receipt';
-      const date = pendingResults[0]?.date || new Date().toISOString().slice(0, 10);
+      const date = pendingResults[0]?.date || todayLocal();
       const totalAmount = pendingResults
         .filter(t => !t._dismissed)
         .reduce((s, t) => s + (t.amount || 0), 0);

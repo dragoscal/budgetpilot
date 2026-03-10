@@ -38,6 +38,19 @@ export function formatDateISO(date) {
   return format(d, 'yyyy-MM-dd');
 }
 
+/** Get today's date as YYYY-MM-DD in local timezone (avoids UTC midnight bug) */
+export function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Convert a Date to YYYY-MM-DD in local timezone */
+export function dateToLocalISO(date) {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function getMonthRange(date = new Date()) {
   return {
     start: startOfMonth(date),
@@ -201,4 +214,36 @@ export function calcMonthlyEquivalent(amount, freqId) {
 
 export function calcAnnualEquivalent(amount, freqId) {
   return calcMonthlyEquivalent(amount, freqId) * 12;
+}
+
+/**
+ * Validate a transaction before saving. Returns { valid, errors }.
+ */
+export function validateTransaction(tx) {
+  const errors = [];
+
+  if (!tx.amount || Number(tx.amount) <= 0) {
+    errors.push('Amount must be greater than 0');
+  }
+  if (Number(tx.amount) > 1000000) {
+    errors.push('Amount seems too large (max 1,000,000)');
+  }
+  if (!tx.date) {
+    errors.push('Date is required');
+  } else {
+    const txDate = new Date(tx.date);
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    if (txDate > oneYearFromNow) {
+      errors.push('Date cannot be more than 1 year in the future');
+    }
+    if (isNaN(txDate.getTime())) {
+      errors.push('Invalid date format');
+    }
+  }
+  if (!tx.type || !['expense', 'income', 'transfer'].includes(tx.type)) {
+    errors.push('Transaction type must be expense, income, or transfer');
+  }
+
+  return { valid: errors.length === 0, errors };
 }

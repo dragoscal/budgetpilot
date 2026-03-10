@@ -5,8 +5,10 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle }) {
   const cat = getCategoryById(item.category);
   const freq = getFrequencyById(item.frequency || 'monthly');
   const billingDay = item.billingDay || 1;
-  const today = new Date().getDate();
-  const daysUntil = billingDay >= today ? billingDay - today : 30 - today + billingDay;
+  const now = new Date();
+  const today = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysUntil = billingDay >= today ? billingDay - today : daysInMonth - today + billingDay;
   const isNear = daysUntil <= 3 && item.active !== false;
 
   const isMonthly = !item.frequency || item.frequency === 'monthly';

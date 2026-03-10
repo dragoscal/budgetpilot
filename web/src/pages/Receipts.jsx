@@ -19,7 +19,7 @@ export default function ReceiptGallery() {
   const [selected, setSelected] = useState(null);
   const [dateFilter, setDateFilter] = useState('all');
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [effectiveUserId]);
 
   const loadData = async () => {
     setLoading(true);

@@ -34,7 +34,7 @@ export default function Budgets() {
   const currency = user?.defaultCurrency || 'RON';
   const monthKey = format(month, 'yyyy-MM');
 
-  useEffect(() => { loadData(); }, [month, viewMode]);
+  useEffect(() => { loadData(); }, [month, viewMode, effectiveUserId]);
 
   const loadData = async () => {
     setLoading(true);

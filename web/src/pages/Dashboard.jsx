@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
@@ -17,6 +17,7 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseIS
 
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user, effectiveUserId } = useAuth();
   const { hideAmounts, updateHideAmounts, shouldHide } = useHideAmounts();
   const [month, setMonth] = useState(new Date());
@@ -33,7 +34,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-  }, [month]);
+  }, [month, effectiveUserId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -103,9 +104,24 @@ export default function Dashboard() {
 
     return {
       totalSpent, totalIncome, net, budgetRemaining, dailyAvg, netWorth, inMyPocket, totalBudget,
+      prevTotalSpent,
       spentTrend: trendIndicator(totalSpent, prevTotalSpent),
     };
   }, [transactions, prevTransactions, budgetsList, accountsList, recurringList]);
+
+  // Spending velocity: compare current pace to last month
+  const velocity = useMemo(() => {
+    const now = new Date();
+    const daysElapsed = now.getDate();
+    const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+
+    const currentDailyRate = daysElapsed > 0 ? stats.totalSpent / daysElapsed : 0;
+    const prevDailyRate = daysInPrevMonth > 0 ? stats.prevTotalSpent / daysInPrevMonth : 0;
+
+    if (prevDailyRate === 0) return null;
+    const change = Math.round(((currentDailyRate - prevDailyRate) / prevDailyRate) * 100);
+    return { change, faster: change > 0 };
+  }, [stats.totalSpent, stats.prevTotalSpent]);
 
   // Chart data — cumulative spending per day
   const spendingChartData = useMemo(() => {
@@ -310,6 +326,18 @@ export default function Dashboard() {
         <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
       </div>
 
+      {/* Spending velocity indicator */}
+      {velocity && Math.abs(velocity.change) > 5 && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
+          velocity.faster
+            ? 'bg-warning/10 text-warning border border-warning/20'
+            : 'bg-success/10 text-success border border-success/20'
+        }`}>
+          {velocity.faster ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+          Spending {Math.abs(velocity.change)}% {velocity.faster ? 'faster' : 'slower'} than last month
+        </div>
+      )}
+
       {/* In My Pocket + Month Comparison + No-spend days */}
       <div className="card relative overflow-hidden border-success/20 !p-3 md:!p-5">
         <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
@@ -505,7 +533,7 @@ export default function Dashboard() {
             title="No transactions yet"
             description="Add your first transaction to start tracking"
             action="Add transaction"
-            onAction={() => window.location.href = '/add'}
+            onAction={() => navigate('/add')}
           />
         )}
       </div>

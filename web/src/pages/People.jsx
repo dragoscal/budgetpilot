@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { people as peopleApi, debts as debtsApi, debtPayments as paymentsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { generateId, formatCurrency, sumBy, formatDate } from '../lib/helpers';
+import { generateId, formatCurrency, sumBy, formatDate, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import {
@@ -29,14 +29,14 @@ export default function People() {
   const [personForm, setPersonForm] = useState({ name: '', emoji: '👤', phone: '', notes: '' });
   const [debtForm, setDebtForm] = useState({
     personId: '', type: 'lent', amount: '', reason: '', dueDate: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: todayLocal(),
   });
 
   const currency = user?.defaultCurrency || 'RON';
 
   const EMOJI_OPTIONS = ['👤', '👩', '👨', '🧑', '👩‍💼', '👨‍💼', '🧔', '👱', '👸', '🤴', '🧑‍🤝‍🧑', '👥', '🏢', '🏠'];
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [effectiveUserId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -97,13 +97,17 @@ export default function People() {
 
   const handleAddPerson = async () => {
     if (!personForm.name.trim()) { toast.error('Name required'); return; }
-    await peopleApi.create({
-      id: generateId(), ...personForm, userId: effectiveUserId, createdAt: new Date().toISOString(),
-    });
-    toast.success('Person added');
-    setShowPersonForm(false);
-    setPersonForm({ name: '', emoji: '👤', phone: '', notes: '' });
-    loadData();
+    try {
+      await peopleApi.create({
+        id: generateId(), ...personForm, userId: effectiveUserId, createdAt: new Date().toISOString(),
+      });
+      toast.success('Person added');
+      setShowPersonForm(false);
+      setPersonForm({ name: '', emoji: '👤', phone: '', notes: '' });
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to add person');
+    }
   };
 
   const handleAddDebt = async () => {
@@ -111,7 +115,7 @@ export default function People() {
     const person = peopleList.find(p => p.id === debtForm.personId);
     const personName = person?.name || 'Unknown';
     const amount = Number(debtForm.amount);
-    const debtDate = debtForm.date || new Date().toISOString().slice(0, 10);
+    const debtDate = debtForm.date || todayLocal();
     const debtId = generateId();
 
     await debtsApi.create({
@@ -141,7 +145,7 @@ export default function People() {
     setShowDebtForm(false);
     setDebtForm({
       personId: '', type: 'lent', amount: '', reason: '', dueDate: '',
-      date: new Date().toISOString().slice(0, 10),
+      date: todayLocal(),
     });
     loadData();
   };
@@ -150,7 +154,7 @@ export default function People() {
     if (!settleDebt || !settleAmount) return;
     const amt = Number(settleAmount);
     const remaining = (settleDebt.remaining ?? settleDebt.amount) - amt;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
 
     // Find the person name for the transaction
     const person = peopleList.find(p => p.id === settleDebt.personId);

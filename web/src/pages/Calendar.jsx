@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, getCategoryById, sumBy, sortByDate } from '../lib/helpers';
+import { formatCurrency, getCategoryById, sumBy, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import TransactionRow from '../components/TransactionRow';
@@ -15,6 +16,7 @@ export default function CalendarPage() {
   const [recurringItems, setRecurring] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rates, setRates] = useState(null);
 
   const currency = user?.defaultCurrency || 'RON';
 
@@ -30,14 +32,15 @@ export default function CalendarPage() {
         const end = endOfMonth(month);
         setTransactions(allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; }));
         setRecurring(rec.filter((r) => r.active !== false));
+        getCachedRates().then(setRates).catch(() => {});
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
-  }, [month]);
+  }, [month, effectiveUserId]);
 
   const days = useMemo(() => eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) }), [month]);
 
-  // Build day data
+  // Build day data (multi-currency aware)
   const dayData = useMemo(() => {
     const map = {};
     for (const day of days) {
@@ -45,11 +48,11 @@ export default function CalendarPage() {
       const dayNum = day.getDate();
       const dayTx = transactions.filter((t) => t.date === key);
       const dayBills = recurringItems.filter((r) => (r.billingDay || 1) === dayNum);
-      const total = sumBy(dayTx.filter((t) => t.type === 'expense'), 'amount');
+      const total = sumAmountsMultiCurrency(dayTx.filter((t) => t.type === 'expense'), currency, rates);
       map[key] = { day, dayNum, transactions: dayTx, bills: dayBills, total, count: dayTx.length };
     }
     return map;
-  }, [days, transactions, recurringItems]);
+  }, [days, transactions, recurringItems, currency, rates]);
 
   // Calculate starting offset (Monday = 0)
   const firstDayOfWeek = getDay(startOfMonth(month));

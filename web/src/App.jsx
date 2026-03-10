@@ -34,6 +34,7 @@ import ReceiptGallery from './pages/Receipts';
 import NotFound from './pages/NotFound';
 import InstallPrompt from './components/InstallPrompt';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
+import OfflineBanner from './components/OfflineBanner';
 
 import { useEffect } from 'react';
 
@@ -69,6 +70,7 @@ export default function App() {
 
   return (
     <>
+      <OfflineBanner />
       <ScrollToTop />
       <ToastContainer />
       <InstallPrompt />

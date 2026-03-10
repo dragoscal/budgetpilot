@@ -53,7 +53,7 @@ const NAV_SECTIONS = [
 ];
 
 export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bp_sidebarCollapsed') === 'true');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { dark, toggleTheme } = useTheme();
@@ -67,6 +67,14 @@ export default function Sidebar() {
       return () => { document.body.style.overflow = ''; };
     }
   }, [mobileMenuOpen]);
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('bp_sidebarCollapsed', String(next));
+      return next;
+    });
+  };
 
   const handleLogout = () => {
     logout();
@@ -187,7 +195,7 @@ export default function Sidebar() {
           </button>
 
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             className="flex items-center justify-center w-full py-1 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-colors"
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

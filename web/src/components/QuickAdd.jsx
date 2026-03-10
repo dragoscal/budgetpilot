@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { ArrowRight, Loader2, Calendar } from 'lucide-react';
 import { processNaturalLanguage } from '../lib/ai';
 import { useAuth } from '../contexts/AuthContext';
+import { todayLocal } from '../lib/helpers';
 
 const EXAMPLES = [
   '45 lei Bolt taxi',
@@ -26,7 +27,7 @@ export default function QuickAdd({ onResult, onError }) {
     setLoading(true);
     try {
       const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
-      const dateOverride = customDate || new Date().toISOString().slice(0, 10);
+      const dateOverride = customDate || todayLocal();
       onResult?.(results.map((t) => ({ ...t, date: dateOverride, source: 'nlp' })));
       setText('');
       setCustomDate('');
@@ -70,7 +71,7 @@ export default function QuickAdd({ onResult, onError }) {
           ref={dateRef}
           type="date"
           value={customDate}
-          max={new Date().toISOString().slice(0, 10)}
+          max={todayLocal()}
           onChange={(e) => setCustomDate(e.target.value)}
           className="sr-only"
           tabIndex={-1}

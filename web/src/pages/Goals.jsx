@@ -24,7 +24,7 @@ export default function Goals() {
 
   const currency = user?.defaultCurrency || 'RON';
 
-  useEffect(() => { loadGoals(); }, []);
+  useEffect(() => { loadGoals(); }, [effectiveUserId]);
 
   const loadGoals = async () => {
     setLoading(true);

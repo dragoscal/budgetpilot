@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
-import { generateId, formatDateISO } from '../lib/helpers';
+import { generateId, formatDateISO, validateTransaction } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import CategoryPicker from './CategoryPicker';
 import TagInput from './TagInput';
 
 export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add transaction' }) {
   const { effectiveUserId } = useAuth();
+  const { toast } = useToast();
   const [type, setType] = useState(initial.type || 'expense');
   const [merchant, setMerchant] = useState(initial.merchant || '');
   const [amount, setAmount] = useState(initial.amount || '');
@@ -110,6 +112,12 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       userId: effectiveUserId,
       createdAt: initial.createdAt || new Date().toISOString(),
     };
+
+    const validation = validateTransaction(transaction);
+    if (!validation.valid) {
+      toast.error(validation.errors[0]);
+      return;
+    }
 
     onSubmit(transaction);
     if (!initial.id) {

@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CATEGORIES, CURRENCIES, RECURRING_FREQUENCIES } from '../lib/constants';
 import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import { detectRecurringPatterns, auditSubscriptions } from '../lib/smartFeatures';
 import RecurringRow from '../components/RecurringRow';
 import CategoryPicker from '../components/CategoryPicker';
@@ -24,13 +25,14 @@ export default function Recurring() {
   const [showAudit, setShowAudit] = useState(false);
   const [audit, setAudit] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [rates, setRates] = useState(null);
 
   const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '' };
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => { loadItems(); }, [effectiveUserId]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -39,6 +41,7 @@ export default function Recurring() {
       setItems(data);
       const patterns = await detectRecurringPatterns();
       setSuggestions(patterns);
+      getCachedRates().then(setRates).catch(() => {});
     } catch (err) {
       toast.error('Failed to load');
     } finally {
@@ -49,9 +52,15 @@ export default function Recurring() {
   const activeItems = items.filter((i) => i.active !== false);
   const pausedItems = items.filter((i) => i.active === false);
 
-  // Frequency-aware monthly total
+  // Frequency-aware monthly total (multi-currency)
   const monthlyTotal = activeItems.reduce((sum, item) => {
-    return sum + calcMonthlyEquivalent(item.amount, item.frequency || 'monthly');
+    const monthlyAmt = calcMonthlyEquivalent(item.amount, item.frequency || 'monthly');
+    const itemCurrency = item.currency || currency;
+    if (!rates || itemCurrency === currency) return sum + monthlyAmt;
+    const fromRate = rates[itemCurrency];
+    const toRate = rates[currency];
+    if (!fromRate || !toRate) return sum + monthlyAmt;
+    return sum + (monthlyAmt / fromRate) * toRate;
   }, 0);
   const annualTotal = monthlyTotal * 12;
 
@@ -86,14 +95,22 @@ export default function Recurring() {
   };
 
   const handleToggle = async (item) => {
-    await recurringApi.update(item.id, { active: item.active === false ? true : false });
-    loadItems();
+    try {
+      await recurringApi.update(item.id, { active: item.active === false ? true : false });
+      loadItems();
+    } catch (err) {
+      toast.error(err.message || 'Failed to toggle');
+    }
   };
 
   const handleDelete = async (item) => {
-    await recurringApi.remove(item.id);
-    toast.success('Deleted');
-    loadItems();
+    try {
+      await recurringApi.remove(item.id);
+      toast.success('Deleted');
+      loadItems();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete');
+    }
   };
 
   const handleEdit = (item) => {

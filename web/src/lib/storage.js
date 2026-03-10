@@ -211,7 +211,11 @@ export async function clearStore(store) {
 
 export async function exportAll() {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
+  const stores = [
+    'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
+    'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
+    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
+  ];
   const data = {};
   for (const store of stores) {
     if (db.objectStoreNames.contains(store)) {
@@ -225,9 +229,13 @@ export async function exportAll() {
 
 export async function importAll(data) {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
+  const stores = [
+    'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
+    'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
+    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
+  ];
   for (const store of stores) {
-    if (data[store] && Array.isArray(data[store])) {
+    if (data[store] && Array.isArray(data[store]) && db.objectStoreNames.contains(store)) {
       const tx = db.transaction(store, 'readwrite');
       await tx.store.clear();
       for (const record of data[store]) {
@@ -240,9 +248,15 @@ export async function importAll(data) {
 
 export async function clearAllData() {
   const db = await getDB();
-  const stores = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments'];
+  const stores = [
+    'transactions', 'budgets', 'goals', 'accounts', 'recurring',
+    'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
+    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts', 'receiptDrafts',
+  ];
   for (const store of stores) {
-    await db.clear(store);
+    if (db.objectStoreNames.contains(store)) {
+      await db.clear(store);
+    }
   }
 }
 

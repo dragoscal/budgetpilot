@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,21 +16,25 @@ import { Receipt, Download, Trash2, Tag, Hash, X } from 'lucide-react';
 const PAGE_SIZE = 30;
 
 export default function Transactions() {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { effectiveUserId } = useAuth();
+  const { user, effectiveUserId } = useAuth();
+  const currency = user?.defaultCurrency || 'RON';
   const [allTx, setAllTx] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState([]);
+  const [dateFilter, setDateFilter] = useState('all');
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
   const [deleteTx, setDeleteTx] = useState(null);
   const [selected, setSelected] = useState(new Set());
+  const [showAllTags, setShowAllTags] = useState(false);
 
-  useEffect(() => { loadTransactions(); }, []);
+  useEffect(() => { loadTransactions(); }, [effectiveUserId]);
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -61,6 +66,20 @@ export default function Transactions() {
   const filtered = useMemo(() => {
     let result = [...allTx];
 
+    // Date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const cutoff = new Date();
+      if (dateFilter === '7d') cutoff.setDate(now.getDate() - 7);
+      else if (dateFilter === '30d') cutoff.setDate(now.getDate() - 30);
+      else if (dateFilter === '90d') cutoff.setDate(now.getDate() - 90);
+      else if (dateFilter === 'thisMonth') {
+        cutoff.setDate(1);
+        cutoff.setHours(0, 0, 0, 0);
+      }
+      result = result.filter(t => new Date(t.date) >= cutoff);
+    }
+
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((t) =>
@@ -90,7 +109,7 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort]);
+  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter]);
 
   const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
   const hasMore = paginated.length < filtered.length;
@@ -123,10 +142,9 @@ export default function Transactions() {
 
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} transaction${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
     try {
-      for (const id of selected) {
-        await txApi.remove(id);
-      }
+      await Promise.all([...selected].map(id => txApi.remove(id)));
       setAllTx((prev) => prev.filter((t) => !selected.has(t.id)));
       setSelected(new Set());
       toast.success(`${selected.size} transactions deleted`);
@@ -178,8 +196,8 @@ export default function Transactions() {
       {/* Summary */}
       <div className="flex gap-4 text-sm">
         <span className="text-cream-500">{filtered.length} transactions</span>
-        <span className="text-danger money">-{formatCurrency(totalExpenses, 'RON')}</span>
-        <span className="text-income money">+{formatCurrency(totalIncome, 'RON')}</span>
+        <span className="text-danger money">-{formatCurrency(totalExpenses, currency)}</span>
+        <span className="text-income money">+{formatCurrency(totalIncome, currency)}</span>
       </div>
 
       <SearchFilter
@@ -187,6 +205,31 @@ export default function Transactions() {
         category={categoryFilter} onCategory={setCategoryFilter}
         type={typeFilter} onType={setTypeFilter}
       />
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-cream-500">Period:</span>
+        <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'thisMonth', label: 'This month' },
+            { id: '7d', label: '7d' },
+            { id: '30d', label: '30d' },
+            { id: '90d', label: '90d' },
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setDateFilter(f.id)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                dateFilter === f.id
+                  ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                  : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <select className="input w-auto text-xs" value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -197,7 +240,7 @@ export default function Transactions() {
         {availableTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
             <Hash size={14} className="text-cream-400" />
-            {availableTags.slice(0, 12).map(({ tag, count }) => (
+            {(showAllTags ? availableTags : availableTags.slice(0, 12)).map(({ tag, count }) => (
               <button
                 key={tag}
                 type="button"
@@ -213,6 +256,11 @@ export default function Transactions() {
                 {tag} <span className="opacity-50">{count}</span>
               </button>
             ))}
+            {availableTags.length > 12 && (
+              <button onClick={() => setShowAllTags(!showAllTags)} className="text-xs text-accent-500 hover:text-accent-600">
+                {showAllTags ? 'Show less' : `+${availableTags.length - 12} more`}
+              </button>
+            )}
             {tagFilter.length > 0 && (
               <button
                 type="button"
@@ -255,9 +303,9 @@ export default function Transactions() {
           <EmptyState
             icon={Receipt}
             title="No transactions found"
-            description={search || categoryFilter || typeFilter || tagFilter.length > 0 ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
-            action={!search && !categoryFilter && tagFilter.length === 0 ? 'Add transaction' : undefined}
-            onAction={() => window.location.href = '/add'}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
+            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' ? 'Add transaction' : undefined}
+            onAction={() => navigate('/add')}
           />
         )}
       </div>

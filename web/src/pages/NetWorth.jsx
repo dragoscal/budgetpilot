@@ -26,7 +26,7 @@ export default function NetWorth() {
 
   const currency = user?.defaultCurrency || 'RON';
 
-  useEffect(() => { loadAccounts(); }, []);
+  useEffect(() => { loadAccounts(); }, [effectiveUserId]);
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -62,17 +62,25 @@ export default function NetWorth() {
 
   const handleUpdateBalance = async () => {
     if (!updateBalance || newBalance === '') return;
-    await accountsApi.update(updateBalance.id, { balance: Number(newBalance), lastUpdated: new Date().toISOString() });
-    toast.success('Balance updated');
-    setUpdateBalance(null);
-    setNewBalance('');
-    loadAccounts();
+    try {
+      await accountsApi.update(updateBalance.id, { balance: Number(newBalance), lastUpdated: new Date().toISOString() });
+      toast.success('Balance updated');
+      setUpdateBalance(null);
+      setNewBalance('');
+      loadAccounts();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update balance');
+    }
   };
 
   const handleDelete = async (acct) => {
-    await accountsApi.remove(acct.id);
-    toast.success('Deleted');
-    loadAccounts();
+    try {
+      await accountsApi.remove(acct.id);
+      toast.success('Deleted');
+      loadAccounts();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete');
+    }
   };
 
   const handleEdit = (acct) => {

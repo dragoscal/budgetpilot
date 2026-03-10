@@ -3,7 +3,7 @@ import { wishlistApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CATEGORIES } from '../lib/constants';
-import { generateId, formatCurrency } from '../lib/helpers';
+import { generateId, formatCurrency, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Star, Plus, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
@@ -28,7 +28,7 @@ export default function Wishlist() {
 
   const currency = user?.defaultCurrency || 'RON';
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => { loadItems(); }, [effectiveUserId]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -39,28 +39,40 @@ export default function Wishlist() {
 
   const handleAdd = async () => {
     if (!form.name) { toast.error('Name required'); return; }
-    await wishlistApi.create({
-      id: generateId(), ...form,
-      estimatedPrice: Number(form.estimatedPrice) || 0,
-      priority: Number(form.priority),
-      currency, status: 'wanted', userId: effectiveUserId, createdAt: new Date().toISOString(),
-    });
-    toast.success('Added to wishlist');
-    setShowForm(false);
-    setForm({ name: '', estimatedPrice: '', category: 'shopping', priority: '3', url: '', notes: '' });
-    loadItems();
+    try {
+      await wishlistApi.create({
+        id: generateId(), ...form,
+        estimatedPrice: Number(form.estimatedPrice) || 0,
+        priority: Number(form.priority),
+        currency, status: 'wanted', userId: effectiveUserId, createdAt: new Date().toISOString(),
+      });
+      toast.success('Added to wishlist');
+      setShowForm(false);
+      setForm({ name: '', estimatedPrice: '', category: 'shopping', priority: '3', url: '', notes: '' });
+      loadItems();
+    } catch (err) {
+      toast.error(err.message || 'Failed to add');
+    }
   };
 
   const handlePurchase = async (item) => {
-    await wishlistApi.update(item.id, { status: 'purchased', purchasedDate: new Date().toISOString().slice(0, 10) });
-    toast.success(`${item.name} marked as purchased`);
-    loadItems();
+    try {
+      await wishlistApi.update(item.id, { status: 'purchased', purchasedDate: todayLocal() });
+      toast.success(`${item.name} marked as purchased`);
+      loadItems();
+    } catch (err) {
+      toast.error(err.message || 'Failed to mark as purchased');
+    }
   };
 
   const handleDelete = async (item) => {
-    await wishlistApi.remove(item.id);
-    toast.success('Removed');
-    loadItems();
+    try {
+      await wishlistApi.remove(item.id);
+      toast.success('Removed');
+      loadItems();
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove');
+    }
   };
 
   const wantedItems = items.filter((i) => i.status === 'wanted').sort((a, b) => b.priority - a.priority);

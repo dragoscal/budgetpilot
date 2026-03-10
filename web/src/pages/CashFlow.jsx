@@ -35,7 +35,7 @@ export default function CashFlow() {
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
-  }, [forecastDays]);
+  }, [forecastDays, effectiveUserId]);
 
   // Current month stats
   const now = new Date();

@@ -97,7 +97,7 @@ export default function Challenges() {
     durationDays: '30',
   });
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [effectiveUserId]);
 
   const loadData = async () => {
     setLoading(true);

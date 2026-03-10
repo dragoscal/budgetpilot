@@ -10,17 +10,20 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
   const isSaveUp = goal.type === 'save_up';
   const remaining = goal.targetAmount - (goal.currentAmount || 0);
 
-  // Calculate monthly needed
+  // Calculate monthly needed and progress status
   let monthlyNeeded = 0;
   let status = 'on-track';
   if (goal.targetDate) {
-    const monthsLeft = differenceInMonths(parseISO(goal.targetDate), new Date());
+    const targetDate = parseISO(goal.targetDate);
+    const startDate = parseISO(goal.startDate || goal.createdAt || goal.targetDate);
+    const monthsLeft = differenceInMonths(targetDate, new Date());
+    const totalMonths = Math.max(1, differenceInMonths(targetDate, startDate));
+    const elapsedMonths = differenceInMonths(new Date(), startDate);
+
     if (monthsLeft > 0) {
       monthlyNeeded = remaining / monthsLeft;
-      const expectedPct = percentOf(
-        goal.targetAmount - monthlyNeeded * monthsLeft,
-        goal.targetAmount
-      );
+      // Expected progress based on time elapsed proportion
+      const expectedPct = totalMonths > 0 ? Math.round((elapsedMonths / totalMonths) * 100) : 100;
       if (pct < expectedPct - 5) status = 'behind';
       else if (pct > expectedPct + 5) status = 'ahead';
     } else if (remaining > 0) {

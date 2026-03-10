@@ -32,7 +32,7 @@ export default function Analytics() {
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [effectiveUserId]);
 
   const monthTx = useMemo(() => {
     const start = startOfMonth(month);
@@ -88,7 +88,12 @@ export default function Analytics() {
   // Summary stats
   const totalSpent = sumBy(expenses, 'amount');
   const totalIncome = sumBy(monthTx.filter((t) => t.type === 'income'), 'amount');
-  const dailyAvg = new Date().getDate() > 0 ? totalSpent / Math.min(new Date().getDate(), 30) : 0;
+  const now = new Date();
+  const isCurrentMonth = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
+  const daysElapsed = isCurrentMonth
+    ? now.getDate()
+    : new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const dailyAvg = daysElapsed > 0 ? totalSpent / daysElapsed : 0;
   const daysLeft = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate() - new Date().getDate();
   const projected = totalSpent + dailyAvg * Math.max(daysLeft, 0);
   const totalBudget = sumBy(budgetsList, 'amount');

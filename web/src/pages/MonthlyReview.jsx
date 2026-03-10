@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndicator } from '../lib/helpers';
+import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndicator, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText } from 'lucide-react';
@@ -17,6 +18,7 @@ export default function MonthlyReview() {
   const [goalsList, setGoals] = useState([]);
   const [recurringItems, setRecurring] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rates, setRates] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
@@ -39,42 +41,43 @@ export default function MonthlyReview() {
         setBudgets(budgets);
         setGoals(goals);
         setRecurring(rec.filter((r) => r.active !== false));
+        getCachedRates().then(setRates).catch(() => {});
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
-  }, [month]);
+  }, [month, effectiveUserId]);
 
-  const income = sumBy(currentTx.filter((t) => t.type === 'income'), 'amount');
-  const expenses = sumBy(currentTx.filter((t) => t.type === 'expense'), 'amount');
+  const income = sumAmountsMultiCurrency(currentTx.filter((t) => t.type === 'income'), currency, rates);
+  const expenses = sumAmountsMultiCurrency(currentTx.filter((t) => t.type === 'expense'), currency, rates);
   const netSavings = income - expenses;
   const savingsRate = income > 0 ? percentOf(netSavings, income) : 0;
-  const prevExpenses = sumBy(prevTx.filter((t) => t.type === 'expense'), 'amount');
+  const prevExpenses = sumAmountsMultiCurrency(prevTx.filter((t) => t.type === 'expense'), currency, rates);
   const trend = trendIndicator(expenses, prevExpenses);
-  const recurringTotal = sumBy(recurringItems, 'amount');
+  const recurringTotal = sumAmountsMultiCurrency(recurringItems, currency, rates);
 
-  // Category breakdown
+  // Category breakdown (multi-currency aware)
   const categoryBreakdown = useMemo(() => {
     const exp = currentTx.filter((t) => t.type === 'expense');
     const grouped = groupBy(exp, 'category');
     return Object.entries(grouped)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
-        const spent = sumBy(txs, 'amount');
+        const spent = sumAmountsMultiCurrency(txs, currency, rates);
         const budget = budgetsList.find((b) => b.category === catId);
         return { name: cat.name, icon: cat.icon, spent, budget: budget?.amount || 0, pct: budget ? percentOf(spent, budget.amount) : 0 };
       })
       .sort((a, b) => b.spent - a.spent);
-  }, [currentTx, budgetsList]);
+  }, [currentTx, budgetsList, currency, rates]);
 
-  // Top merchants
+  // Top merchants (multi-currency aware)
   const topMerchants = useMemo(() => {
     const exp = currentTx.filter((t) => t.type === 'expense');
     const grouped = groupBy(exp, (t) => t.merchant || 'Unknown');
     return Object.entries(grouped)
-      .map(([merchant, txs]) => ({ merchant, total: sumBy(txs, 'amount') }))
+      .map(([merchant, txs]) => ({ merchant, total: sumAmountsMultiCurrency(txs, currency, rates) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
-  }, [currentTx]);
+  }, [currentTx, currency, rates]);
 
   if (loading) return <SkeletonPage />;
 
