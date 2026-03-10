@@ -253,6 +253,7 @@ const en = {
   'addTransaction.deleteDraft': 'Delete draft',
   'addTransaction.pdfOnly': 'Please upload a PDF file',
   'addTransaction.fileTooLarge': 'File is too large (max 20MB)',
+  'addTransaction.offlineWarning': 'Bank statement processing requires an internet connection.',
   'addTransaction.readingPdf': 'Reading PDF...',
   'addTransaction.aiAnalyzing': 'AI analyzing transactions...',
   'addTransaction.preparingTx': 'Preparing transactions...',
@@ -316,12 +317,14 @@ const en = {
   'quickAdd.dateLabel': 'Date: {date}',
   'quickAdd.clear': 'clear',
   'quickAdd.failedParse': 'Failed to parse input',
+  'quickAdd.offlineWarning': 'Quick add requires an internet connection for AI parsing.',
 
   // ─── Receipt Scanner ─────────────────────────────────
   'receipt.title': 'Scan Receipt',
   'receipt.upload': 'Upload receipt photo',
   'receipt.camera': 'Take photo',
   'receipt.processing': 'Processing receipt...',
+  'receipt.offlineWarning': 'Receipt scanning requires an internet connection. Please try again when online.',
   'receipt.noKey': 'AI API key required for receipt scanning. Add one in Settings.',
   'receipt.failed': 'Failed to process receipt',
   'receipt.addAll': 'Add all items',
@@ -1173,6 +1176,15 @@ const en = {
   'settings.telegramConnectionFailed': 'Connection failed',
   'settings.webhookFailed': 'Failed to set webhook',
   'settings.telegramChatIdPlaceholder': 'Your Telegram user/chat ID',
+  'settings.changePassword': 'Change Password',
+  'settings.currentPassword': 'Current password',
+  'settings.newPassword': 'New password',
+  'settings.confirmPassword': 'Confirm new password',
+  'settings.updatePassword': 'Update password',
+  'settings.passwordMismatch': 'Passwords do not match',
+  'settings.passwordTooShort': 'Password must be at least 8 characters',
+  'settings.passwordChanged': 'Password changed successfully',
+  'settings.passwordChangeFailed': 'Failed to change password',
 
   // ─── Onboarding ──────────────────────────────────────
   'onboarding.welcome': 'Welcome to BudgetPilot',

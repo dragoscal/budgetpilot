@@ -19,6 +19,11 @@ export default function BankStatementUpload({ onResult, onError }) {
   const handleFile = useCallback(async (file) => {
     if (!file) return;
 
+    if (!navigator.onLine) {
+      onError?.(t('addTransaction.offlineWarning') || 'Bank statement processing requires an internet connection.');
+      return;
+    }
+
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       onError?.(t('addTransaction.pdfOnly'));
       return;

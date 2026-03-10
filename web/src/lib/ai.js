@@ -144,6 +144,33 @@ Return JSON:
   }]
 }`;
 
+// ─── THUMBNAIL GENERATION ────────────────────────────────
+/**
+ * Generate a small thumbnail from a base64 image for gallery display.
+ * Returns a data URL (JPEG, ~200px wide). Falls back to null on error.
+ */
+async function generateThumbnail(base64Data, mediaType = 'image/jpeg') {
+  try {
+    const MAX_WIDTH = 200;
+    const img = new Image();
+    const src = `data:${mediaType};base64,${base64Data}`;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = src;
+    });
+    const scale = Math.min(MAX_WIDTH / img.width, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.6);
+  } catch {
+    return null;
+  }
+}
+
 // ─── JSON EXTRACTION (balanced braces) ──────────────────
 function extractJSON(text) {
   const start = text.indexOf('{');
@@ -403,11 +430,13 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
 
   const normalized = normalizeReceiptResult(result, userId);
 
-  // Save to receipt history — store full image for gallery display
+  // Save to receipt history — store thumbnail for gallery, full image on demand
   try {
     const firstTx = normalized.transactions[0];
+    const thumbnail = await generateThumbnail(imageBase64, mediaType);
     await saveReceiptHistory({
-      imageData: imageBase64, // full base64 for gallery
+      imageData: imageBase64, // full base64 for detail view
+      thumbnail,             // small thumbnail for gallery grid
       mediaType: mediaType,
       // Flat fields for gallery display (Receipts.jsx reads these directly)
       merchant: result.receipt?.store || firstTx?.merchant || 'Unknown',

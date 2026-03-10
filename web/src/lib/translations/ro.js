@@ -253,6 +253,7 @@ const ro = {
   'addTransaction.deleteDraft': 'Șterge ciorna',
   'addTransaction.pdfOnly': 'Te rugăm să încarci un fișier PDF',
   'addTransaction.fileTooLarge': 'Fișierul este prea mare (max 20MB)',
+  'addTransaction.offlineWarning': 'Procesarea extrasului bancar necesită conexiune la internet.',
   'addTransaction.readingPdf': 'Se citește PDF-ul...',
   'addTransaction.aiAnalyzing': 'AI analizează tranzacțiile...',
   'addTransaction.preparingTx': 'Se pregătesc tranzacțiile...',
@@ -316,12 +317,14 @@ const ro = {
   'quickAdd.dateLabel': 'Data: {date}',
   'quickAdd.clear': 'șterge',
   'quickAdd.failedParse': 'Eroare la procesarea textului',
+  'quickAdd.offlineWarning': 'Adăugarea rapidă necesită conexiune la internet pentru procesarea AI.',
 
   // ─── Scanner bonuri ──────────────────────────────────
   'receipt.title': 'Scanează bon',
   'receipt.upload': 'Încarcă poza bonului',
   'receipt.camera': 'Fotografiază',
   'receipt.processing': 'Se procesează bonul...',
+  'receipt.offlineWarning': 'Scanarea bonurilor necesită conexiune la internet. Încearcă din nou când ești online.',
   'receipt.noKey': 'Este necesară o cheie AI pentru scanarea bonurilor. Adaugă una în Setări.',
   'receipt.failed': 'Eroare la procesarea bonului',
   'receipt.addAll': 'Adaugă toate articolele',
@@ -1173,6 +1176,15 @@ const ro = {
   'settings.telegramConnectionFailed': 'Conexiunea a eșuat',
   'settings.webhookFailed': 'Eroare la setarea webhook-ului',
   'settings.telegramChatIdPlaceholder': 'ID-ul tău Telegram de utilizator/chat',
+  'settings.changePassword': 'Schimbă parola',
+  'settings.currentPassword': 'Parola curentă',
+  'settings.newPassword': 'Parola nouă',
+  'settings.confirmPassword': 'Confirmă parola nouă',
+  'settings.updatePassword': 'Actualizează parola',
+  'settings.passwordMismatch': 'Parolele nu se potrivesc',
+  'settings.passwordTooShort': 'Parola trebuie să aibă cel puțin 8 caractere',
+  'settings.passwordChanged': 'Parola a fost schimbată cu succes',
+  'settings.passwordChangeFailed': 'Eroare la schimbarea parolei',
 
   // ─── Configurare inițială ────────────────────────────
   'onboarding.welcome': 'Bine ai venit la BudgetPilot',

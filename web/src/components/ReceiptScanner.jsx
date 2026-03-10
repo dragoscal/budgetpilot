@@ -15,6 +15,10 @@ export default function ReceiptScanner({ onResult, onError }) {
   const fileRef = useRef(null);
 
   const handleFile = useCallback(async (file) => {
+    if (!navigator.onLine) {
+      onError?.(t('receipt.offlineWarning') || 'Receipt scanning requires an internet connection. Please try again when online.');
+      return;
+    }
     if (!file || !file.type.startsWith('image/')) {
       onError?.(t('receipt.uploadImage'));
       return;

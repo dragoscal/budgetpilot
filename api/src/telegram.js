@@ -131,6 +131,15 @@ const CAT_EMOJI = {
 export function registerTelegramRoutes(router) {
   // POST /telegram/webhook — handle Telegram updates
   router.post('/telegram/webhook', async (ctx) => {
+    // Validate webhook secret token if configured
+    const secretToken = ctx.env.TELEGRAM_WEBHOOK_SECRET;
+    if (secretToken) {
+      const headerSecret = ctx.request.headers.get('x-telegram-bot-api-secret-token');
+      if (headerSecret !== secretToken) {
+        return json({ error: 'Unauthorized' }, 403);
+      }
+    }
+
     const update = ctx.body;
     if (!update?.message?.text) return json({ ok: true });
 

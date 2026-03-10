@@ -7,12 +7,12 @@ import { useSync } from '../contexts/SyncContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getSetting, setSetting, getAllSettings } from '../lib/storage';
 import { exportData, importData, clearData } from '../lib/api';
-import { deleteAccount } from '../lib/auth';
+import { deleteAccount, changePassword } from '../lib/auth';
 import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
 import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -45,6 +45,10 @@ export default function SettingsPage() {
   const [aiTestResult, setAiTestResult] = useState(null);
   const [aiTesting, setAiTesting] = useState(false);
   const [keySyncStatus, setKeySyncStatus] = useState(null); // null | 'syncing' | 'synced' | 'local'
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChanging, setPasswordChanging] = useState(false);
   const [exchangeRates, setExchangeRates] = useState({});
   const [rateOverrides, setRateOverrides] = useState({});
   const [ratesUpdatedAt, setRatesUpdatedAt] = useState(null);
@@ -294,6 +298,46 @@ export default function SettingsPage() {
               {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} — {t('currencies.' + c.code) || c.name}</option>)}
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><Lock size={14} /> {t('settings.changePassword')}</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="label">{t('settings.currentPassword')}</label>
+            <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
+          </div>
+          <div>
+            <label className="label">{t('settings.newPassword')}</label>
+            <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+          </div>
+          <div>
+            <label className="label">{t('settings.confirmPassword')}</label>
+            <input className="input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+          </div>
+          <button
+            className="btn-primary"
+            disabled={passwordChanging || !currentPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 8}
+            onClick={async () => {
+              if (newPassword !== confirmPassword) { toast.error(t('settings.passwordMismatch')); return; }
+              if (newPassword.length < 8) { toast.error(t('settings.passwordTooShort')); return; }
+              setPasswordChanging(true);
+              try {
+                await changePassword(user?.id || 'local', currentPassword, newPassword);
+                toast.success(t('settings.passwordChanged'));
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+              } catch (e) {
+                toast.error(e.message || t('settings.passwordChangeFailed'));
+              }
+              setPasswordChanging(false);
+            }}
+          >
+            {passwordChanging ? t('common.saving') : t('settings.updatePassword')}
+          </button>
         </div>
       </div>
 

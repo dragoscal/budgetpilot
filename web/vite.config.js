@@ -13,4 +13,24 @@ export default defineConfig({
     port: 5173,
     open: true,
   },
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — cached long-term, rarely changes
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Charts — only loaded on pages that use them
+          'vendor-charts': ['recharts'],
+          // Date utilities
+          'vendor-date': ['date-fns'],
+          // Icons
+          'vendor-icons': ['lucide-react'],
+          // IndexedDB
+          'vendor-idb': ['idb'],
+        },
+      },
+    },
+  },
 });

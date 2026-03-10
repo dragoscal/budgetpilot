@@ -222,11 +222,12 @@ router.put('/api/auth/password', async (ctx) => {
 // ─── Delete Own Account ──────────────────────────────────
 router.delete('/api/auth/account', async (ctx) => {
   const userId = ctx.user.id;
-  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log'];
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback'];
   for (const table of tables) {
     await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
   }
   await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
+  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
   await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(userId).run();
   return json({ success: true });
 });

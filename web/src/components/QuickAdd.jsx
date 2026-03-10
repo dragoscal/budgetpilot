@@ -26,6 +26,11 @@ export default function QuickAdd({ onResult, onError }) {
     const value = input || text;
     if (!value.trim()) return;
 
+    if (!navigator.onLine) {
+      onError?.(t('quickAdd.offlineWarning') || 'Quick add requires an internet connection for AI parsing.');
+      return;
+    }
+
     setLoading(true);
     try {
       const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
