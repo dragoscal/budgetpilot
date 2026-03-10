@@ -14,6 +14,7 @@ import {
 
 function CreateFamilyForm({ onCreated }) {
   const { createFamily, FAMILY_EMOJIS } = useFamily();
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(FAMILY_EMOJIS[0]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +27,7 @@ function CreateFamilyForm({ onCreated }) {
       const family = await createFamily(name.trim(), emoji);
       onCreated?.(family);
     } catch (err) {
-      console.error(err);
+      toast.error(err.message || 'Failed to create family');
     } finally {
       setLoading(false);
     }

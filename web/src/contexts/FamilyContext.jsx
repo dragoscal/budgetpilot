@@ -15,6 +15,19 @@ function generateInviteCode() {
   return code;
 }
 
+/** Generate an invite code guaranteed unique among existing families */
+async function generateUniqueInviteCode() {
+  const existing = await familiesApi.getAll();
+  const usedCodes = new Set(existing.map((f) => f.inviteCode));
+  let code;
+  let attempts = 0;
+  do {
+    code = generateInviteCode();
+    attempts++;
+  } while (usedCodes.has(code) && attempts < 50);
+  return code;
+}
+
 export function FamilyProvider({ children }) {
   const { user, effectiveUserId } = useAuth();
   const [myFamilies, setMyFamilies] = useState([]);
@@ -58,12 +71,28 @@ export function FamilyProvider({ children }) {
   }, [effectiveUserId]);
 
   const createFamily = useCallback(async (name, emoji) => {
+    // Check for duplicate family name among user's families
+    const allFamilies = await familiesApi.getAll();
+    const allMembers = await membersApi.getAll();
+    const myFamilyIds = new Set(
+      allMembers.filter((m) => m.userId === effectiveUserId).map((m) => m.familyId)
+    );
+    const duplicate = allFamilies.find(
+      (f) => myFamilyIds.has(f.id) && f.name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+    if (duplicate) {
+      throw new Error(`You already have a family named "${duplicate.name}"`);
+    }
+
+    // Generate collision-free invite code
+    const inviteCode = await generateUniqueInviteCode();
+
     const family = {
       id: generateId(),
       name,
       emoji: emoji || FAMILY_EMOJIS[Math.floor(Math.random() * FAMILY_EMOJIS.length)],
       createdBy: effectiveUserId,
-      inviteCode: generateInviteCode(),
+      inviteCode,
       defaultCurrency: user?.defaultCurrency || 'RON',
       createdAt: new Date().toISOString(),
     };
