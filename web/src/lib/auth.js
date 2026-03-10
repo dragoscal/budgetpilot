@@ -140,7 +140,7 @@ export async function login({ email, password, remember = false }) {
     } catch (err) {
       // Network error (API unreachable) — fall through to local mode
       if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-        console.warn('API unreachable, using local login:', err.message);
+        console.warn('API unreachable, trying local login:', err.message);
       } else {
         throw err; // Re-throw server validation errors (e.g. "Invalid credentials")
       }
@@ -152,6 +152,11 @@ export async function login({ email, password, remember = false }) {
   const user = users.find((u) => u.email === email.toLowerCase());
 
   if (!user) {
+    // If we fell through from a network error, the user's account likely exists
+    // only on the server — give a clearer error than "invalid password"
+    if (apiUrl) {
+      throw new Error('Server is currently unreachable. Please check your connection and try again.');
+    }
     throw new Error('Invalid email or password');
   }
 

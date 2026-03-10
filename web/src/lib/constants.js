@@ -257,7 +257,7 @@ export const DEFAULT_SETTINGS = {
   defaultCategory: 'other',
   firstDayOfWeek: 1, // Monday
   darkMode: false,
-  apiUrl: 'https://lumet-api.lumet.workers.dev',
+  apiUrl: 'https://budgetpilot-api.budgetpilot.workers.dev',
   apiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',
