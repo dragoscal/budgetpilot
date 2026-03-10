@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
@@ -21,9 +21,11 @@ import {
 
 export default function AddTransaction() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('quick');
+  const sharedText = searchParams.get('text') || searchParams.get('title') || '';
+  const [activeTab, setActiveTab] = useState(sharedText ? 'quick' : 'quick');
   const [showManual, setShowManual] = useState(false);
   const [pendingResults, setPendingResults] = useState(null);
   const [receiptMeta, setReceiptMeta] = useState(null);
@@ -518,7 +520,7 @@ export default function AddTransaction() {
       {activeTab === 'quick' && (
         <div className="card">
           <h3 className="text-sm font-semibold mb-3">{t('addTransaction.naturalLanguageInput')}</h3>
-          <QuickAdd onResult={handleAIResult} onError={handleError} />
+          <QuickAdd onResult={handleAIResult} onError={handleError} initialValue={sharedText} />
         </div>
       )}
 

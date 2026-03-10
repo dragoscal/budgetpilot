@@ -185,6 +185,8 @@ const ro = {
   'dashboard.moveUp': 'Mută sus',
   'dashboard.moveDown': 'Mută jos',
   'dashboard.resetDefaults': 'Resetează la implicit',
+  'dashboard.dragToReorder': 'Trage pentru a reordona',
+  'dashboard.widgetDragHint': 'Trage widgeturile pentru a reordona sau folosește săgețile',
 
   // ─── Predicții cheltuieli ──────────────────────────────
   'dashboard.predictions': 'Predicții',
@@ -467,6 +469,9 @@ const ro = {
   'budgets.remainingAmount': '{amount} rămas',
   'budgets.overAmount': '{amount} peste buget',
   'budgets.rolloverAmount': '+{amount} reportat din luna anterioară',
+  'budgets.onTrackMessage': 'Ești pe drumul cel bun luna aceasta! Continuă tot așa!',
+  'budgets.overBudgetEmpathetic': '{category} a depășit bugetul.',
+  'budgets.reallocateSuggestion': 'Ia în considerare redistribuirea din altă categorie.',
 
   // ─── Obiective ───────────────────────────────────────
   'goals.title': 'Obiective',
@@ -1092,6 +1097,12 @@ const ro = {
   'family.markSettled': 'Marchează ca achitat',
   'family.personal': 'Personal',
   'family.families': 'Familii',
+  'family.monthlyIncome': 'Venit lunar (pentru împărțiri proporționale)',
+  'family.incomeHint': 'Folosit pentru calculul împărțirii bazate pe venit. Doar tu poți vedea suma ta.',
+  'family.viewer': 'Vizualizator',
+  'family.viewerRestricted': 'Vizualizatorii nu pot crea cheltuieli, achita datorii sau modifica setările.',
+  'family.changeRole': 'Schimbă rolul',
+  'family.roleUpdated': 'Rol actualizat',
 
   // ─── Rapoarte ────────────────────────────────────────
   'reports.title': 'Rapoarte',
@@ -1575,6 +1586,11 @@ const ro = {
   'split.paidByYou': 'Plătit de tine',
   'split.whatWasThis': 'Pentru ce a fost?',
   'split.totalAllocated': 'Total alocat',
+  'split.byIncome': 'Proporțional',
+  'split.setIncomeFirst': 'Setează venitul lunar din Setări Familie mai întâi',
+  'split.incomeProportional': 'Proporțional cu venitul',
+  'split.paidBy': 'Plătit de',
+  'split.selectPayer': 'Selectează cine a plătit',
 
   // ─── Sincronizare ────────────────────────────────────
   'sync.syncing': 'Se sincronizează...',
@@ -1757,11 +1773,81 @@ const ro = {
   'currencies.USD': 'Dolar american',
   'currencies.GBP': 'Liră sterlină',
 
+  // ─── Sfaturi scor sănătate ─────────────────────────────────
+  'health.excellent': 'Sănătate financiară excelentă!',
+  'health.good': 'Progres bun! Concentrează-te pe constanță.',
+  'health.needsWork': 'Loc de îmbunătățire. Revizuiește alocările bugetare.',
+  'health.critical': 'Hai să lucrăm împreună. Începe cu categoriile cu cele mai mari cheltuieli.',
+
+  // ─── Stare goală ─────────────────────────────────────────
+  'emptyState.tip': 'Sfat',
+
   // ─── Paleta de comenzi ─────────────────────────────────
   'commandPalette.placeholder': 'Caută pagini...',
   'commandPalette.noResults': 'Niciun rezultat găsit',
   'commandPalette.title': 'Paletă de comenzi',
   'commandPalette.results': 'Rezultatele căutării',
+  'commandPalette.actions': 'Acțiuni',
+  'commandPalette.pages': 'Pagini',
+  'commandPalette.quickAdd': 'Adaugă cheltuială rapid',
+  'commandPalette.scanReceipt': 'Scanează bon',
+  'commandPalette.importCsv': 'Importă CSV',
+  'commandPalette.toggleDark': 'Comută modul întunecat',
+  'commandPalette.exportData': 'Exportă date',
+
+  // ─── Șabloane buget & De bugetat ────────────────────────
+  'budgets.toBeBudgeted': 'De bugetat',
+  'budgets.fullyAllocated': 'Tot venitul a fost alocat în bugete',
+  'budgets.unallocated': 'Ai bani de alocat',
+  'budgets.overBudgeted': 'Ai bugetat mai mult decât venitul',
+  'budgets.basedOnIncome': 'Bazat pe {amount} venit',
+  'budgets.useTemplate': 'Folosește șablon',
+  'budgets.selectTemplate': 'Alege un șablon de buget',
+  'budgets.applyTemplate': 'Aplică șablonul',
+  'budgets.preview': 'Previzualizare',
+  'budgets.templateApplied': 'Șablonul de buget a fost aplicat!',
+  'budgets.quickAllocate': 'Alocare rapidă',
+  'budgets.noIncomeForTemplate': 'Niciun venit înregistrat luna aceasta. Adaugă tranzacții de venit pentru a folosi șabloanele.',
+
+  // ─── Inteligență categorii ────────────────────────────
+  'settings.categoryRules': 'Reguli categorii',
+  'settings.categoryRulesDesc': 'Gestionează asocierile automate comerciant-categorie învățate din corecturile tale.',
+  'settings.addRule': 'Adaugă regulă',
+  'settings.noRules': 'Nicio regulă de categorie învățată încă. Editează categoria unei tranzacții pentru a începe.',
+  'settings.ruleAdded': 'Regulă de categorie adăugată',
+  'categories.alwaysCategorize': 'Categorizezi mereu "{merchant}" ca {category}?',
+  'categories.learnConfirm': 'Regulă de categorie salvată!',
+
+  // ─── Onboarding — Import & Sugestii ───────────────────
+  'onboarding.importData': 'Importă date existente',
+  'onboarding.importDescription': 'Ai un export CSV de la bancă? Importă-l pentru a începe mai rapid.',
+  'onboarding.skipImport': 'Sari peste',
+  'onboarding.stepImport': 'Import',
+  'onboarding.useSuggestions': 'Folosește sumele sugerate',
+  'onboarding.suggestedBudgets': 'Sugestii de buget aplicate din istoricul tău!',
+  'onboarding.createFromHistory': 'Din istoric',
+
+  // ─── Notificări ───────────────────────────────────────────
+  'settings.notifications': 'Notificări',
+  'settings.notificationsEnabled': 'Activează notificările',
+  'settings.notificationPermission': 'Permisiune browser',
+  'settings.notificationGranted': 'Acordată',
+  'settings.notificationDenied': 'Refuzată',
+  'settings.notificationDefault': 'Nesetat',
+  'settings.notificationHelp': 'Notificările au fost refuzate. Pentru a le reactiva, apasă iconița de lacăt din bara de adrese și permite notificările pentru acest site.',
+  'notifications.title': 'Notificări',
+  'notifications.markAllRead': 'Marchează tot ca citit',
+  'notifications.empty': 'Nicio notificare',
+  'notifications.noNotifications': 'Nicio notificare',
+  'notifications.budgetWarning': 'Avertizare buget',
+  'notifications.budgetExceeded': 'Buget depășit',
+  'notifications.recurringDue': 'Facturi scadente',
+  'notifications.paceAlert': 'Alertă ritm cheltuieli',
+  'notifications.timeAgo': 'acum {time}',
+
+  // ─── PWA ──────────────────────────────────────────────────
+  'pwa.shareTarget': 'Țintă partajare',
+  'pwa.sharedReceived': 'Text partajat primit',
 };
 
 export default ro;

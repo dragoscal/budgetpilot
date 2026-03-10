@@ -10,7 +10,7 @@ import EmptyState from '../components/EmptyState';
 import { formatCurrency } from '../lib/helpers';
 import {
   Users, Plus, Copy, Check, LogOut, Settings, UserPlus, Crown,
-  LayoutDashboard, Receipt, ArrowRight, CheckCircle2,
+  LayoutDashboard, Receipt, ArrowRight, CheckCircle2, Eye,
 } from 'lucide-react';
 
 function CreateFamilyForm({ onCreated }) {
@@ -145,7 +145,7 @@ function InviteCodeDisplay({ family }) {
   );
 }
 
-function MemberCard({ member, isMe, isAdmin: viewerIsAdmin, t }) {
+function MemberCard({ member, isMe, isAdmin: viewerIsAdmin, onRoleChange, t }) {
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isMe ? 'bg-accent-50/50 dark:bg-accent-500/5' : ''}`}>
       <div className="w-10 h-10 rounded-full bg-cream-200 dark:bg-dark-border flex items-center justify-center text-lg">
@@ -155,6 +155,11 @@ function MemberCard({ member, isMe, isAdmin: viewerIsAdmin, t }) {
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm truncate">{member.displayName}</span>
           {isMe && <span className="text-[10px] text-accent font-medium">{t('family.you')}</span>}
+          {member.role === 'viewer' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-500 flex items-center gap-0.5">
+              <Eye size={9} /> {t('family.viewer')}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-cream-500">
           {member.role === 'admin' && (
@@ -165,6 +170,17 @@ function MemberCard({ member, isMe, isAdmin: viewerIsAdmin, t }) {
           <span>{t('family.joinedDate', { date: new Date(member.joinedAt).toLocaleDateString() })}</span>
         </div>
       </div>
+      {/* Role selector for admins editing non-admin members */}
+      {viewerIsAdmin && !isMe && member.role !== 'admin' && onRoleChange && (
+        <select
+          value={member.role}
+          onChange={(e) => onRoleChange(member.id, e.target.value)}
+          className="text-xs border border-cream-300 dark:border-dark-border rounded-lg px-2 py-1 bg-white dark:bg-dark-card"
+        >
+          <option value="member">{t('family.membersTab')}</option>
+          <option value="viewer">{t('family.viewer')}</option>
+        </select>
+      )}
     </div>
   );
 }
@@ -175,8 +191,10 @@ export default function Family() {
   const { t } = useTranslation();
   const {
     myFamilies, activeFamily, members, loading, isAdmin, myMembership,
-    switchFamily, leaveFamily, updateFamily, updateMember, MEMBER_EMOJIS,
+    switchFamily, leaveFamily, updateFamily, updateMember, updateMemberIncome, MEMBER_EMOJIS,
   } = useFamily();
+
+  const isViewer = myMembership?.role === 'viewer';
 
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
@@ -204,6 +222,11 @@ export default function Family() {
   const getMemberName = (userId) => {
     const m = members.find((m) => m.userId === userId);
     return m ? `${m.emoji} ${m.displayName}` : userId;
+  };
+
+  const handleRoleChange = async (memberId, newRole) => {
+    await updateMember(memberId, { role: newRole });
+    toast.success(t('family.roleUpdated'));
   };
 
   const handleSettleDebt = async (from, to) => {
@@ -371,13 +394,15 @@ export default function Family() {
                     <span className="font-heading font-bold money text-warning">
                       {formatCurrency(st.amount, activeFamily?.defaultCurrency || 'RON')}
                     </span>
-                    <button
-                      onClick={() => handleSettleDebt(st.from, st.to)}
-                      className="p-2 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
-                      title={t('family.markSettled')}
-                    >
-                      <CheckCircle2 size={16} />
-                    </button>
+                    {!isViewer && (
+                      <button
+                        onClick={() => handleSettleDebt(st.from, st.to)}
+                        className="p-2 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
+                        title={t('family.markSettled')}
+                      >
+                        <CheckCircle2 size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -470,6 +495,7 @@ export default function Family() {
                 member={m}
                 isMe={m.userId === effectiveUserId}
                 isAdmin={isAdmin}
+                onRoleChange={isAdmin ? handleRoleChange : null}
                 t={t}
               />
             ))}
@@ -480,6 +506,11 @@ export default function Family() {
       {/* Settings tab */}
       {tab === 'settings' && (
         <div className="space-y-4">
+          {isViewer && (
+            <div className="p-3 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-500 text-xs font-medium flex items-center gap-2">
+              <Eye size={14} /> {t('family.viewerRestricted')}
+            </div>
+          )}
           <div className="card space-y-4">
             <div>
               <label className="label">{t('family.familyName')}</label>
@@ -508,6 +539,24 @@ export default function Family() {
                   }
                 }}
               />
+            </div>
+
+            <div>
+              <label className="label">{t('family.monthlyIncome')}</label>
+              <input
+                type="number"
+                className="input"
+                defaultValue={myMembership?.monthlyIncome || ''}
+                placeholder="0"
+                min="0"
+                onBlur={(e) => {
+                  if (myMembership) {
+                    updateMemberIncome(myMembership.id, e.target.value);
+                    toast.success(t('family.displayNameUpdated'));
+                  }
+                }}
+              />
+              <p className="text-[11px] text-cream-400 mt-1">{t('family.incomeHint')}</p>
             </div>
 
             <div>

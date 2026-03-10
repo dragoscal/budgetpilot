@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { CATEGORIES } from '../lib/constants';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
+import { learnCategory } from '../lib/smartFeatures';
 
 export default function TransactionEditModal({ transaction, open, onClose, onSave }) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [form, setForm] = useState({});
 
   useEffect(() => {
@@ -24,12 +27,35 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
 
   const handleSave = () => {
     if (!form.merchant.trim() || !form.amount) return;
+
+    const categoryChanged = transaction && form.category !== transaction.category;
+    const merchantExists = form.merchant && form.merchant.trim().length > 0;
+
     onSave({
       ...transaction,
       ...form,
       amount: Math.abs(Number(form.amount)),
       updatedAt: new Date().toISOString(),
     });
+
+    // Offer to learn this categorization
+    if (categoryChanged && merchantExists) {
+      const merchant = form.merchant.trim();
+      const newCategory = form.category;
+      const catObj = CATEGORIES.find((c) => c.id === newCategory);
+      const catName = catObj ? `${catObj.icon} ${t('categories.' + newCategory)}` : newCategory;
+
+      toast.undo(
+        t('categories.alwaysCategorize', { merchant, category: catName }),
+        {
+          onUndo: () => {
+            learnCategory(merchant, newCategory);
+            toast.success(t('categories.learnConfirm'));
+          },
+        }
+      );
+    }
+
     onClose();
   };
 

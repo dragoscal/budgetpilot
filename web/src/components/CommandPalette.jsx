@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
-import { Search, ArrowRight, Home, PlusCircle, List, Wallet, Target, RotateCcw, Calendar, TrendingUp, BarChart3, PieChart, Settings, Users, Heart, Sparkles, Receipt, FileText, CreditCard, Users2, MessageSquare } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { Search, ArrowRight, Home, PlusCircle, List, Wallet, Target, RotateCcw, Calendar, TrendingUp, BarChart3, PieChart, Settings, Users, Heart, Sparkles, Receipt, FileText, CreditCard, Users2, MessageSquare, Zap, Camera, Upload, Moon, Download } from 'lucide-react';
 
 const PAGES = [
   { path: '/', label: 'nav.dashboard', icon: Home, keywords: ['home', 'dashboard', 'panou'] },
@@ -33,6 +34,15 @@ export default function CommandPalette() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { toggleTheme } = useTheme();
+
+  const ACTIONS = useMemo(() => [
+    { id: 'quick-add', label: t('commandPalette.quickAdd'), icon: Zap, keywords: ['quick', 'add', 'expense', 'fast', 'cheltuiala'], action: () => navigate('/add?tab=nlp') },
+    { id: 'scan-receipt', label: t('commandPalette.scanReceipt'), icon: Camera, keywords: ['scan', 'receipt', 'photo', 'bon', 'scanare'], action: () => navigate('/add?tab=receipt') },
+    { id: 'import-csv', label: t('commandPalette.importCsv'), icon: Upload, keywords: ['import', 'csv', 'bank', 'statement'], action: () => navigate('/add?tab=import') },
+    { id: 'toggle-dark', label: t('commandPalette.toggleDark'), icon: Moon, keywords: ['dark', 'light', 'theme', 'tema', 'mod'], action: () => toggleTheme() },
+    { id: 'export-data', label: t('commandPalette.exportData'), icon: Download, keywords: ['export', 'backup', 'download', 'salvare'], action: () => navigate('/settings') },
+  ], [t, navigate, toggleTheme]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -54,17 +64,38 @@ export default function CommandPalette() {
     }
   }, [open]);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return PAGES;
-    const q = query.toLowerCase();
-    return PAGES.filter(p => {
-      const label = t(p.label).toLowerCase();
-      return label.includes(q) || p.keywords.some(k => k.includes(q)) || p.path.includes(q);
-    });
-  }, [query, t]);
+  // Build combined results with section markers
+  const { flatItems, pageCount, actionCount } = useMemo(() => {
+    const q = query.toLowerCase().trim();
 
-  const handleSelect = (path) => {
-    navigate(path);
+    const filteredPages = q
+      ? PAGES.filter(p => {
+          const label = t(p.label).toLowerCase();
+          return label.includes(q) || p.keywords.some(k => k.includes(q)) || p.path.includes(q);
+        })
+      : PAGES;
+
+    const filteredActions = q
+      ? ACTIONS.filter(a => {
+          const label = a.label.toLowerCase();
+          return label.includes(q) || a.keywords.some(k => k.includes(q));
+        })
+      : ACTIONS;
+
+    // Build flat list: actions first, then pages
+    const items = [];
+    filteredActions.forEach((a) => items.push({ type: 'action', ...a }));
+    filteredPages.forEach((p) => items.push({ type: 'page', ...p }));
+
+    return { flatItems: items, pageCount: filteredPages.length, actionCount: filteredActions.length };
+  }, [query, t, ACTIONS]);
+
+  const handleSelect = (item) => {
+    if (item.type === 'action' && item.action) {
+      item.action();
+    } else if (item.path) {
+      navigate(item.path);
+    }
     setOpen(false);
     setQuery('');
   };
@@ -72,12 +103,12 @@ export default function CommandPalette() {
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex(i => Math.min(i + 1, results.length - 1));
+      setActiveIndex(i => Math.min(i + 1, flatItems.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && results[activeIndex]) {
-      handleSelect(results[activeIndex].path);
+    } else if (e.key === 'Enter' && flatItems[activeIndex]) {
+      handleSelect(flatItems[activeIndex]);
     }
   };
 
@@ -101,9 +132,9 @@ export default function CommandPalette() {
             ref={inputRef}
             role="combobox"
             aria-label={t('commandPalette.placeholder') || 'Search pages'}
-            aria-expanded={results.length > 0}
+            aria-expanded={flatItems.length > 0}
             aria-controls={listboxId}
-            aria-activedescendant={results[activeIndex] ? `cmd-option-${results[activeIndex].path}` : undefined}
+            aria-activedescendant={flatItems[activeIndex] ? `cmd-option-${flatItems[activeIndex].id || flatItems[activeIndex].path}` : undefined}
             className="flex-1 bg-transparent outline-none text-sm text-cream-900 dark:text-cream-100 placeholder:text-cream-400"
             placeholder={t('commandPalette.placeholder') || 'Search pages...'}
             value={query}
@@ -113,30 +144,65 @@ export default function CommandPalette() {
           <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-cream-400 bg-cream-100 dark:bg-dark-border rounded">ESC</kbd>
         </div>
         <div id={listboxId} role="listbox" aria-label={t('commandPalette.results') || 'Search results'} className="max-h-[300px] overflow-y-auto py-1">
-          {results.length === 0 ? (
+          {flatItems.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-cream-400" role="status">{t('commandPalette.noResults') || 'No results found'}</div>
-          ) : results.map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.path}
-                id={`cmd-option-${item.path}`}
-                role="option"
-                aria-selected={i === activeIndex}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${i === activeIndex ? 'bg-cream-100 dark:bg-dark-border text-cream-900 dark:text-cream-100' : 'text-cream-600 dark:text-cream-400 hover:bg-cream-50 dark:hover:bg-dark-border/50'}`}
-                onClick={() => handleSelect(item.path)}
-                onMouseEnter={() => setActiveIndex(i)}
-              >
-                <Icon size={16} className="shrink-0" aria-hidden="true" />
-                <span className="flex-1">{t(item.label)}</span>
-                <ArrowRight size={12} className="opacity-30" aria-hidden="true" />
-              </button>
-            );
-          })}
+          ) : (
+            <>
+              {/* Actions section */}
+              {actionCount > 0 && (
+                <div className="px-4 pt-2 pb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cream-400">{t('commandPalette.actions')}</span>
+                </div>
+              )}
+              {flatItems.slice(0, actionCount).map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    id={`cmd-option-${item.id}`}
+                    role="option"
+                    aria-selected={i === activeIndex}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${i === activeIndex ? 'bg-cream-100 dark:bg-dark-border text-cream-900 dark:text-cream-100' : 'text-cream-600 dark:text-cream-400 hover:bg-cream-50 dark:hover:bg-dark-border/50'}`}
+                    onClick={() => handleSelect(item)}
+                    onMouseEnter={() => setActiveIndex(i)}
+                  >
+                    <Icon size={16} className="shrink-0 text-accent" aria-hidden="true" />
+                    <span className="flex-1">{item.label}</span>
+                    <Zap size={10} className="opacity-30" aria-hidden="true" />
+                  </button>
+                );
+              })}
+              {/* Pages section */}
+              {pageCount > 0 && (
+                <div className="px-4 pt-2 pb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cream-400">{t('commandPalette.pages')}</span>
+                </div>
+              )}
+              {flatItems.slice(actionCount).map((item, idx) => {
+                const Icon = item.icon;
+                const globalIdx = actionCount + idx;
+                return (
+                  <button
+                    key={item.path}
+                    id={`cmd-option-${item.path}`}
+                    role="option"
+                    aria-selected={globalIdx === activeIndex}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${globalIdx === activeIndex ? 'bg-cream-100 dark:bg-dark-border text-cream-900 dark:text-cream-100' : 'text-cream-600 dark:text-cream-400 hover:bg-cream-50 dark:hover:bg-dark-border/50'}`}
+                    onClick={() => handleSelect(item)}
+                    onMouseEnter={() => setActiveIndex(globalIdx)}
+                  >
+                    <Icon size={16} className="shrink-0" aria-hidden="true" />
+                    <span className="flex-1">{t(item.label)}</span>
+                    <ArrowRight size={12} className="opacity-30" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
         <div className="px-4 py-2 border-t border-cream-200 dark:border-dark-border flex items-center gap-4 text-[10px] text-cream-400" aria-hidden="true">
-          <span>↑↓ navigate</span>
-          <span>↵ open</span>
+          <span>&uarr;&darr; navigate</span>
+          <span>&crarr; open</span>
           <span>esc close</span>
         </div>
       </div>

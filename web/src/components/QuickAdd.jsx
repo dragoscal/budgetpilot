@@ -14,10 +14,10 @@ const EXAMPLES = [
   '25 eur coffee #business',
 ];
 
-export default function QuickAdd({ onResult, onError }) {
+export default function QuickAdd({ onResult, onError, initialValue = '' }) {
   const { effectiveUserId } = useAuth();
   const { t } = useTranslation();
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialValue);
   const [loading, setLoading] = useState(false);
   const [customDate, setCustomDate] = useState('');
   const dateRef = useRef(null);

@@ -178,14 +178,37 @@ export async function getLearnedCategories() {
   return (await getSetting(LEARNED_CATEGORIES_KEY)) || {};
 }
 
+export async function removeLearnedCategory(merchant) {
+  if (!merchant) return;
+  const key = merchant.toLowerCase().trim();
+  const learned = await getLearnedCategories();
+  delete learned[key];
+  await setSetting(LEARNED_CATEGORIES_KEY, learned);
+}
+
+export async function getAllLearnedCategories() {
+  const learned = await getLearnedCategories();
+  const result = [];
+  for (const [merchant, cats] of Object.entries(learned)) {
+    const entries = Object.entries(cats);
+    if (entries.length === 0) continue;
+    // Sort by count descending, pick top
+    entries.sort((a, b) => {
+      const countA = typeof a[1] === 'object' ? (a[1].count || 0) : (typeof a[1] === 'number' ? a[1] : 0);
+      const countB = typeof b[1] === 'object' ? (b[1].count || 0) : (typeof b[1] === 'number' ? b[1] : 0);
+      return countB - countA;
+    });
+    const topCategory = entries[0][0];
+    const topEntry = entries[0][1];
+    const count = typeof topEntry === 'object' ? (topEntry.count || 0) : (typeof topEntry === 'number' ? topEntry : 0);
+    result.push({ merchant, category: topCategory, count });
+  }
+  return result.sort((a, b) => a.merchant.localeCompare(b.merchant));
+}
+
 export async function inferCategorySmart(merchant) {
   if (!merchant) return { category: 'other', subcategory: null };
   const lower = merchant.toLowerCase().trim();
-
-  // 1. Check hardcoded map first
-  for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
-    if (lower.includes(key)) return { category: cat, subcategory: null };
-  }
 
   // Helper to extract count from learned entry (supports old number format and new object format)
   const getCount = (entry) => {
@@ -198,17 +221,17 @@ export async function inferCategorySmart(merchant) {
     return null;
   };
 
-  // 2. Check learned categories
+  // 1. Check user-learned categories FIRST (exact match — threshold 1)
   const learned = await getLearnedCategories();
   if (learned[lower]) {
     const entries = Object.entries(learned[lower]);
     entries.sort((a, b) => getCount(b[1]) - getCount(a[1]));
-    if (getCount(entries[0][1]) >= 2) {
+    if (getCount(entries[0][1]) >= 1) {
       return { category: entries[0][0], subcategory: getSubcat(entries[0][1]) };
     }
   }
 
-  // 3. Partial match on learned categories
+  // 2. Partial match on learned categories (threshold >= 2)
   for (const [key, cats] of Object.entries(learned)) {
     if (lower.includes(key) || key.includes(lower)) {
       const entries = Object.entries(cats);
@@ -217,6 +240,11 @@ export async function inferCategorySmart(merchant) {
         return { category: entries[0][0], subcategory: getSubcat(entries[0][1]) };
       }
     }
+  }
+
+  // 3. Check hardcoded keyword map
+  for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
+    if (lower.includes(key)) return { category: cat, subcategory: null };
   }
 
   return { category: 'other', subcategory: null };
@@ -301,6 +329,26 @@ export async function checkBudgetAlerts(monthTransactions) {
         budget: budget.amount,
         message: `${budget.category} budget at ${Math.round(pct)}% — be careful.`,
       });
+    }
+
+    // Pace-based alert: project spending to end of month
+    const now = new Date();
+    const daysElapsed = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    if (daysElapsed > 5 && spent > 0 && spent < budget.amount && budget.amount > 0) {
+      const dailyPace = spent / daysElapsed;
+      const projected = dailyPace * daysInMonth;
+      if (projected > budget.amount) {
+        const dayOfExceed = Math.ceil(budget.amount / dailyPace);
+        alerts.push({
+          category: budget.category,
+          type: 'pace',
+          percent: Math.round((projected / budget.amount) * 100),
+          spent,
+          budget: budget.amount,
+          message: `At current pace, you'll exceed ${budget.category} by the ${dayOfExceed}th`,
+        });
+      }
     }
   }
 

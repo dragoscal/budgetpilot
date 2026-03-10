@@ -12,6 +12,7 @@ import {
   Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera,
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
+import NotificationCenter from './NotificationCenter';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bp_sidebarCollapsed') === 'true');
@@ -161,6 +162,8 @@ export default function Sidebar() {
         <div className="border-t border-cream-200 dark:border-dark-border px-3 py-2 space-y-px shrink-0">
           <SyncIndicator collapsed={collapsed} />
 
+          <NotificationCenter collapsed={collapsed} />
+
           <button
             onClick={toggleTheme}
             aria-label={dark ? t('nav.lightMode') : t('nav.darkMode')}
@@ -268,6 +271,8 @@ export default function Sidebar() {
                   {t('nav.settings')}
                 </p>
                 <div className="space-y-px">
+                  <NotificationCenter mobile />
+
                   <NavLink
                     to="/feedback"
                     onClick={() => setMobileMenuOpen(false)}

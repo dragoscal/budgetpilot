@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Equal, Percent, Sliders } from 'lucide-react';
+import { Equal, Percent, Sliders, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../lib/helpers';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -14,7 +14,13 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
     { id: 'equal', label: t('split.equal'), icon: Equal },
     { id: 'percentage', label: t('split.percentage'), icon: Percent },
     { id: 'custom', label: t('split.custom'), icon: Sliders },
+    { id: 'income', label: t('split.byIncome'), icon: TrendingUp },
   ], [t]);
+
+  // Check if all members have income set (for income-based split)
+  const allHaveIncome = useMemo(() => {
+    return members.every((m) => m.monthlyIncome && m.monthlyIncome > 0);
+  }, [members]);
 
   const handleTypeChange = (type) => {
     setSplitType(type);
@@ -37,6 +43,41 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
         percentage: pct,
         settled: false,
       }));
+      onChange(newSplits, type);
+    } else if (type === 'income') {
+      if (!allHaveIncome) {
+        // Fall back to equal if income not set
+        const perPerson = Math.round((totalAmount / members.length) * 100) / 100;
+        const newSplits = members.map((m) => ({
+          userId: m.userId,
+          amount: perPerson,
+          percentage: Math.round((100 / members.length) * 100) / 100,
+          settled: false,
+        }));
+        onChange(newSplits, type);
+        return;
+      }
+      const totalIncome = members.reduce((s, m) => s + (m.monthlyIncome || 0), 0);
+      // Find highest-income member index for rounding remainder
+      let highestIdx = 0;
+      let highestIncome = 0;
+      members.forEach((m, i) => {
+        if ((m.monthlyIncome || 0) > highestIncome) {
+          highestIncome = m.monthlyIncome || 0;
+          highestIdx = i;
+        }
+      });
+      const newSplits = members.map((m) => {
+        const pct = totalIncome > 0 ? Math.round(((m.monthlyIncome || 0) / totalIncome) * 10000) / 100 : 0;
+        const amount = Math.round((totalAmount * pct / 100) * 100) / 100;
+        return { userId: m.userId, amount, percentage: pct, settled: false };
+      });
+      // Handle rounding remainder
+      const allocated = newSplits.reduce((s, sp) => s + sp.amount, 0);
+      const remainder = Math.round((totalAmount - allocated) * 100) / 100;
+      if (Math.abs(remainder) >= 0.01) {
+        newSplits[highestIdx].amount = Math.round((newSplits[highestIdx].amount + remainder) * 100) / 100;
+      }
       onChange(newSplits, type);
     } else {
       const perPerson = Math.round((totalAmount / members.length) * 100) / 100;
@@ -96,6 +137,13 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
         ))}
       </div>
 
+      {/* Income warning */}
+      {splitType === 'income' && !allHaveIncome && (
+        <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 text-warning text-xs font-medium flex items-center gap-2">
+          <span>&#9888;&#65039;</span> {t('split.setIncomeFirst')}
+        </div>
+      )}
+
       {/* Split list */}
       <div className="space-y-2">
         {splits.map((split) => (
@@ -104,7 +152,12 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
               {getMemberName(split.userId)}
             </span>
 
-            {splitType === 'percentage' ? (
+            {splitType === 'income' ? (
+              <div className="flex-1 flex items-center gap-2">
+                <span className="text-xs text-cream-400">{split.percentage}%</span>
+                <span className="text-sm money ml-auto font-medium">{formatCurrency(split.amount, currency)}</span>
+              </div>
+            ) : splitType === 'percentage' ? (
               <div className="flex-1 flex items-center gap-2">
                 <input
                   type="number"

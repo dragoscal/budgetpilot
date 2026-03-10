@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { CURRENCIES, CATEGORIES, ACCOUNT_TYPES } from '../lib/constants';
-import { accounts as accountsApi, budgets as budgetsApi, settings as settingsApi } from '../lib/api';
+import { CURRENCIES, CATEGORIES, ACCOUNT_TYPES, ONBOARDING_BUDGET_DEFAULTS } from '../lib/constants';
+import { accounts as accountsApi, budgets as budgetsApi, transactions as txApi, settings as settingsApi } from '../lib/api';
 import { generateId, formatDateISO } from '../lib/helpers';
-import { Wallet, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
+import { Wallet, ArrowRight, ArrowLeft, Check, Sparkles, Upload, History } from 'lucide-react';
+import CSVImport from '../components/CSVImport';
+import { suggestBudgetsFromHistory } from '../lib/predictions';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -14,17 +16,27 @@ export default function Onboarding() {
   const { toast } = useToast();
   const { t, language, setLanguage, languages } = useTranslation();
 
-  const STEPS = [t('onboarding.stepWelcome'), t('onboarding.stepAccount'), t('onboarding.stepBudgets'), t('onboarding.stepAi')];
+  const STEPS = [
+    t('onboarding.stepWelcome'),
+    t('onboarding.stepAccount'),
+    t('onboarding.stepImport'),
+    t('onboarding.stepBudgets'),
+    t('onboarding.stepAi'),
+  ];
   const [step, setStep] = useState(0);
 
-  // Step 1 — Welcome
+  // Step 0 — Welcome
   const [displayName, setDisplayName] = useState(user?.name || '');
   const [currency, setCurrency] = useState(user?.defaultCurrency || 'RON');
 
-  // Step 2 — First account
+  // Step 1 — First account
   const [accountName, setAccountName] = useState('Main Account');
   const [accountType, setAccountType] = useState('checking');
   const [accountBalance, setAccountBalance] = useState('');
+
+  // Step 2 — Import (optional)
+  const [importedTransactions, setImportedTransactions] = useState([]);
+  const [importError, setImportError] = useState(null);
 
   // Step 3 — Budgets
   const budgetCategories = ['groceries', 'dining', 'transport', 'shopping', 'entertainment'];
@@ -32,6 +44,24 @@ export default function Onboarding() {
 
   // Step 4 — AI
   const [apiKey, setApiKey] = useState('');
+
+  const handleImportResult = useCallback((result) => {
+    if (result?.transactions?.length > 0) {
+      setImportedTransactions(result.transactions);
+      setImportError(null);
+      toast.success(t('addTransaction.transactionsAdded', { count: result.transactions.length }));
+    }
+  }, [toast, t]);
+
+  const handleImportError = useCallback((msg) => {
+    setImportError(msg);
+    toast.error(msg);
+  }, [toast]);
+
+  const handleUseSuggestions = () => {
+    const defaults = ONBOARDING_BUDGET_DEFAULTS[currency] || ONBOARDING_BUDGET_DEFAULTS.RON;
+    setBudgetAmounts({ ...defaults });
+  };
 
   const handleFinish = async () => {
     try {
@@ -57,6 +87,13 @@ export default function Onboarding() {
           createdAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
         });
+      }
+
+      // Save imported transactions
+      if (importedTransactions.length > 0) {
+        for (const tx of importedTransactions) {
+          await txApi.create({ ...tx, userId: uid, currency });
+        }
       }
 
       // Create budgets
@@ -109,7 +146,7 @@ export default function Onboarding() {
                 {i < step ? <Check size={14} /> : i + 1}
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`w-12 h-0.5 ${i < step ? 'bg-cream-900 dark:bg-cream-100' : 'bg-cream-300 dark:bg-dark-border'}`} />
+                <div className={`w-8 h-0.5 ${i < step ? 'bg-cream-900 dark:bg-cream-100' : 'bg-cream-300 dark:bg-dark-border'}`} />
               )}
             </div>
           ))}
@@ -213,38 +250,95 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Step 2: Budgets */}
+          {/* Step 2: Import Data (optional) */}
           {step === 2 && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-accent-500/10 rounded-2xl mb-3">
+                  <Upload className="w-7 h-7 text-accent-500" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold">{t('onboarding.importData')}</h2>
+                <p className="text-cream-700 dark:text-cream-500 mt-1">{t('onboarding.importDescription')}</p>
+              </div>
+              {importedTransactions.length > 0 ? (
+                <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-center">
+                  <Check className="w-8 h-8 text-success mx-auto mb-2" />
+                  <p className="text-sm font-medium">{importedTransactions.length} {t('common.transactions')} {t('addTransaction.saved')}</p>
+                </div>
+              ) : (
+                <CSVImport onResult={handleImportResult} onError={handleImportError} />
+              )}
+              {importError && (
+                <p className="text-xs text-danger">{importError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Budgets */}
+          {step === 3 && (
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-2xl font-heading font-bold">{t('onboarding.setMonthlyBudgets')}</h2>
                 <p className="text-cream-700 dark:text-cream-500 mt-1">{t('onboarding.budgetsOptional')}</p>
               </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleUseSuggestions}
+                  className="btn-secondary flex-1 text-sm"
+                >
+                  {t('onboarding.useSuggestions')}
+                </button>
+                {importedTransactions.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const suggestions = suggestBudgetsFromHistory(importedTransactions, currency);
+                      const newAmounts = {};
+                      for (const s of suggestions) {
+                        newAmounts[s.category] = s.suggestedAmount;
+                      }
+                      setBudgetAmounts(newAmounts);
+                      toast.success(t('onboarding.suggestedBudgets'));
+                    }}
+                    className="btn-secondary flex-1 text-sm flex items-center justify-center gap-1"
+                  >
+                    <History size={14} /> {t('onboarding.createFromHistory')}
+                  </button>
+                )}
+              </div>
               <div className="space-y-3">
-                {budgetCategories.map((catId) => {
-                  const cat = CATEGORIES.find((c) => c.id === catId);
-                  return (
-                    <div key={catId} className="flex items-center gap-3">
-                      <span className="text-xl w-8 text-center">{cat.icon}</span>
-                      <span className="text-sm font-medium flex-1">{t(`categories.${catId}`)}</span>
-                      <input
-                        type="number"
-                        className="input w-32"
-                        placeholder="0"
-                        value={budgetAmounts[catId] || ''}
-                        onChange={(e) => setBudgetAmounts((prev) => ({ ...prev, [catId]: e.target.value }))}
-                        inputMode="decimal"
-                      />
-                      <span className="text-xs text-cream-500 w-8">{currency === 'RON' ? 'lei' : CURRENCIES.find((c) => c.code === currency)?.symbol}</span>
-                    </div>
+                {/* Show the fixed budget categories, plus any extra from imported history */}
+                {(() => {
+                  const extraCats = Object.keys(budgetAmounts).filter(
+                    (id) => !budgetCategories.includes(id) && id !== 'income' && id !== 'transfer'
                   );
-                })}
+                  const allCats = [...budgetCategories, ...extraCats];
+                  return allCats.map((catId) => {
+                    const cat = CATEGORIES.find((c) => c.id === catId);
+                    if (!cat) return null;
+                    const defaults = ONBOARDING_BUDGET_DEFAULTS[currency] || ONBOARDING_BUDGET_DEFAULTS.RON;
+                    return (
+                      <div key={catId} className="flex items-center gap-3">
+                        <span className="text-xl w-8 text-center">{cat.icon}</span>
+                        <span className="text-sm font-medium flex-1">{t(`categories.${catId}`)}</span>
+                        <input
+                          type="number"
+                          className="input w-32"
+                          placeholder={defaults[catId]?.toString() || '0'}
+                          value={budgetAmounts[catId] || ''}
+                          onChange={(e) => setBudgetAmounts((prev) => ({ ...prev, [catId]: e.target.value }))}
+                          inputMode="decimal"
+                        />
+                        <span className="text-xs text-cream-500 w-8">{currency === 'RON' ? 'lei' : CURRENCIES.find((c) => c.code === currency)?.symbol}</span>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
 
-          {/* Step 3: AI Setup */}
-          {step === 3 && (
+          {/* Step 4: AI Setup */}
+          {step === 4 && (
             <div className="space-y-6">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 bg-info/10 rounded-2xl mb-3">
@@ -285,7 +379,7 @@ export default function Onboarding() {
                 disabled={!canNext()}
                 className="btn-primary flex items-center gap-1 disabled:opacity-50"
               >
-                {t('common.next')} <ArrowRight size={16} />
+                {step === 2 ? t('onboarding.skipImport') : t('common.next')} <ArrowRight size={16} />
               </button>
             ) : (
               <button onClick={handleFinish} className="btn-primary flex items-center gap-1">

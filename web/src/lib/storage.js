@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'budgetpilot';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 let dbPromise = null;
 
@@ -15,7 +15,7 @@ if (import.meta.hot) {
   });
 }
 
-function getDB() {
+export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
@@ -133,6 +133,15 @@ function getDB() {
             const challengeStore = db.createObjectStore('challenges', { keyPath: 'id' });
             challengeStore.createIndex('userId', 'userId');
             challengeStore.createIndex('status', 'status');
+          }
+        }
+
+        // v9: In-app notifications
+        if (oldVersion < 9) {
+          if (!db.objectStoreNames.contains('notifications')) {
+            const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
+            notifStore.createIndex('read', 'read');
+            notifStore.createIndex('createdAt', 'createdAt');
           }
         }
       },

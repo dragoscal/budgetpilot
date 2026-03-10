@@ -12,7 +12,10 @@ import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
 import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock } from 'lucide-react';
+import { requestNotificationPermission, getNotificationPermission } from '../lib/notifications';
+import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
+import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
+import { CATEGORIES } from '../lib/constants';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -53,6 +56,11 @@ export default function SettingsPage() {
   const [rateOverrides, setRateOverrides] = useState({});
   const [ratesUpdatedAt, setRatesUpdatedAt] = useState(null);
   const [ratesFetching, setRatesFetching] = useState(false);
+  const [categoryRules, setCategoryRules] = useState([]);
+  const [newRuleMerchant, setNewRuleMerchant] = useState('');
+  const [newRuleCategory, setNewRuleCategory] = useState('groceries');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
 
   useEffect(() => {
     loadSettings();
@@ -72,6 +80,8 @@ export default function SettingsPage() {
     setWebhookUrl(settings.webhookUrl || '');
     setDefaultCurrency(settings.defaultCurrency || user?.defaultCurrency || 'RON');
     setUserName(settings.userName || user?.name || '');
+    setNotificationsEnabled(!!settings.notificationsEnabled);
+    setNotifPermission(getNotificationPermission());
 
     // Load exchange rates
     try {
@@ -84,6 +94,14 @@ export default function SettingsPage() {
     } catch (err) {
       // Offline or network error — use default exchange rates
       console.error('Failed to load exchange rates:', err);
+    }
+
+    // Load category rules
+    try {
+      const rules = await getAllLearnedCategories();
+      setCategoryRules(rules);
+    } catch (err) {
+      console.error('Failed to load category rules:', err);
     }
   };
 
@@ -283,6 +301,66 @@ export default function SettingsPage() {
               ))}
             </select>
             <p className="text-xs text-cream-400 mt-1">{t('settings.hideAmountsDesc')}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><Bell size={14} /> {t('settings.notifications')}</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">{t('settings.notificationsEnabled')}</p>
+              <p className="text-xs text-cream-500">{t('settings.notificationPermission')}</p>
+            </div>
+            <button
+              onClick={async () => {
+                if (!notificationsEnabled) {
+                  // Turning ON — request permission
+                  const perm = await requestNotificationPermission();
+                  setNotifPermission(perm);
+                  if (perm === 'granted') {
+                    setNotificationsEnabled(true);
+                    await setSetting('notificationsEnabled', true);
+                    toast.success(t('settings.notificationGranted'));
+                  } else if (perm === 'denied') {
+                    toast.error(t('settings.notificationDenied'));
+                  }
+                } else {
+                  // Turning OFF
+                  setNotificationsEnabled(false);
+                  await setSetting('notificationsEnabled', false);
+                }
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                notificationsEnabled ? 'bg-accent-600' : 'bg-cream-300 dark:bg-cream-700'
+              }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+          <div className="border-t border-cream-200 dark:border-dark-border pt-3">
+            <p className="text-xs text-cream-500">
+              {t('settings.notificationPermission')}:{' '}
+              {notifPermission === 'granted' && (
+                <span className="text-success font-medium">{t('settings.notificationGranted')}</span>
+              )}
+              {notifPermission === 'denied' && (
+                <span className="text-danger font-medium">{t('settings.notificationDenied')}</span>
+              )}
+              {notifPermission === 'default' && (
+                <span className="text-cream-600 dark:text-cream-400 font-medium">{t('settings.notificationDefault')}</span>
+              )}
+              {notifPermission === 'unsupported' && (
+                <span className="text-cream-400 font-medium">Unsupported</span>
+              )}
+            </p>
+            {notifPermission === 'denied' && (
+              <p className="text-xs text-cream-400 mt-1">{t('settings.notificationHelp')}</p>
+            )}
           </div>
         </div>
       </div>
@@ -703,6 +781,83 @@ export default function SettingsPage() {
               {t('settings.clearOverrides')}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Category Rules */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><Tag size={14} /> {t('settings.categoryRules')}</h3>
+        <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
+          {t('settings.categoryRulesDesc')}
+        </p>
+
+        {categoryRules.length > 0 ? (
+          <div className="space-y-2 mb-4">
+            {categoryRules.map((rule) => {
+              const cat = CATEGORIES.find((c) => c.id === rule.category);
+              return (
+                <div key={rule.merchant} className="flex items-center justify-between p-2 rounded-lg bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base">{cat?.icon || '📦'}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{rule.merchant}</p>
+                      <p className="text-xs text-cream-500">{t(`categories.${rule.category}`)} ({rule.count}x)</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await removeLearnedCategory(rule.merchant);
+                      setCategoryRules((prev) => prev.filter((r) => r.merchant !== rule.merchant));
+                      toast.success(t('common.delete'));
+                    }}
+                    className="p-1.5 rounded-full hover:bg-danger/10 text-cream-400 hover:text-danger shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-cream-500 mb-4">{t('settings.noRules')}</p>
+        )}
+
+        {/* Add Rule */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="text-xs text-cream-500 mb-1 block">{t('transactions.merchant')}</label>
+            <input
+              className="input text-sm"
+              value={newRuleMerchant}
+              onChange={(e) => setNewRuleMerchant(e.target.value)}
+              placeholder={t('manualForm.merchantPlaceholderShort')}
+            />
+          </div>
+          <div className="w-36">
+            <label className="text-xs text-cream-500 mb-1 block">{t('common.category')}</label>
+            <select
+              className="input text-sm"
+              value={newRuleCategory}
+              onChange={(e) => setNewRuleCategory(e.target.value)}
+            >
+              {CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => (
+                <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={async () => {
+              if (!newRuleMerchant.trim()) return;
+              await learnCategory(newRuleMerchant.trim(), newRuleCategory);
+              const rules = await getAllLearnedCategories();
+              setCategoryRules(rules);
+              setNewRuleMerchant('');
+              toast.success(t('settings.ruleAdded'));
+            }}
+            className="btn-primary text-xs flex items-center gap-1 px-3 py-2"
+          >
+            <Plus size={14} /> {t('settings.addRule')}
+          </button>
         </div>
       </div>
 

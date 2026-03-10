@@ -107,6 +107,7 @@ export function FamilyProvider({ children }) {
       role: 'admin',
       displayName: user?.name || 'Me',
       emoji: MEMBER_EMOJIS[0],
+      monthlyIncome: 0,
       joinedAt: new Date().toISOString(),
     };
     await membersApi.create(member);
@@ -138,6 +139,7 @@ export function FamilyProvider({ children }) {
       role: 'member',
       displayName: user?.name || 'Me',
       emoji: MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)],
+      monthlyIncome: 0,
       joinedAt: new Date().toISOString(),
     };
     await membersApi.create(member);
@@ -200,6 +202,14 @@ export function FamilyProvider({ children }) {
     setMembers((prev) => prev.map((m) => (m.id === memberId ? updated : m)));
   }, [members]);
 
+  const updateMemberIncome = useCallback(async (memberId, income) => {
+    const member = members.find((m) => m.id === memberId);
+    if (!member) return;
+    const updated = { ...member, monthlyIncome: Number(income) || 0 };
+    await membersApi.update(updated);
+    setMembers((prev) => prev.map((m) => (m.id === memberId ? updated : m)));
+  }, [members]);
+
   const isFamilyMode = !!activeFamily;
   const myMembership = members.find((m) => m.userId === effectiveUserId);
   const isAdmin = myMembership?.role === 'admin';
@@ -220,6 +230,7 @@ export function FamilyProvider({ children }) {
         updateFamily,
         leaveFamily,
         updateMember,
+        updateMemberIncome,
         loadFamilies,
         FAMILY_EMOJIS,
         MEMBER_EMOJIS,

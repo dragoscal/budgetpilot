@@ -42,13 +42,25 @@ async function getAuthHeaders() {
 
 // Register for background sync when there are pending changes and the user goes offline
 export async function registerBackgroundSync() {
-  if ('serviceWorker' in navigator && 'SyncManager' in window) {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.sync.register('sync-transactions');
-    } catch (err) {
-      console.warn('Background sync registration failed:', err);
+  if (!('serviceWorker' in navigator)) {
+    console.warn('Background sync not available: no service worker support');
+    return false;
+  }
+  if (!('SyncManager' in window)) {
+    console.warn('Background sync not available: SyncManager not supported');
+    return false;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg.sync) {
+      console.warn('Background sync not available: sync not on registration');
+      return false;
     }
+    await reg.sync.register('sync-transactions');
+    return true;
+  } catch (err) {
+    console.warn('Background sync registration failed:', err);
+    return false;
   }
 }
 

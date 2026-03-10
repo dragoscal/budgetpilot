@@ -14,7 +14,7 @@ import SplitCalculator from './SplitCalculator';
  */
 export default function SplitExpenseModal({ open, onClose, transaction, onSaved }) {
   const { t } = useTranslation();
-  const { activeFamily, members } = useFamily();
+  const { activeFamily, members, myMembership } = useFamily();
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [splits, setSplits] = useState([]);
@@ -22,6 +22,9 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [alreadySplit, setAlreadySplit] = useState(false);
+  const [paidBy, setPaidBy] = useState(effectiveUserId);
+
+  const isViewer = myMembership?.role === 'viewer';
 
   // Initialize splits when modal opens + check for duplicates
   useEffect(() => {
@@ -40,6 +43,7 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
       const perPerson = Math.round((transaction.amount / members.length) * 100) / 100;
       const remainder = Math.round((transaction.amount - perPerson * members.length) * 100) / 100;
 
+      setPaidBy(effectiveUserId);
       setSplits(members.map((m, i) => ({
         userId: m.userId,
         amount: i === 0 ? perPerson + remainder : perPerson,
@@ -53,7 +57,7 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
   const handleSplitChange = (newSplits, type) => {
     setSplits(newSplits.map((s) => ({
       ...s,
-      settled: s.userId === effectiveUserId ? true : s.settled,
+      settled: s.userId === paidBy ? true : s.settled,
     })));
     setSplitType(type);
   };
@@ -78,7 +82,7 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
         id: generateId(),
         familyId: activeFamily.id,
         transactionId: transaction.id,
-        paidByUserId: effectiveUserId,
+        paidByUserId: paidBy,
         totalAmount: transaction.amount,
         currency: transaction.currency || 'RON',
         splitType,
@@ -106,9 +110,15 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
   return (
     <Modal open={open} onClose={onClose} title={t('split.splitExpense')}>
       <div className="space-y-4">
+        {isViewer && (
+          <div className="p-3 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-500 text-sm font-medium text-center">
+            {t('family.viewerRestricted')}
+          </div>
+        )}
+
         {alreadySplit && (
           <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 text-warning text-sm font-medium flex items-center gap-2">
-            <span>⚠️</span> {t('split.duplicateWarning')}
+            <span>&#9888;&#65039;</span> {t('split.duplicateWarning')}
           </div>
         )}
 
@@ -122,8 +132,25 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
           </p>
         </div>
 
+        {/* Paid by selector */}
+        <div>
+          <label className="label">{t('split.paidBy')}</label>
+          <select
+            className="input"
+            value={paidBy}
+            onChange={(e) => setPaidBy(e.target.value)}
+            disabled={isViewer}
+          >
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.emoji} {m.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <p className="text-xs text-cream-500">
-          {t('split.paidByYou')} · {t('split.splitWith', { name: activeFamily.name })}
+          {t('split.splitWith', { name: activeFamily.name })}
         </p>
 
         <div>
@@ -146,10 +173,10 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
 
         <button
           onClick={handleSave}
-          disabled={saving || alreadySplit}
+          disabled={saving || alreadySplit || isViewer}
           className="btn-primary w-full"
         >
-          {saving ? t('common.saving') : alreadySplit ? t('split.alreadySplitBtn') : t('split.saveSplit')}
+          {saving ? t('common.saving') : isViewer ? t('family.viewerRestricted') : alreadySplit ? t('split.alreadySplitBtn') : t('split.saveSplit')}
         </button>
       </div>
     </Modal>

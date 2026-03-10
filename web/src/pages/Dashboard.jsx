@@ -8,6 +8,8 @@ import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, tre
 import { getCachedRates } from '../lib/exchangeRates';
 import { predictMonthlySpending, predictEndOfMonthBalance, getSpendingAnomalies } from '../lib/predictions';
 import { getBillSuggestions, dismissSuggestion } from '../lib/billSuggestions';
+import { checkAndNotifyBudgetAlerts, checkAndNotifyRecurringDue } from '../lib/notifications';
+import { addNotification } from '../lib/notificationStore';
 import StatCard from '../components/StatCard';
 import BudgetBar from '../components/BudgetBar';
 import TransactionRow from '../components/TransactionRow';
@@ -16,7 +18,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
 
 
@@ -75,6 +77,8 @@ export default function Dashboard() {
     return WIDGET_DEFAULTS;
   });
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
+  const [draggedWidget, setDraggedWidget] = useState(null);
+  const [dragOverWidget, setDragOverWidget] = useState(null);
 
   const saveWidgetConfig = useCallback((config) => {
     setWidgetConfig(config);
@@ -159,6 +163,42 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  // ─── Notification checks (run once when data is loaded) ─────
+  useEffect(() => {
+    if (loading || transactions.length === 0) return;
+    const runNotificationChecks = async () => {
+      try {
+        // Check budget alerts and send OS notifications
+        await checkAndNotifyBudgetAlerts(transactions, budgetsList);
+        // Store budget alerts in notification center
+        const { checkBudgetAlerts } = await import('../lib/smartFeatures');
+        const alerts = await checkBudgetAlerts(transactions);
+        for (const alert of alerts) {
+          await addNotification({
+            type: alert.type === 'over' ? 'budget_exceeded' : alert.type === 'pace' ? 'pace_alert' : 'budget_warning',
+            title: alert.type === 'over' ? t('notifications.budgetExceeded') : alert.type === 'pace' ? t('notifications.paceAlert') : t('notifications.budgetWarning'),
+            message: alert.message,
+            actionUrl: '/budgets',
+          });
+        }
+        // Check recurring due and send OS notifications
+        if (recurringDue.length > 0) {
+          await checkAndNotifyRecurringDue(recurringDue);
+          await addNotification({
+            type: 'recurring_due',
+            title: t('notifications.recurringDue'),
+            message: `${recurringDue.length} bill(s) due: ${recurringDue.map(r => r.name).join(', ')}`,
+            actionUrl: '/recurring',
+          });
+        }
+      } catch (err) {
+        // Notifications are non-critical — don't block the dashboard
+        console.error('Notification check error:', err);
+      }
+    };
+    runNotificationChecks();
+  }, [loading, transactions.length, budgetsList.length, recurringDue.length]);
 
   const stats = useMemo(() => {
     const currency = user?.defaultCurrency || 'RON';
@@ -486,9 +526,50 @@ export default function Dashboard() {
                       {t('dashboard.resetDefaults')}
                     </button>
                   </div>
+                  <p className="text-[10px] text-cream-400 mb-1">{t('dashboard.widgetDragHint')}</p>
                   <div className="space-y-1">
                     {widgetConfig.map((w, idx) => (
-                      <div key={w.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-cream-50 dark:hover:bg-cream-800/30">
+                      <div
+                        key={w.id}
+                        draggable="true"
+                        onDragStart={(e) => {
+                          setDraggedWidget(w.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverWidget(w.id);
+                        }}
+                        onDragLeave={() => {
+                          setDragOverWidget((prev) => prev === w.id ? null : prev);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedWidget && draggedWidget !== w.id) {
+                            const fromIdx = widgetConfig.findIndex((wc) => wc.id === draggedWidget);
+                            const toIdx = widgetConfig.findIndex((wc) => wc.id === w.id);
+                            if (fromIdx >= 0 && toIdx >= 0) {
+                              const updated = [...widgetConfig];
+                              const [moved] = updated.splice(fromIdx, 1);
+                              updated.splice(toIdx, 0, moved);
+                              saveWidgetConfig(updated);
+                            }
+                          }
+                          setDraggedWidget(null);
+                          setDragOverWidget(null);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedWidget(null);
+                          setDragOverWidget(null);
+                        }}
+                        className={`flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors ${
+                          draggedWidget === w.id ? 'opacity-50 cursor-grabbing' :
+                          dragOverWidget === w.id ? 'bg-accent-50 dark:bg-accent-500/15 ring-1 ring-accent/30' :
+                          'hover:bg-cream-50 dark:hover:bg-cream-800/30 cursor-grab'
+                        }`}
+                      >
+                        <GripVertical size={12} className="text-cream-300 shrink-0" />
                         <label className="flex items-center gap-2 flex-1 cursor-pointer">
                           <input
                             type="checkbox"
@@ -651,21 +732,33 @@ export default function Dashboard() {
 
           case 'healthScore':
             return (
-              <div key="healthScore" className={`card !p-3 md:!p-4 flex items-center gap-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
-                <div className="relative w-14 h-14 shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
-                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" className="text-cream-200 dark:text-dark-border" />
-                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={healthLabel.strokeColor} strokeWidth="3" strokeDasharray={`${healthScore}, 100`} strokeLinecap="round" />
-                  </svg>
-                  <span className={`absolute inset-0 flex items-center justify-center text-sm font-heading font-bold ${healthLabel.color}`}>{healthScore}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Heart size={14} className={healthLabel.color} />
-                    <p className="text-xs font-bold uppercase tracking-wider text-cream-600 dark:text-cream-400">{t('dashboard.healthScore')}</p>
+              <div key="healthScore" className={`card !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-14 h-14 shrink-0">
+                    <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" className="text-cream-200 dark:text-dark-border" />
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={healthLabel.strokeColor} strokeWidth="3" strokeDasharray={`${healthScore}, 100`} strokeLinecap="round" />
+                    </svg>
+                    <span className={`absolute inset-0 flex items-center justify-center text-sm font-heading font-bold ${healthLabel.color}`}>{healthScore}</span>
                   </div>
-                  <p className={`text-sm font-heading font-bold ${healthLabel.color}`}>{t(healthLabel.key)}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Heart size={14} className={healthLabel.color} />
+                      <p className="text-xs font-bold uppercase tracking-wider text-cream-600 dark:text-cream-400">{t('dashboard.healthScore')}</p>
+                    </div>
+                    <p className={`text-sm font-heading font-bold ${healthLabel.color}`}>{t(healthLabel.key)}</p>
+                  </div>
                 </div>
+                <p className="text-xs text-cream-500 mt-2">
+                  {healthScore > 80
+                    ? t('health.excellent')
+                    : healthScore >= 60
+                    ? t('health.good')
+                    : healthScore >= 40
+                    ? t('health.needsWork')
+                    : t('health.critical')
+                  }
+                </p>
               </div>
             );
 

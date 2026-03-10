@@ -269,7 +269,52 @@ export const DEFAULT_SETTINGS = {
   userName: '',
   budgetAlerts: { 50: false, 80: true, 100: true },
   weeklyDigest: false,
+  notificationsEnabled: false,
   locale: 'ro-RO',
+};
+
+export const BUDGET_TEMPLATES = [
+  {
+    id: '50-30-20', name: '50/30/20 Rule',
+    description: '50% needs, 30% wants, 20% savings',
+    buckets: { needs: 50, wants: 30, savings: 20 },
+    mapping: {
+      housing: 'needs', utilities: 'needs', groceries: 'needs', transport: 'needs',
+      health: 'needs', insurance: 'needs', education: 'needs',
+      dining: 'wants', shopping: 'wants', entertainment: 'wants',
+      subscriptions: 'wants', personal: 'wants', travel: 'wants',
+      gifts: 'wants', pets: 'needs',
+      savings: 'savings', other: 'wants',
+    },
+  },
+  {
+    id: '60-30-10', name: '60/30/10 Rule',
+    description: '60% essentials, 30% lifestyle, 10% savings',
+    buckets: { needs: 60, wants: 30, savings: 10 },
+    mapping: {
+      housing: 'needs', utilities: 'needs', groceries: 'needs', transport: 'needs',
+      health: 'needs', insurance: 'needs', education: 'needs',
+      dining: 'wants', shopping: 'wants', entertainment: 'wants',
+      subscriptions: 'wants', personal: 'wants', travel: 'wants',
+      gifts: 'wants', pets: 'needs',
+      savings: 'savings', other: 'wants',
+    },
+  },
+  {
+    id: '80-20', name: '80/20 Rule',
+    description: '80% spending, 20% savings',
+    buckets: { spending: 80, savings: 20 },
+    mapping: {
+      savings: 'savings',
+      // everything else maps to 'spending'
+    },
+  },
+];
+
+export const ONBOARDING_BUDGET_DEFAULTS = {
+  RON: { groceries: 1500, dining: 500, transport: 400, shopping: 600, entertainment: 300 },
+  EUR: { groceries: 400, dining: 150, transport: 100, shopping: 150, entertainment: 80 },
+  USD: { groceries: 400, dining: 200, transport: 150, shopping: 200, entertainment: 100 },
 };
 
 export const SORT_OPTIONS = [

@@ -185,6 +185,8 @@ const en = {
   'dashboard.moveUp': 'Move up',
   'dashboard.moveDown': 'Move down',
   'dashboard.resetDefaults': 'Reset to defaults',
+  'dashboard.dragToReorder': 'Drag to reorder',
+  'dashboard.widgetDragHint': 'Drag widgets to reorder, or use arrows',
 
   // ─── Spending Predictions ──────────────────────────────
   'dashboard.predictions': 'Predictions',
@@ -467,6 +469,9 @@ const en = {
   'budgets.remainingAmount': '{amount} remaining',
   'budgets.overAmount': '{amount} over budget',
   'budgets.rolloverAmount': '+{amount} rolled over from last month',
+  'budgets.onTrackMessage': "You're on track this month! Keep it up!",
+  'budgets.overBudgetEmpathetic': '{category} is over budget.',
+  'budgets.reallocateSuggestion': 'Consider reallocating from another category.',
 
   // ─── Goals ───────────────────────────────────────────
   'goals.title': 'Goals',
@@ -1092,6 +1097,12 @@ const en = {
   'family.markSettled': 'Mark as settled',
   'family.personal': 'Personal',
   'family.families': 'Families',
+  'family.monthlyIncome': 'Monthly Income (for proportional splits)',
+  'family.incomeHint': 'Used for income-based split calculations. Only you can see your amount.',
+  'family.viewer': 'Viewer',
+  'family.viewerRestricted': 'Viewers cannot create expenses, settle debts, or modify settings.',
+  'family.changeRole': 'Change role',
+  'family.roleUpdated': 'Role updated',
 
   // ─── Reports ─────────────────────────────────────────
   'reports.title': 'Reports',
@@ -1575,6 +1586,11 @@ const en = {
   'split.paidByYou': 'Paid by you',
   'split.whatWasThis': 'What was this for?',
   'split.totalAllocated': 'Total allocated',
+  'split.byIncome': 'By Income',
+  'split.setIncomeFirst': 'Set monthly income in Family Settings first',
+  'split.incomeProportional': 'Income proportional',
+  'split.paidBy': 'Paid by',
+  'split.selectPayer': 'Select who paid',
 
   // ─── Sync ────────────────────────────────────────────
   'sync.syncing': 'Syncing...',
@@ -1757,11 +1773,81 @@ const en = {
   'currencies.USD': 'US Dollar',
   'currencies.GBP': 'British Pound',
 
+  // ─── Health Score Tips ────────────────────────────────────
+  'health.excellent': 'Excellent financial health!',
+  'health.good': 'Good progress! Focus on consistency.',
+  'health.needsWork': 'Room for improvement. Review your budget allocations.',
+  'health.critical': "Let's work on this together. Start with the highest spending categories.",
+
+  // ─── Empty State ────────────────────────────────────────
+  'emptyState.tip': 'Tip',
+
   // ─── Command Palette ───────────────────────────────────
   'commandPalette.placeholder': 'Search pages...',
   'commandPalette.noResults': 'No results found',
   'commandPalette.title': 'Command palette',
   'commandPalette.results': 'Search results',
+  'commandPalette.actions': 'Actions',
+  'commandPalette.pages': 'Pages',
+  'commandPalette.quickAdd': 'Quick add expense',
+  'commandPalette.scanReceipt': 'Scan receipt',
+  'commandPalette.importCsv': 'Import CSV',
+  'commandPalette.toggleDark': 'Toggle dark mode',
+  'commandPalette.exportData': 'Export data',
+
+  // ─── Budget Templates & To Be Budgeted ─────────────────
+  'budgets.toBeBudgeted': 'To Be Budgeted',
+  'budgets.fullyAllocated': 'All income has been allocated to budgets',
+  'budgets.unallocated': 'You have money left to allocate',
+  'budgets.overBudgeted': 'You have budgeted more than your income',
+  'budgets.basedOnIncome': 'Based on {amount} income',
+  'budgets.useTemplate': 'Use Template',
+  'budgets.selectTemplate': 'Select a Budget Template',
+  'budgets.applyTemplate': 'Apply Template',
+  'budgets.preview': 'Preview',
+  'budgets.templateApplied': 'Budget template applied!',
+  'budgets.quickAllocate': 'Quick Allocate',
+  'budgets.noIncomeForTemplate': 'No income recorded this month. Add income transactions first to use templates.',
+
+  // ─── Category Intelligence ────────────────────────────
+  'settings.categoryRules': 'Category Rules',
+  'settings.categoryRulesDesc': 'Manage automatic merchant-to-category mappings learned from your corrections.',
+  'settings.addRule': 'Add Rule',
+  'settings.noRules': 'No learned category rules yet. Edit a transaction category to start learning.',
+  'settings.ruleAdded': 'Category rule added',
+  'categories.alwaysCategorize': 'Always categorize "{merchant}" as {category}?',
+  'categories.learnConfirm': 'Category rule saved!',
+
+  // ─── Onboarding — Import & Suggestions ────────────────
+  'onboarding.importData': 'Import Existing Data',
+  'onboarding.importDescription': 'Have a CSV export from your bank? Import it to get started faster.',
+  'onboarding.skipImport': 'Skip',
+  'onboarding.stepImport': 'Import',
+  'onboarding.useSuggestions': 'Use suggested amounts',
+  'onboarding.suggestedBudgets': 'Budget suggestions applied from your history!',
+  'onboarding.createFromHistory': 'From history',
+
+  // ─── Notifications ───────────────────────────────────────
+  'settings.notifications': 'Notifications',
+  'settings.notificationsEnabled': 'Enable notifications',
+  'settings.notificationPermission': 'Browser permission',
+  'settings.notificationGranted': 'Granted',
+  'settings.notificationDenied': 'Denied',
+  'settings.notificationDefault': 'Not set',
+  'settings.notificationHelp': 'Notifications were denied. To re-enable, click the lock icon in the address bar and allow notifications for this site.',
+  'notifications.title': 'Notifications',
+  'notifications.markAllRead': 'Mark all read',
+  'notifications.empty': 'No notifications',
+  'notifications.noNotifications': 'No notifications',
+  'notifications.budgetWarning': 'Budget Warning',
+  'notifications.budgetExceeded': 'Budget Exceeded',
+  'notifications.recurringDue': 'Bills Due',
+  'notifications.paceAlert': 'Spending Pace Alert',
+  'notifications.timeAgo': '{time} ago',
+
+  // ─── PWA ──────────────────────────────────────────────────
+  'pwa.shareTarget': 'Share Target',
+  'pwa.sharedReceived': 'Shared text received',
 };
 
 export default en;

@@ -31,15 +31,85 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Background Sync — push pending transactions when connectivity is restored
+// Background Sync — replay pending operations when connectivity is restored
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-transactions') {
     event.waitUntil(
-      self.clients.matchAll().then((clients) => {
+      (async () => {
+        try {
+          // Try to open IndexedDB and replay pending sync queue items
+          const db = await new Promise((resolve, reject) => {
+            const req = indexedDB.open('budgetpilot');
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          });
+
+          // Read the apiUrl from settings
+          const settingsTx = db.transaction('settings', 'readonly');
+          const settingsStore = settingsTx.objectStore('settings');
+          const apiUrlRecord = await new Promise((resolve) => {
+            const req = settingsStore.get('apiUrl');
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+          });
+          const apiUrl = apiUrlRecord?.value;
+
+          if (apiUrl) {
+            // Read all pending sync queue items
+            const syncTx = db.transaction('syncQueue', 'readwrite');
+            const syncStore = syncTx.objectStore('syncQueue');
+            const allItems = await new Promise((resolve) => {
+              const req = syncStore.getAll();
+              req.onsuccess = () => resolve(req.result || []);
+              req.onerror = () => resolve([]);
+            });
+            const pending = allItems.filter((q) => !q.synced);
+
+            // Attempt to replay each pending item
+            for (const item of pending) {
+              try {
+                const serverData = { ...item.data };
+                if (serverData.userId === 'local') delete serverData.userId;
+
+                const res = await fetch(`${apiUrl}/api/sync/push`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    changes: [{
+                      table: item.store,
+                      action: item.action,
+                      data: serverData,
+                    }],
+                  }),
+                });
+
+                if (res.ok) {
+                  // Remove from queue on success
+                  const delTx = db.transaction('syncQueue', 'readwrite');
+                  delTx.objectStore('syncQueue').delete(item.id);
+                  await new Promise((resolve, reject) => {
+                    delTx.oncomplete = resolve;
+                    delTx.onerror = reject;
+                  });
+                }
+              } catch {
+                // Leave in queue for next sync attempt
+              }
+            }
+          }
+
+          db.close();
+        } catch (err) {
+          // IndexedDB may not be accessible in SW — fall through to client notification
+          console.warn('SW background sync replay failed:', err);
+        }
+
+        // Always notify clients so they can also trigger a sync
+        const clients = await self.clients.matchAll();
         clients.forEach((client) => {
           client.postMessage({ type: 'BACKGROUND_SYNC' });
         });
-      })
+      })()
     );
   }
 });

@@ -173,3 +173,52 @@ export function getSpendingAnomalies(transactions) {
 
   return anomalies.sort((a, b) => b.percentOver - a.percentOver);
 }
+
+/**
+ * Suggest budgets based on historical transaction data.
+ * Groups expenses by category, computes monthly averages, and rounds up.
+ *
+ * @param {Array} transactions - All imported/existing transactions.
+ * @param {string} currency - User's currency code (RON, EUR, USD).
+ * @returns {Array<{ category: string, suggestedAmount: number }>}
+ */
+export function suggestBudgetsFromHistory(transactions, currency = 'RON') {
+  const expenses = transactions.filter((t) => t.type === 'expense' && t.date && t.category);
+  if (expenses.length === 0) return [];
+
+  // Group by month and category
+  const monthCats = {};
+  const months = new Set();
+  for (const tx of expenses) {
+    const monthKey = tx.date.slice(0, 7);
+    months.add(monthKey);
+    const key = `${monthKey}:${tx.category}`;
+    monthCats[key] = (monthCats[key] || 0) + (Number(tx.amount) || 0);
+  }
+
+  const monthCount = months.size || 1;
+
+  // Aggregate per category
+  const catTotals = {};
+  for (const [key, total] of Object.entries(monthCats)) {
+    const cat = key.split(':')[1];
+    catTotals[cat] = (catTotals[cat] || 0) + total;
+  }
+
+  // Round to nearest 50 for RON, nearest 10 for others
+  const roundTo = currency === 'RON' ? 50 : 10;
+  const roundUp = (val) => Math.ceil(val / roundTo) * roundTo;
+
+  const suggestions = [];
+  for (const [category, total] of Object.entries(catTotals)) {
+    if (category === 'income' || category === 'transfer') continue;
+    const monthlyAvg = total / monthCount;
+    if (monthlyAvg < 1) continue;
+    suggestions.push({
+      category,
+      suggestedAmount: roundUp(monthlyAvg),
+    });
+  }
+
+  return suggestions.sort((a, b) => b.suggestedAmount - a.suggestedAmount);
+}
