@@ -4,7 +4,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 export default function StatCard({ label, value, trend, icon: Icon, className = '', hide, accent, compact }) {
   const { t } = useTranslation();
   return (
-    <div className={`card relative overflow-hidden ${compact ? '!p-3 md:!p-5' : ''} ${className}`}>
+    <div className={`card relative overflow-hidden ${compact ? '!p-2 sm:!p-3 md:!p-5' : ''} ${className}`}>
       {accent && (
         <div
           className="absolute top-0 left-0 right-0 h-[3px]"
@@ -12,16 +12,16 @@ export default function StatCard({ label, value, trend, icon: Icon, className = 
         />
       )}
 
-      <div className={`flex items-center gap-2 ${compact ? 'mb-2 md:mb-3' : 'mb-3'}`}>
+      <div className={`flex items-center gap-1.5 sm:gap-2 ${compact ? 'mb-1.5 sm:mb-2 md:mb-3' : 'mb-3'}`}>
         {Icon && (
-          <div className={`${compact ? 'w-6 h-6 md:w-8 md:h-8' : 'w-8 h-8'} rounded-lg bg-cream-100 dark:bg-cream-800 flex items-center justify-center`}>
-            <Icon size={compact ? 13 : 15} className="text-cream-500 dark:text-cream-400" />
+          <div className={`${compact ? 'w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8' : 'w-8 h-8'} rounded-lg bg-cream-100 dark:bg-cream-800 flex items-center justify-center shrink-0`}>
+            <Icon size={compact ? 11 : 15} className="text-cream-500 dark:text-cream-400" />
           </div>
         )}
-        <p className={`${compact ? 'text-[10px] md:text-[11px]' : 'text-[11px]'} font-bold text-cream-500 dark:text-cream-400 uppercase tracking-wider`}>{label}</p>
+        <p className={`${compact ? 'text-[9px] sm:text-[10px] md:text-[11px] leading-tight' : 'text-[11px]'} font-bold text-cream-500 dark:text-cream-400 uppercase tracking-wider`}>{label}</p>
       </div>
 
-      <p className={`${compact ? 'text-[17px] md:text-[22px]' : 'text-[22px]'} font-heading font-bold money leading-tight`}>{hide ? '••••••' : value}</p>
+      <p className={`${compact ? 'text-[14px] sm:text-[17px] md:text-[22px]' : 'text-[22px]'} font-heading font-bold money leading-tight truncate`}>{hide ? '••••••' : value}</p>
 
       {trend && !hide && (
         <div className="flex items-center gap-1.5 mt-1.5 md:mt-2">

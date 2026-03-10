@@ -631,11 +631,11 @@ export default function Loans() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-lg font-heading font-bold text-danger">
+                <div className="flex items-center gap-1.5 shrink-0 max-w-[45%]">
+                  <span className="text-sm sm:text-lg font-heading font-bold text-danger truncate">
                     {formatCurrency(loan.remainingBalance, loan.currency)}
                   </span>
-                  {isExpanded ? <ChevronUp size={16} className="text-cream-400" /> : <ChevronDown size={16} className="text-cream-400" />}
+                  {isExpanded ? <ChevronUp size={16} className="text-cream-400 shrink-0" /> : <ChevronDown size={16} className="text-cream-400 shrink-0" />}
                 </div>
               </div>
 

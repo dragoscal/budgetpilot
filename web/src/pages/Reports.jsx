@@ -145,13 +145,13 @@ export default function Reports() {
       </div>
 
       {/* Report type + date range */}
-      <div className="flex flex-col sm:flex-row gap-3 print:hidden">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 print:hidden">
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
           {REPORT_TYPES.map((r) => (
             <button
               key={r.id}
               onClick={() => setReportType(r.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium border transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-medium border transition-colors whitespace-nowrap shrink-0 ${
                 reportType === r.id
                   ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                   : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100'
@@ -161,11 +161,11 @@ export default function Reports() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <Calendar size={14} className="text-cream-400" />
-          <input type="date" className="input w-auto text-xs" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Calendar size={14} className="text-cream-400 shrink-0" />
+          <input type="date" className="input w-auto text-xs min-w-0" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <span className="text-cream-400 text-xs">{t('reports.to')}</span>
-          <input type="date" className="input w-auto text-xs" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <input type="date" className="input w-auto text-xs min-w-0" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
       </div>
 
@@ -179,18 +179,18 @@ export default function Reports() {
       {reportType === 'spending' && (
         <>
           {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="card">
-              <p className="text-xs text-cream-500">{t('reports.totalSpent')}</p>
-              <p className="font-heading font-bold text-lg money text-danger">{formatCurrency(totalExpenses, currency)}</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="card !p-2.5 sm:!p-4">
+              <p className="text-[10px] sm:text-xs text-cream-500">{t('reports.totalSpent')}</p>
+              <p className="font-heading font-bold text-sm sm:text-lg money text-danger truncate">{formatCurrency(totalExpenses, currency)}</p>
             </div>
-            <div className="card">
-              <p className="text-xs text-cream-500">{t('reports.totalIncome')}</p>
-              <p className="font-heading font-bold text-lg money text-income">{formatCurrency(totalIncome, currency)}</p>
+            <div className="card !p-2.5 sm:!p-4">
+              <p className="text-[10px] sm:text-xs text-cream-500">{t('reports.totalIncome')}</p>
+              <p className="font-heading font-bold text-sm sm:text-lg money text-income truncate">{formatCurrency(totalIncome, currency)}</p>
             </div>
-            <div className="card">
-              <p className="text-xs text-cream-500">{t('reports.net')}</p>
-              <p className={`font-heading font-bold text-lg money ${totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-danger'}`}>
+            <div className="card !p-2.5 sm:!p-4">
+              <p className="text-[10px] sm:text-xs text-cream-500">{t('reports.net')}</p>
+              <p className={`font-heading font-bold text-sm sm:text-lg money truncate ${totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatCurrency(totalIncome - totalExpenses, currency)}
               </p>
             </div>
@@ -201,7 +201,7 @@ export default function Reports() {
             <h3 className="section-title">{t('reports.categoryBreakdown')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {categoryData.length > 0 && (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
                       data={categoryData}
@@ -209,9 +209,10 @@ export default function Reports() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={70}
+                      label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
                       labelLine={false}
+                      fontSize={11}
                     >
                       {categoryData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -224,13 +225,13 @@ export default function Reports() {
 
               <div className="space-y-2">
                 {categoryData.map((c, i) => (
-                  <div key={c.id} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
+                  <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-2 min-w-0">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                      <span>{c.icon} {c.name}</span>
-                      <span className="text-xs text-cream-400">({c.count})</span>
+                      <span className="truncate">{c.icon} {c.name}</span>
+                      <span className="text-xs text-cream-400 shrink-0">({c.count})</span>
                     </span>
-                    <span className="money font-medium">{formatCurrency(c.total, currency)}</span>
+                    <span className="money font-medium shrink-0 text-xs sm:text-sm">{formatCurrency(c.total, currency)}</span>
                   </div>
                 ))}
               </div>

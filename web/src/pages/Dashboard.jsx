@@ -574,24 +574,24 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title mb-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="page-title mb-0 !text-lg sm:!text-2xl">
             {user?.name ? t('dashboard.hey', { name: user.name.split(' ')[0] }) : t('dashboard.title')}
           </h1>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-cream-600 dark:text-cream-500">{t('dashboard.financialOverview')}</p>
+            <p className="text-xs sm:text-sm text-cream-600 dark:text-cream-500 hidden sm:block">{t('dashboard.financialOverview')}</p>
             <span className="md:hidden"><SyncIndicator mobile /></span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <div className="relative">
             <button
               onClick={() => setShowWidgetSettings(!showWidgetSettings)}
-              className="p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
               title={t('dashboard.customizeWidgets')}
             >
-              <Settings size={18} />
+              <Settings size={16} />
             </button>
             {showWidgetSettings && (
               <>
@@ -683,10 +683,10 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => setHidden(!hidden)}
-            className="p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
+            className="p-1.5 sm:p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
             title={hidden ? t('dashboard.showAmounts') : t('dashboard.hideAmounts')}
           >
-            {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+            {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
           <MonthPicker value={month} onChange={setMonth} />
         </div>
@@ -790,10 +790,10 @@ export default function Dashboard() {
                 <div className="relative flex items-center justify-end mb-1.5">
                   <button
                     onClick={() => setShowStatSettings(v => !v)}
-                    className="flex items-center gap-1 text-[11px] text-cream-500 dark:text-cream-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
+                    className="flex items-center gap-1 text-[10px] sm:text-[11px] text-cream-500 dark:text-cream-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
                   >
                     <Settings size={12} />
-                    {t('dashboard.customizeStats')}
+                    <span className="hidden sm:inline">{t('dashboard.customizeStats')}</span>
                   </button>
                   {showStatSettings && (
                     <div className="absolute top-6 right-0 z-50 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg p-3 w-56">
@@ -812,7 +812,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Stat cards — draggable, horizontal scroll on mobile, grid on desktop */}
-                <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5 md:gap-3 md:overflow-visible">
                   {statCardConfig.filter(s => s.visible).map((statItem) => {
                     const card = STAT_CARDS[statItem.id];
                     if (!card) return null;
@@ -847,7 +847,7 @@ export default function Dashboard() {
                           setDragOverStat(null);
                         }}
                         onDragEnd={() => { setDraggedStat(null); setDragOverStat(null); }}
-                        className={`min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start transition-all ${
+                        className={`min-w-0 transition-all ${
                           draggedStat === statItem.id ? 'opacity-40 scale-95' :
                           dragOverStat === statItem.id ? 'ring-2 ring-accent-400/50 ring-offset-2 dark:ring-offset-dark-bg scale-[1.02]' :
                           'cursor-grab active:cursor-grabbing'
@@ -874,16 +874,16 @@ export default function Dashboard() {
                 {/* In My Pocket + Month Comparison + No-spend days */}
                 <div className="mt-4 card relative overflow-hidden border-success/20 !p-3 md:!p-5">
                   <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
-                  <div className="relative flex items-center justify-between">
-                    <div>
+                  <div className="relative flex items-center justify-between gap-2">
+                    <div className="min-w-0 shrink-0">
                       <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">{t('dashboard.inMyPocket')}</p>
                       <p className="text-xs md:text-sm text-cream-500 dark:text-cream-400 mt-0.5">{t('dashboard.safeToSpend')}</p>
                     </div>
-                    <p className="text-2xl md:text-3xl font-heading font-bold text-success money">
+                    <p className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-success money truncate">
                       {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
                     </p>
                   </div>
-                  <div className="relative flex items-center gap-3 mt-2 pt-2 border-t border-success/10">
+                  <div className="relative flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-success/10 flex-wrap">
                     {monthComparison && (
                       <span className={`flex items-center gap-1 text-[11px] font-medium ${monthComparison.isGood ? 'text-success' : 'text-warning'}`}>
                         {monthComparison.isGood ? <TrendingDown size={12} /> : <TrendingUp size={12} />}

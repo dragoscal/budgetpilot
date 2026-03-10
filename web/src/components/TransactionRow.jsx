@@ -30,24 +30,24 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
   const subcatLabel = subcat ? (t(`subcategories.${subcat.id}`) || subcat.name) : null;
 
   return (
-    <div className="flex items-center gap-3 py-3 px-4 hover:bg-cream-50 dark:hover:bg-dark-border/50 rounded-xl transition-colors group">
+    <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-4 hover:bg-cream-50 dark:hover:bg-dark-border/50 rounded-xl transition-colors group">
       {onSelect && (
         <input
           type="checkbox"
           checked={selected}
           onChange={(e) => onSelect(transaction.id, e.target.checked)}
-          className="w-4 h-4 rounded border-cream-300"
+          className="w-4 h-4 rounded border-cream-300 shrink-0"
         />
       )}
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-cream-100 dark:bg-dark-border shrink-0">
+      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg bg-cream-100 dark:bg-dark-border shrink-0">
         {subcat?.icon || cat.icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium truncate">{truncate(transaction.merchant || transaction.description, 28)}</p>
-          <span className="text-xs" title={source.label}>{source.icon}</span>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium truncate">{transaction.merchant || transaction.description}</p>
+          <span className="text-xs shrink-0" title={source.label}>{source.icon}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-cream-500">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-cream-500 flex-wrap">
           <span>{subcatLabel ? `${catLabel} > ${subcatLabel}` : catLabel}</span>
           <span>·</span>
           <span>{formatDate(transaction.date, 'dd MMM')}</span>
@@ -85,20 +85,20 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex items-center gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         {onSplit && !isSplit && (
-          <button onClick={() => onSplit(transaction)} className="p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')}>
-            <Split size={14} />
+          <button onClick={() => onSplit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')}>
+            <Split size={13} />
           </button>
         )}
         {onEdit && (
-          <button onClick={() => onEdit(transaction)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700">
-            <Edit3 size={14} />
+          <button onClick={() => onEdit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700">
+            <Edit3 size={13} />
           </button>
         )}
         {onDelete && (
-          <button onClick={() => onDelete(transaction)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger">
-            <Trash2 size={14} />
+          <button onClick={() => onDelete(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger">
+            <Trash2 size={13} />
           </button>
         )}
       </div>
