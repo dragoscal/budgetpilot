@@ -171,8 +171,9 @@ export async function getCurrentUser() {
         return data.user;
       }
       // Server error (500 etc.) — fall through to local
-    } catch {
-      // Network error — fall through to local
+    } catch (err) {
+      // Network error — fall through to local session restore
+      console.error('Server session restore failed, using local:', err);
     }
   }
 
@@ -191,7 +192,8 @@ export async function getCurrentUser() {
     }
     const { passwordHash: _, salt: __, ...safeUser } = user;
     return safeUser;
-  } catch {
+  } catch (err) {
+    console.error('Session restore failed:', err);
     logout();
     return null;
   }

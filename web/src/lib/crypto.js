@@ -45,7 +45,8 @@ export async function getStoredEncryptionKey() {
     return crypto.subtle.importKey(
       'raw', raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
     );
-  } catch {
+  } catch (err) {
+    console.error('Encryption key derivation failed:', err);
     return null;
   }
 }

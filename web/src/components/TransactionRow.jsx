@@ -1,12 +1,24 @@
-import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
+import { useState, useEffect } from 'react';
+import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate, getDisplayAmount } from '../lib/helpers';
 import { TRANSACTION_SOURCES } from '../lib/constants';
+import { getById } from '../lib/storage';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { Trash2, Edit3, Split } from 'lucide-react';
 
-export default function TransactionRow({ transaction, onEdit, onDelete, onSplit, selected, onSelect, hide: hideProp, isSplit }) {
+export default function TransactionRow({ transaction, onEdit, onDelete, onSplit, selected, onSelect, hide: hideProp, isSplit, defaultCurrency, rates }) {
   const { t } = useTranslation();
   const { shouldHide } = useHideAmounts();
+  const [accountName, setAccountName] = useState(null);
+
+  useEffect(() => {
+    if (transaction.accountId) {
+      getById('accounts', transaction.accountId)
+        .then((acc) => { if (acc) setAccountName(acc.name); })
+        .catch(() => {});
+    }
+  }, [transaction.accountId]);
+
   const cat = getCategoryById(transaction.category);
   const subcat = transaction.subcategory ? getSubcategoryById(transaction.subcategory) : null;
   const source = TRANSACTION_SOURCES[transaction.source] || TRANSACTION_SOURCES.manual;
@@ -47,6 +59,12 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
               ))}
             </>
           )}
+          {accountName && (
+            <>
+              <span>·</span>
+              <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[10px] font-medium">{accountName}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="text-right shrink-0">
@@ -55,6 +73,12 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
         }`}>
           {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency, { hide })}
         </p>
+        {!hide && defaultCurrency && rates && transaction.currency && transaction.currency !== defaultCurrency && (() => {
+          const display = getDisplayAmount(transaction.amount, transaction.currency, defaultCurrency, rates);
+          return display.converted ? (
+            <p className="text-[10px] text-cream-400">({display.converted})</p>
+          ) : null;
+        })()}
         {isSplit && (
           <span className="text-[10px] text-accent font-medium flex items-center justify-end gap-0.5">
             <Split size={8} /> {t('split.split')}

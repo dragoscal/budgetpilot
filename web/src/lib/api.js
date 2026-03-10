@@ -80,8 +80,9 @@ function createCrud(storeName) {
             body: JSON.stringify(serverRecord),
           });
           // Immediate push succeeded — no need to queue
-        } catch {
-          // Immediate push failed — queue for later sync
+        } catch (err) {
+          // Immediate push failed — queue for later sync (offline-first)
+          console.error(`Immediate push failed for ${storeName} create:`, err);
           addToSyncQueue('create', storeName, record).catch(() => {});
         }
       }
@@ -115,8 +116,9 @@ function createCrud(storeName) {
             body: JSON.stringify(serverData),
           });
           // Immediate push succeeded — no need to queue
-        } catch {
-          // Queue for later sync
+        } catch (err) {
+          // Immediate push failed — queue for later sync (offline-first)
+          console.error(`Immediate push failed for ${storeName} update:`, err);
           addToSyncQueue('update', storeName, updated).catch(() => {});
         }
       }
@@ -132,8 +134,9 @@ function createCrud(storeName) {
         try {
           await apiFetch(apiUrl, `/api/${apiTable}/${id}`, { method: 'DELETE' });
           // Immediate push succeeded — no need to queue
-        } catch {
-          // Queue for later sync
+        } catch (err) {
+          // Immediate push failed — queue for later sync (offline-first)
+          console.error(`Immediate push failed for ${storeName} delete:`, err);
           addToSyncQueue('delete', storeName, { id }).catch(() => {});
         }
       }
@@ -174,7 +177,10 @@ export const settings = {
           method: 'PUT',
           body: JSON.stringify({ [key]: value }),
         });
-      } catch { /* Local is source of truth */ }
+      } catch (err) {
+        // Local is source of truth — backend push is best-effort
+        console.error('Failed to push setting to server:', err);
+      }
     }
   },
 

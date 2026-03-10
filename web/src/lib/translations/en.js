@@ -111,6 +111,13 @@ const en = {
   'nav.menu': 'Menu',
   'nav.home': 'Home',
   'nav.history': 'History',
+  'nav.mainNavigation': 'Main navigation',
+  'nav.mobileNavigation': 'Mobile navigation',
+  'nav.tabBar': 'Tab bar',
+  'nav.closeMenu': 'Close menu',
+  'nav.openMenu': 'Open menu',
+  'nav.expandSidebar': 'Expand sidebar',
+  'nav.collapseSidebar': 'Collapse sidebar',
 
   // ─── Dashboard ───────────────────────────────────────
   'dashboard.hey': 'Hey, {name}',
@@ -156,6 +163,50 @@ const en = {
   'dashboard.dueTomorrow': '{name} is due tomorrow',
   'dashboard.dueIn2Days': '{name} is due in 2 days',
   'dashboard.spendingHigher': 'Spending {pct}% higher than last month at this point',
+  'dashboard.healthScore': 'Financial Health',
+  'dashboard.healthExcellent': 'Excellent',
+  'dashboard.healthGood': 'Good',
+  'dashboard.healthFair': 'Fair',
+  'dashboard.healthPoor': 'Needs work',
+  'dashboard.recurringDue': '{count} recurring bills are due',
+  'dashboard.autoCreate': 'Auto-create transactions',
+
+  // ─── Dashboard Widget Customization ────────────────────
+  'dashboard.customizeWidgets': 'Customize widgets',
+  'dashboard.showWidget': 'Show',
+  'dashboard.hideWidget': 'Hide',
+  'dashboard.widgetOrder': 'Widget order',
+  'dashboard.quickStats': 'Quick Stats',
+  'dashboard.recentTransactionsWidget': 'Recent Transactions',
+  'dashboard.budgetOverview': 'Budget Overview',
+  'dashboard.healthScoreWidget': 'Health Score',
+  'dashboard.topCategories': 'Top Categories',
+  'dashboard.spendingChartWidget': 'Spending Chart',
+  'dashboard.moveUp': 'Move up',
+  'dashboard.moveDown': 'Move down',
+  'dashboard.resetDefaults': 'Reset to defaults',
+
+  // ─── Spending Predictions ──────────────────────────────
+  'dashboard.predictions': 'Predictions',
+  'dashboard.predictedSpending': 'Predicted end-of-month',
+  'dashboard.daysLeft': '{count} days left',
+  'dashboard.dailyRate': '{amount}/day average',
+  'dashboard.trendUp': 'Trending up',
+  'dashboard.trendDown': 'Trending down',
+  'dashboard.trendStable': 'Stable',
+  'dashboard.spendingAnomalies': 'Spending anomalies',
+  'dashboard.aboveAverage': '{pct}% above average',
+  'dashboard.notEnoughHistory': 'Need 2+ months of history for predictions',
+
+  // ─── Bill Suggestions ─────────────────────────────────
+  'dashboard.billSuggestions': 'Bill Suggestions',
+  'dashboard.unusedSubscription': 'Unused subscription',
+  'dashboard.duplicateServices': 'Duplicate services',
+  'dashboard.priceIncrease': 'Price increase detected',
+  'dashboard.switchToAnnual': 'Switch to annual billing',
+  'dashboard.potentialSaving': 'Potential saving: {amount}',
+  'dashboard.dismiss': 'Dismiss',
+  'dashboard.noBillSuggestions': 'No suggestions right now',
 
   // ─── Transactions ────────────────────────────────────
   'transactions.title': 'Transactions',
@@ -189,6 +240,18 @@ const en = {
   'transactions.clearAmountFilter': 'Clear amount filter',
   'transactions.clearTagFilter': 'Clear tag filter',
   'transactions.moreCount': '+{count} more',
+  'transactions.merchant': 'Merchant',
+  'transactions.type': 'Type',
+  'transactions.expense': 'Expense',
+  'transactions.income': 'Income',
+  'transactions.transfer': 'Transfer',
+  'transactions.category': 'Category',
+  'transactions.date': 'Date',
+  'transactions.description': 'Description',
+  'transactions.confirmBulkDelete': 'Delete {count} transactions? This cannot be undone.',
+  'transactions.account': 'Account',
+  'transactions.allAccounts': 'All Accounts',
+  'transactions.selectAccount': 'Select account',
 
   // ─── Add Transaction ─────────────────────────────────
   'addTransaction.title': 'Add Transaction',
@@ -268,6 +331,16 @@ const en = {
   'addTransaction.pdfTip2': 'AI will extract transactions, dates, amounts, and merchants automatically',
   'addTransaction.uploadDifferent': 'Upload different file',
   'addTransaction.selectPdf': 'Select PDF',
+  'addTransaction.csvImport': 'CSV Import',
+  'addTransaction.uploadCsv': 'Upload CSV or TSV file',
+  'addTransaction.csvPreview': 'Preview',
+  'addTransaction.importAll': 'Import all',
+  'addTransaction.mapColumns': 'Map columns',
+  'addTransaction.mapRequired': 'Please map at least Date and Amount columns',
+  'addTransaction.csvOnly': 'Please upload a CSV or TSV file',
+  'addTransaction.csvEmpty': 'CSV file appears empty or invalid',
+  'addTransaction.csvReadFailed': 'Failed to read file',
+  'addTransaction.noValidRows': 'No valid rows found to import',
 
   // ─── Manual Form ─────────────────────────────────────
   'manualForm.type': 'Type',
@@ -393,6 +466,7 @@ const en = {
   'budgets.newBudget': 'New budget',
   'budgets.remainingAmount': '{amount} remaining',
   'budgets.overAmount': '{amount} over budget',
+  'budgets.rolloverAmount': '+{amount} rolled over from last month',
 
   // ─── Goals ───────────────────────────────────────────
   'goals.title': 'Goals',
@@ -634,6 +708,8 @@ const en = {
   'analytics.budget': 'Budget',
   'analytics.smartInsights': 'Smart insights',
   'analytics.spendingByTag': 'Spending by tag',
+  'analytics.subcategories': 'Subcategories',
+  'analytics.clickCategory': 'Click a category to see subcategories',
 
   // ─── People & Debts ──────────────────────────────────
   'people.title': 'People & Debts',
@@ -737,6 +813,15 @@ const en = {
   'people.receivedSettleFully': 'Receive & settle fully',
   'people.paidSettleFully': 'Pay & settle fully',
   'people.pay': 'Pay',
+
+  // ─── Settlement ────────────────────────────────────────
+  'people.settleUp': 'Settle Up',
+  'people.settlementPlan': 'Settlement Plan',
+  'people.markSettled': 'Mark as Settled',
+  'people.noSettlementsNeeded': 'No settlements needed — everyone is even!',
+  'people.pays': 'pays',
+  'people.settleUpDesc': 'Optimize payments between all people',
+  'people.settlementCreated': 'Settlement transactions created',
 
   // ─── Loans ───────────────────────────────────────────
   'loans.title': 'Loans',
@@ -1040,6 +1125,9 @@ const en = {
   'reports.monthlyComparison': 'Monthly comparison (last 6 months)',
   'reports.expenses': 'Expenses',
   'reports.income': 'Income',
+  'reports.emptyTitle': 'No reports yet',
+  'reports.emptyDesc': 'Add some transactions first to generate reports and insights.',
+  'reports.failedLoad': 'Failed to load report data',
 
   // ─── Monthly Review ──────────────────────────────────
   'review.title': 'Monthly Review',
@@ -1668,6 +1756,12 @@ const en = {
   'currencies.EUR': 'Euro',
   'currencies.USD': 'US Dollar',
   'currencies.GBP': 'British Pound',
+
+  // ─── Command Palette ───────────────────────────────────
+  'commandPalette.placeholder': 'Search pages...',
+  'commandPalette.noResults': 'No results found',
+  'commandPalette.title': 'Command palette',
+  'commandPalette.results': 'Search results',
 };
 
 export default en;

@@ -58,10 +58,13 @@ export class Router {
       if (result instanceof Response) return addCors(result);
     }
 
+    // Re-read path after middleware (e.g., API versioning may rewrite it)
+    const resolvedPath = reqCtx.url.pathname;
+
     // Match route
     for (const route of this.routes) {
       if (route.method !== method && route.method !== 'ALL') continue;
-      const match = path.match(route.pattern);
+      const match = resolvedPath.match(route.pattern);
       if (!match) continue;
 
       // Extract params

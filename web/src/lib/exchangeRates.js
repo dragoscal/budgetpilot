@@ -66,8 +66,9 @@ export async function getRates(baseCurrency = 'RON') {
     const rates = await fetchRates(baseCurrency);
     const overrides = (await getSetting(MANUAL_OVERRIDES_KEY)) || {};
     return { ...rates, ...overrides };
-  } catch {
-    // Offline or error — use cached
+  } catch (err) {
+    // Offline or error — use cached rates as fallback
+    console.error('Failed to fetch exchange rates:', err);
     return getCachedRates();
   }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
 import { generateId, formatDateISO, validateTransaction } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
+import { getAll } from '../lib/storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -21,6 +22,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const [date, setDate] = useState(initial.date || formatDateISO(new Date()));
   const [description, setDescription] = useState(initial.description || '');
   const [tags, setTags] = useState(initial.tags || []);
+  const [accountId, setAccountId] = useState(initial.accountId || '');
+  const [accounts, setAccounts] = useState([]);
+
+  // Load accounts from IndexedDB
+  useEffect(() => {
+    getAll('accounts').then(setAccounts).catch(() => setAccounts([]));
+  }, []);
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState([]);
@@ -117,6 +125,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       date,
       description: description.trim(),
       tags: tags.filter(Boolean),
+      accountId: accountId || null,
       source: initial.source || 'manual',
       userId: effectiveUserId,
       createdAt: initial.createdAt || new Date().toISOString(),
@@ -134,6 +143,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       setAmount('');
       setDescription('');
       setTags([]);
+      setAccountId('');
       setSubcategory(null);
       setCategoryAutoSet(false);
     }
@@ -225,6 +235,18 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
         <div className="col-span-2">
           <TagInput tags={tags} onChange={setTags} userId={effectiveUserId} />
         </div>
+
+        {accounts.length > 0 && (
+          <div className="col-span-2">
+            <label className="label">{t('manualForm.account')}</label>
+            <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="">{t('manualForm.selectAccount')}</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <button type="submit" className="btn-primary w-full">{submitLabel || t('manualForm.addTransaction')}</button>

@@ -9,7 +9,7 @@ let dbPromise = null;
 if (import.meta.hot) {
   import.meta.hot.dispose(async () => {
     if (dbPromise) {
-      try { const db = await dbPromise; db.close(); } catch {}
+      try { const db = await dbPromise; db.close(); } catch { /* Intentionally swallowed — HMR cleanup is best-effort */ }
       dbPromise = null;
     }
   });
@@ -307,23 +307,169 @@ export async function getAllSettings() {
   }, {});
 }
 
-// Query helpers
+// ─── OPTIMIZED QUERIES (using IndexedDB indexes) ──────────
+
+/**
+ * Get transactions for a specific month using the date index.
+ * month is 0-based (0 = January) for backwards-compat with callers using Date.getMonth().
+ * Falls back to userId post-filter since date is the primary range key.
+ */
 export async function getTransactionsByMonth(year, month, userId = 'local') {
-  const all = await getAll('transactions', { userId });
-  return all.filter((t) => {
-    const d = new Date(t.date);
-    return d.getFullYear() === year && d.getMonth() === month;
-  });
+  const db = await getDB();
+  // month is 0-based from callers (Date.getMonth()), convert to 1-based for ISO strings
+  const m = month + 1;
+  const startDate = `${year}-${String(m).padStart(2, '0')}-01`;
+  const endMonth = m === 12 ? 1 : m + 1;
+  const endYear = m === 12 ? year + 1 : year;
+  const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+  const range = IDBKeyRange.bound(startDate, endDate, false, true);
+  const results = await db.getAllFromIndex('transactions', 'date', range);
+  return userId ? results.filter((t) => t.userId === userId) : results;
 }
 
+/**
+ * Get transactions within a date range using the date index.
+ * startDate/endDate should be ISO date strings (YYYY-MM-DD).
+ * endDate is inclusive.
+ */
 export async function getTransactionsByDateRange(startDate, endDate, userId = 'local') {
-  const all = await getAll('transactions', { userId });
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  return all.filter((t) => {
-    const d = new Date(t.date);
-    return d >= start && d <= end;
-  });
+  const db = await getDB();
+  const range = IDBKeyRange.bound(startDate, endDate, false, false);
+  const results = await db.getAllFromIndex('transactions', 'date', range);
+  return userId ? results.filter((t) => t.userId === userId) : results;
+}
+
+/**
+ * Get transactions by category using the category index.
+ */
+export async function getTransactionsByCategory(category, userId = 'local') {
+  const db = await getDB();
+  const results = await db.getAllFromIndex('transactions', 'category', category);
+  return userId ? results.filter((t) => t.userId === userId) : results;
+}
+
+/**
+ * Get transactions by type ('income' | 'expense') using the type index.
+ */
+export async function getTransactionsByType(type, userId = 'local') {
+  const db = await getDB();
+  const results = await db.getAllFromIndex('transactions', 'type', type);
+  return userId ? results.filter((t) => t.userId === userId) : results;
+}
+
+/**
+ * Get transactions by merchant using the merchant index.
+ */
+export async function getTransactionsByMerchant(merchant, userId = 'local') {
+  const db = await getDB();
+  const results = await db.getAllFromIndex('transactions', 'merchant', merchant);
+  return userId ? results.filter((t) => t.userId === userId) : results;
+}
+
+/**
+ * Generic: get all records from any store filtered by the userId index.
+ * Works for: transactions, budgets, goals, accounts, recurring, people,
+ *            debts, wishlist, loans, receipts, challenges.
+ */
+export async function getByUserId(store, userId) {
+  const db = await getDB();
+  return db.getAllFromIndex(store, 'userId', userId);
+}
+
+/**
+ * Get all records from any store by a named index and key.
+ * Generic escape hatch for one-off index lookups.
+ * Example: getByIndex('debts', 'status', 'active')
+ */
+export async function getByIndex(store, indexName, key) {
+  const db = await getDB();
+  return db.getAllFromIndex(store, indexName, key);
+}
+
+/**
+ * Get all records from a store by index within a key range.
+ * Example: getByIndexRange('loanPayments', 'date', '2026-01-01', '2026-03-31')
+ */
+export async function getByIndexRange(store, indexName, lower, upper, lowerOpen = false, upperOpen = false) {
+  const db = await getDB();
+  const range = IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen);
+  return db.getAllFromIndex(store, indexName, range);
+}
+
+/**
+ * Get debt payments for a specific debt using the debtId index.
+ */
+export async function getDebtPaymentsByDebtId(debtId) {
+  const db = await getDB();
+  return db.getAllFromIndex('debtPayments', 'debtId', debtId);
+}
+
+/**
+ * Get loan payments for a specific loan using the loanId index.
+ */
+export async function getLoanPaymentsByLoanId(loanId) {
+  const db = await getDB();
+  return db.getAllFromIndex('loanPayments', 'loanId', loanId);
+}
+
+/**
+ * Get debts by status ('active' | 'settled') using the status index.
+ */
+export async function getDebtsByStatus(status, userId = 'local') {
+  const db = await getDB();
+  const results = await db.getAllFromIndex('debts', 'status', status);
+  return userId ? results.filter((d) => d.userId === userId) : results;
+}
+
+/**
+ * Get debts for a specific person using the personId index.
+ */
+export async function getDebtsByPersonId(personId) {
+  const db = await getDB();
+  return db.getAllFromIndex('debts', 'personId', personId);
+}
+
+/**
+ * Get family members by familyId using the familyId index.
+ */
+export async function getFamilyMembersByFamilyId(familyId) {
+  const db = await getDB();
+  return db.getAllFromIndex('familyMembers', 'familyId', familyId);
+}
+
+/**
+ * Get shared expenses by familyId using the familyId index.
+ */
+export async function getSharedExpensesByFamilyId(familyId) {
+  const db = await getDB();
+  return db.getAllFromIndex('sharedExpenses', 'familyId', familyId);
+}
+
+/**
+ * Get shared expenses by date range using the date index.
+ */
+export async function getSharedExpensesByDateRange(startDate, endDate) {
+  const db = await getDB();
+  const range = IDBKeyRange.bound(startDate, endDate, false, false);
+  return db.getAllFromIndex('sharedExpenses', 'date', range);
+}
+
+/**
+ * Get challenges by status using the status index.
+ */
+export async function getChallengesByStatus(status, userId = 'local') {
+  const db = await getDB();
+  const results = await db.getAllFromIndex('challenges', 'status', status);
+  return userId ? results.filter((c) => c.userId === userId) : results;
+}
+
+/**
+ * Count records in a store using an index (avoids fetching all records).
+ * Uses a cursor to count without loading full objects into memory.
+ */
+export async function countByIndex(store, indexName, key) {
+  const db = await getDB();
+  return db.countFromIndex(store, indexName, key);
 }
 
 // ─── Receipt Drafts (save for later) ────────────────────────

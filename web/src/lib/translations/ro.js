@@ -111,6 +111,13 @@ const ro = {
   'nav.menu': 'Meniu',
   'nav.home': 'Acasă',
   'nav.history': 'Istoric',
+  'nav.mainNavigation': 'Navigare principală',
+  'nav.mobileNavigation': 'Navigare mobilă',
+  'nav.tabBar': 'Bară de navigare',
+  'nav.closeMenu': 'Închide meniul',
+  'nav.openMenu': 'Deschide meniul',
+  'nav.expandSidebar': 'Extinde bara laterală',
+  'nav.collapseSidebar': 'Restrânge bara laterală',
 
   // ─── Panou ───────────────────────────────────────────
   'dashboard.hey': 'Salut, {name}',
@@ -156,6 +163,50 @@ const ro = {
   'dashboard.dueTomorrow': '{name} scadent mâine',
   'dashboard.dueIn2Days': '{name} scadent peste 2 zile',
   'dashboard.spendingHigher': 'Cheltuieli cu {pct}% mai mari decât luna trecută în acest punct',
+  'dashboard.healthScore': 'Sănătate financiară',
+  'dashboard.healthExcellent': 'Excelent',
+  'dashboard.healthGood': 'Bun',
+  'dashboard.healthFair': 'Mediu',
+  'dashboard.healthPoor': 'Necesită atenție',
+  'dashboard.recurringDue': '{count} facturi recurente sunt scadente',
+  'dashboard.autoCreate': 'Creează tranzacțiile automat',
+
+  // ─── Personalizare widgeturi panou ─────────────────────
+  'dashboard.customizeWidgets': 'Personalizează widgeturile',
+  'dashboard.showWidget': 'Afișează',
+  'dashboard.hideWidget': 'Ascunde',
+  'dashboard.widgetOrder': 'Ordine widgeturi',
+  'dashboard.quickStats': 'Statistici rapide',
+  'dashboard.recentTransactionsWidget': 'Tranzacții recente',
+  'dashboard.budgetOverview': 'Progres buget',
+  'dashboard.healthScoreWidget': 'Scor sănătate',
+  'dashboard.topCategories': 'Categorii principale',
+  'dashboard.spendingChartWidget': 'Grafic cheltuieli',
+  'dashboard.moveUp': 'Mută sus',
+  'dashboard.moveDown': 'Mută jos',
+  'dashboard.resetDefaults': 'Resetează la implicit',
+
+  // ─── Predicții cheltuieli ──────────────────────────────
+  'dashboard.predictions': 'Predicții',
+  'dashboard.predictedSpending': 'Cheltuieli estimate la final de lună',
+  'dashboard.daysLeft': '{count} zile rămase',
+  'dashboard.dailyRate': '{amount}/zi medie',
+  'dashboard.trendUp': 'Tendință crescătoare',
+  'dashboard.trendDown': 'Tendință descrescătoare',
+  'dashboard.trendStable': 'Stabil',
+  'dashboard.spendingAnomalies': 'Anomalii de cheltuieli',
+  'dashboard.aboveAverage': '{pct}% peste medie',
+  'dashboard.notEnoughHistory': 'Necesită 2+ luni de istoric pentru predicții',
+
+  // ─── Sugestii facturi ──────────────────────────────────
+  'dashboard.billSuggestions': 'Sugestii facturi',
+  'dashboard.unusedSubscription': 'Abonament neutilizat',
+  'dashboard.duplicateServices': 'Servicii duplicate',
+  'dashboard.priceIncrease': 'Creștere de preț detectată',
+  'dashboard.switchToAnnual': 'Treci la facturare anuală',
+  'dashboard.potentialSaving': 'Economie potențială: {amount}',
+  'dashboard.dismiss': 'Respinge',
+  'dashboard.noBillSuggestions': 'Nicio sugestie momentan',
 
   // ─── Tranzacții ──────────────────────────────────────
   'transactions.title': 'Tranzacții',
@@ -189,6 +240,18 @@ const ro = {
   'transactions.clearAmountFilter': 'Șterge filtrul de sumă',
   'transactions.clearTagFilter': 'Șterge filtrul de etichete',
   'transactions.moreCount': '+{count} altele',
+  'transactions.merchant': 'Comerciant',
+  'transactions.type': 'Tip',
+  'transactions.expense': 'Cheltuială',
+  'transactions.income': 'Venit',
+  'transactions.transfer': 'Transfer',
+  'transactions.category': 'Categorie',
+  'transactions.date': 'Data',
+  'transactions.description': 'Descriere',
+  'transactions.confirmBulkDelete': 'Ștergi {count} tranzacții? Această acțiune nu poate fi anulată.',
+  'transactions.account': 'Cont',
+  'transactions.allAccounts': 'Toate conturile',
+  'transactions.selectAccount': 'Selectează cont',
 
   // ─── Adaugă tranzacție ───────────────────────────────
   'addTransaction.title': 'Adaugă tranzacție',
@@ -268,6 +331,16 @@ const ro = {
   'addTransaction.pdfTip2': 'AI va extrage automat tranzacțiile, datele, sumele și comercianții',
   'addTransaction.uploadDifferent': 'Încarcă alt fișier',
   'addTransaction.selectPdf': 'Selectează PDF',
+  'addTransaction.csvImport': 'Import CSV',
+  'addTransaction.uploadCsv': 'Încarcă fișier CSV sau TSV',
+  'addTransaction.csvPreview': 'Previzualizare',
+  'addTransaction.importAll': 'Importă tot',
+  'addTransaction.mapColumns': 'Asociază coloanele',
+  'addTransaction.mapRequired': 'Asociază cel puțin coloanele Dată și Sumă',
+  'addTransaction.csvOnly': 'Încarcă un fișier CSV sau TSV',
+  'addTransaction.csvEmpty': 'Fișierul CSV pare gol sau invalid',
+  'addTransaction.csvReadFailed': 'Eroare la citirea fișierului',
+  'addTransaction.noValidRows': 'Niciun rând valid de importat',
 
   // ─── Formular manual ─────────────────────────────────
   'manualForm.type': 'Tip',
@@ -393,6 +466,7 @@ const ro = {
   'budgets.newBudget': 'Buget nou',
   'budgets.remainingAmount': '{amount} rămas',
   'budgets.overAmount': '{amount} peste buget',
+  'budgets.rolloverAmount': '+{amount} reportat din luna anterioară',
 
   // ─── Obiective ───────────────────────────────────────
   'goals.title': 'Obiective',
@@ -634,6 +708,8 @@ const ro = {
   'analytics.budget': 'Buget',
   'analytics.smartInsights': 'Informații inteligente',
   'analytics.spendingByTag': 'Cheltuieli pe etichete',
+  'analytics.subcategories': 'Subcategorii',
+  'analytics.clickCategory': 'Click pe o categorie pentru subcategorii',
 
   // ─── Persoane și datorii ─────────────────────────────
   'people.title': 'Persoane & Datorii',
@@ -737,6 +813,15 @@ const ro = {
   'people.receivedSettleFully': 'Primește și achită integral',
   'people.paidSettleFully': 'Plătește și achită integral',
   'people.pay': 'Plătește',
+
+  // ─── Echilibrare ───────────────────────────────────────
+  'people.settleUp': 'Echilibrare',
+  'people.settlementPlan': 'Plan de echilibrare',
+  'people.markSettled': 'Marchează ca achitat',
+  'people.noSettlementsNeeded': 'Nu e nevoie de echilibrare — totul este la zi!',
+  'people.pays': 'plătește',
+  'people.settleUpDesc': 'Optimizează plățile între toate persoanele',
+  'people.settlementCreated': 'Tranzacții de echilibrare create',
 
   // ─── Împrumuturi ─────────────────────────────────────
   'loans.title': 'Împrumuturi',
@@ -1040,6 +1125,9 @@ const ro = {
   'reports.monthlyComparison': 'Comparație lunară (ultimele 6 luni)',
   'reports.expenses': 'Cheltuieli',
   'reports.income': 'Venituri',
+  'reports.emptyTitle': 'Niciun raport încă',
+  'reports.emptyDesc': 'Adaugă tranzacții pentru a genera rapoarte și statistici.',
+  'reports.failedLoad': 'Nu s-au putut încărca datele raportului',
 
   // ─── Recenzie lunară ─────────────────────────────────
   'review.title': 'Recenzie lunară',
@@ -1668,6 +1756,12 @@ const ro = {
   'currencies.EUR': 'Euro',
   'currencies.USD': 'Dolar american',
   'currencies.GBP': 'Liră sterlină',
+
+  // ─── Paleta de comenzi ─────────────────────────────────
+  'commandPalette.placeholder': 'Caută pagini...',
+  'commandPalette.noResults': 'Niciun rezultat găsit',
+  'commandPalette.title': 'Paletă de comenzi',
+  'commandPalette.results': 'Rezultatele căutării',
 };
 
 export default ro;

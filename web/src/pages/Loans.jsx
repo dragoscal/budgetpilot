@@ -10,6 +10,7 @@ import {
   ChevronDown, ChevronUp, Edit3, Trash2, Check, X, Loader2, Clock,
   AlertTriangle, CheckCircle, PiggyBank, BarChart3, CircleDollarSign,
 } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 
 const EMPTY_FORM = {
   name: '', type: 'personal', lender: '', principalAmount: '',
@@ -555,15 +556,13 @@ export default function Loans() {
 
       {/* Loans list */}
       {filteredLoans.length === 0 && !showForm && (
-        <div className="card text-center py-12">
-          <Building2 size={48} className="mx-auto mb-3 text-cream-300 dark:text-cream-600" />
-          <h3 className="text-sm font-semibold mb-1">
-            {loansList.length === 0 ? t('loans.noLoans') : t('loans.noLoansFilter')}
-          </h3>
-          <p className="text-xs text-cream-500">
-            {loansList.length === 0 ? t('loans.noLoansDesc') : t('loans.tryDifferentFilter')}
-          </p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title={loansList.length === 0 ? t('loans.noLoans') : t('loans.noLoansFilter')}
+          description={loansList.length === 0 ? t('loans.noLoansDesc') : t('loans.tryDifferentFilter')}
+          action={loansList.length === 0 ? t('loans.add') : undefined}
+          onAction={loansList.length === 0 ? () => setShowForm(true) : undefined}
+        />
       )}
 
       <div className="space-y-3">

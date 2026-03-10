@@ -11,8 +11,8 @@ import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/LoadingSkeleton';
-import { PiggyBank, Plus, Users } from 'lucide-react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { PiggyBank, Plus, Users, ArrowRightLeft } from 'lucide-react';
+import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { useFamily } from '../contexts/FamilyContext';
 
 export default function Budgets() {
@@ -27,6 +27,7 @@ export default function Budgets() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editBudget, setEditBudget] = useState(null);
+  const [prevMonthTransactions, setPrevMonthTransactions] = useState([]);
 
   // Form state
   const [formCategory, setFormCategory] = useState('');
@@ -53,16 +54,20 @@ export default function Budgets() {
 
       const start = startOfMonth(month);
       const end = endOfMonth(month);
+      const prevStart = startOfMonth(subMonths(month, 1));
+      const prevEnd = endOfMonth(subMonths(month, 1));
 
       // In family mode, aggregate all family members' expenses
       const familyUserIds = isFamily ? new Set(members.map((m) => m.userId)) : null;
-      const monthTx = allTx.filter((t) => {
+      const filterExpense = (t, s, e) => {
         const d = new Date(t.date);
-        const inMonth = d >= start && d <= end && t.type === 'expense';
-        if (!inMonth) return false;
+        const inRange = d >= s && d <= e && t.type === 'expense';
+        if (!inRange) return false;
         if (isFamily && familyUserIds) return familyUserIds.has(t.userId);
         return t.userId === effectiveUserId;
-      });
+      };
+      const monthTx = allTx.filter((t) => filterExpense(t, start, end));
+      const prevTx = allTx.filter((t) => filterExpense(t, prevStart, prevEnd));
 
       // Filter budgets
       const filteredBudgets = isFamily
@@ -71,6 +76,7 @@ export default function Budgets() {
 
       setBudgets(filteredBudgets);
       setTransactions(monthTx);
+      setPrevMonthTransactions(prevTx);
     } catch (err) {
       toast.error(t('budgets.failedLoad'));
     } finally {
@@ -81,9 +87,26 @@ export default function Budgets() {
   const budgetData = useMemo(() => {
     return budgetsList.map((b) => {
       const spent = sumBy(transactions.filter((t) => t.category === b.category), 'amount');
-      return { ...b, spent, pct: percentOf(spent, b.amount), remaining: b.amount - spent };
+
+      // Rollover: carry over unused budget from previous month
+      let rolloverAmount = 0;
+      if (b.rollover) {
+        const prevSpent = sumBy(prevMonthTransactions.filter((t) => t.category === b.category), 'amount');
+        const prevRemaining = b.amount - prevSpent;
+        rolloverAmount = prevRemaining > 0 ? prevRemaining : 0;
+      }
+
+      const effectiveBudget = b.amount + rolloverAmount;
+      return {
+        ...b,
+        spent,
+        rolloverAmount,
+        effectiveBudget,
+        pct: percentOf(spent, effectiveBudget),
+        remaining: effectiveBudget - spent,
+      };
     }).sort((a, b) => b.pct - a.pct);
-  }, [budgetsList, transactions]);
+  }, [budgetsList, transactions, prevMonthTransactions]);
 
   const totalBudget = sumBy(budgetsList, 'amount');
   const totalSpent = sumBy(transactions, 'amount');
@@ -219,12 +242,18 @@ export default function Budgets() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {budgetData.map((b) => (
             <div key={b.id} className="relative group">
-              <BudgetBar category={b.category} spent={b.spent} budgeted={b.amount} currency={b.currency || currency} />
+              <BudgetBar category={b.category} spent={b.spent} budgeted={b.effectiveBudget} currency={b.currency || currency} />
+              {b.rolloverAmount > 0 && (
+                <div className="flex items-center gap-1 mt-1 px-3 pb-1 text-[11px] text-accent-600 dark:text-accent-400">
+                  <ArrowRightLeft size={11} />
+                  <span>{t('budgets.rolloverAmount', { amount: formatCurrency(b.rolloverAmount, b.currency || currency) })}</span>
+                </div>
+              )}
               <div className="absolute top-3 right-3 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleEdit(b)} className="p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 text-xs">{t('common.edit')}</button>
                 <button onClick={() => handleDelete(b.id)} className="p-1 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger text-xs">{t('common.delete')}</button>
               </div>
-              {b.rollover && (
+              {b.rollover && !b.rolloverAmount && (
                 <span className="absolute top-3 right-3 text-[10px] text-cream-400 group-hover:hidden">{t('budgets.rollover')}</span>
               )}
             </div>

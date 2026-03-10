@@ -96,6 +96,8 @@ export default function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside
+        role="navigation"
+        aria-label={t('nav.mainNavigation') || 'Main navigation'}
         className={`hidden md:flex flex-col fixed left-0 top-0 h-full bg-white dark:bg-dark-card border-r border-cream-200 dark:border-dark-border z-40 transition-all duration-200 ${
           collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'
         }`}
@@ -161,6 +163,7 @@ export default function Sidebar() {
 
           <button
             onClick={toggleTheme}
+            aria-label={dark ? t('nav.lightMode') : t('nav.darkMode')}
             className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
             title={dark ? t('nav.lightMode') : t('nav.darkMode')}
           >
@@ -192,6 +195,7 @@ export default function Sidebar() {
 
           <button
             onClick={handleLogout}
+            aria-label={t('nav.signOut')}
             className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-danger hover:bg-danger/8 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
           >
             <LogOut size={16} />
@@ -200,6 +204,7 @@ export default function Sidebar() {
 
           <button
             onClick={toggleCollapsed}
+            aria-label={collapsed ? (t('nav.expandSidebar') || 'Expand sidebar') : (t('nav.collapseSidebar') || 'Collapse sidebar')}
             className="flex items-center justify-center w-full py-1 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-colors"
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -209,18 +214,18 @@ export default function Sidebar() {
 
       {/* Mobile slide-up menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50">
+        <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t('nav.menu') || 'Menu'}>
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
 
           {/* Panel */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-2xl max-h-[80vh] overflow-y-auto animate-slide-up safe-bottom">
+          <nav aria-label={t('nav.mobileNavigation') || 'Mobile navigation'} className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-2xl max-h-[80vh] overflow-y-auto animate-slide-up safe-bottom">
             {/* Handle + close */}
             <div className="sticky top-0 bg-white dark:bg-dark-card z-10 pt-3 pb-2 px-4 border-b border-cream-100 dark:border-dark-border">
               <div className="w-8 h-1 bg-cream-300 dark:bg-cream-600 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-heading font-bold">{t('nav.menu')}</span>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-cream-800/50">
+                <button onClick={() => setMobileMenuOpen(false)} aria-label={t('nav.closeMenu') || 'Close menu'} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-cream-800/50">
                   <X size={18} className="text-cream-500" />
                 </button>
               </div>
@@ -319,12 +324,12 @@ export default function Sidebar() {
               </div>
             </div>
             <div className="h-4" />
-          </div>
+          </nav>
         </div>
       )}
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-1 py-1 safe-bottom">
+      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-1 py-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { to: '/', icon: LayoutDashboard, label: t('nav.home') },
           { to: '/transactions', icon: Receipt, label: t('nav.history') },
@@ -335,33 +340,46 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            onClick={() => navigator.vibrate?.(10)}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
+              `relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
                 isActive
                   ? 'text-accent-600 dark:text-accent-400'
                   : 'text-cream-400'
               }`
             }
           >
-            {item.special ? (
-              <div className="w-10 h-10 -mt-4 rounded-full bg-accent-600 flex items-center justify-center shadow-lg">
-                <item.icon size={20} className="text-white" />
-              </div>
-            ) : (
-              <item.icon size={20} />
+            {({ isActive }) => (
+              <>
+                {item.special ? (
+                  <div className="w-10 h-10 -mt-4 rounded-full bg-accent-600 flex items-center justify-center shadow-lg animate-pulse-add">
+                    <item.icon size={20} className="text-white" />
+                  </div>
+                ) : (
+                  <item.icon size={20} />
+                )}
+                <span>{item.label}</span>
+                {isActive && !item.special && (
+                  <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
+                )}
+              </>
             )}
-            <span>{item.label}</span>
           </NavLink>
         ))}
         {/* More button — opens slide-up menu */}
         <button
-          onClick={() => setMobileMenuOpen(true)}
+          onClick={() => { navigator.vibrate?.(10); setMobileMenuOpen(true); }}
+          aria-label={t('nav.openMenu') || 'Open menu'}
+          aria-expanded={mobileMenuOpen}
           className={`relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
             mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400'
           }`}
         >
           <Menu size={20} />
           <span>{t('nav.more')}</span>
+          {mobileMenuOpen && (
+            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
+          )}
           {/* Sync indicator dot */}
           {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
             <span className={`absolute top-1 right-2 w-2 h-2 rounded-full ${

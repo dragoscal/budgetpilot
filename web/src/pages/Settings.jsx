@@ -81,7 +81,10 @@ export default function SettingsPage() {
       setRateOverrides(overrides);
       const updAt = await getRatesUpdatedAt();
       setRatesUpdatedAt(updAt);
-    } catch { /* offline — use defaults */ }
+    } catch (err) {
+      // Offline or network error — use default exchange rates
+      console.error('Failed to load exchange rates:', err);
+    }
   };
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === aiProvider) || AI_PROVIDERS[0];
@@ -445,7 +448,8 @@ export default function SettingsPage() {
                   try {
                     await syncNow();
                     toast.success(t('settings.syncCompleted'));
-                  } catch {
+                  } catch (err) {
+                    console.error('Sync failed:', err);
                     toast.error(t('settings.syncFailed'));
                   }
                 }}
@@ -555,7 +559,8 @@ export default function SettingsPage() {
                     ok: data.ok,
                     msg: data.ok ? t('settings.connectedToBot', { username: data.result.username }) : data.description || t('settings.failed'),
                   });
-                } catch {
+                } catch (err) {
+                  console.error('Telegram connection test failed:', err);
                   setTelegramTestResult({ ok: false, msg: t('settings.telegramConnectionFailed') });
                 }
               }}
@@ -573,7 +578,8 @@ export default function SettingsPage() {
                       ok: data.ok,
                       msg: data.ok ? t('settings.webhookSet') : data.description || t('settings.failed'),
                     });
-                  } catch {
+                  } catch (err) {
+                    console.error('Webhook setup failed:', err);
                     setTelegramTestResult({ ok: false, msg: t('settings.webhookFailed') });
                   }
                 }}
@@ -624,7 +630,8 @@ export default function SettingsPage() {
                   const updAt = await getRatesUpdatedAt();
                   setRatesUpdatedAt(updAt);
                   toast.success(t('settings.ratesUpdated'));
-                } catch {
+                } catch (err) {
+                  console.error('Exchange rate update failed:', err);
                   toast.error(t('settings.ratesFailed'));
                 } finally {
                   setRatesFetching(false);

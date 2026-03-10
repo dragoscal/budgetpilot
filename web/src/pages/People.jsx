@@ -3,13 +3,14 @@ import { people as peopleApi, debts as debtsApi, debtPayments as paymentsApi, tr
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { generateId, formatCurrency, sumBy, formatDate, todayLocal } from '../lib/helpers';
+import { generateId, formatCurrency, sumBy, formatDate, todayLocal, calculateSettlements } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import {
   Users, Plus, ArrowUpRight, ArrowDownLeft, Check, Trash2,
   ChevronRight, Wallet, TrendingUp, TrendingDown, Clock,
   HandCoins, Banknote, UserPlus, DollarSign, CalendarClock, AlertTriangle, Info,
+  Scale, ArrowRight,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 
@@ -27,6 +28,8 @@ export default function People() {
   const [settleDebt, setSettleDebt] = useState(null);
   const [settleAmount, setSettleAmount] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // all | owed | owing | settled
+  const [showSettlement, setShowSettlement] = useState(false);
+  const [settlingAll, setSettlingAll] = useState(false);
 
   const [personForm, setPersonForm] = useState({ name: '', emoji: '👤', phone: '', notes: '' });
   const [debtForm, setDebtForm] = useState({
@@ -81,6 +84,74 @@ export default function People() {
   const totalYouOwe = sumBy(Object.values(balances).filter((b) => b.net < 0), (b) => Math.abs(b.net));
   const netBalance = totalOwedToYou - totalYouOwe;
   const activeDebtsCount = debtsList.filter(d => d.status !== 'settled').length;
+
+  // Settlement plan: calculate optimal payments between people
+  const settlementPlan = useMemo(() => {
+    // Build debts array: "from" owes "to" money
+    // For lent debts: the person (personId) owes you (user) money -> from=personName, to="You"
+    // For borrowed debts: you owe the person -> from="You", to=personName
+    const debts = [];
+    const activeDebts = debtsList.filter(d => d.status !== 'settled');
+    for (const debt of activeDebts) {
+      const person = peopleList.find(p => p.id === debt.personId);
+      const personName = person?.name || 'Unknown';
+      const remaining = debt.remaining ?? debt.amount;
+      if (remaining <= 0) continue;
+      if (debt.type === 'lent') {
+        // They owe you
+        debts.push({ from: personName, to: 'You', amount: remaining });
+      } else {
+        // You owe them
+        debts.push({ from: 'You', to: personName, amount: remaining });
+      }
+    }
+    return calculateSettlements(debts);
+  }, [debtsList, peopleList]);
+
+  // Handle mark-all-as-settled: create offsetting transactions
+  const handleSettleAll = async () => {
+    if (settlementPlan.length === 0) return;
+    setSettlingAll(true);
+    try {
+      const today = todayLocal();
+      for (const s of settlementPlan) {
+        // Create a settlement transaction for each payment
+        const isYouPaying = s.from === 'You';
+        await txApi.create({
+          id: generateId(),
+          type: isYouPaying ? 'expense' : 'income',
+          merchant: isYouPaying ? s.to : s.from,
+          amount: s.amount,
+          currency,
+          category: 'transfer',
+          date: today,
+          description: `${t('people.settlementPlan')}: ${s.from} ${t('people.pays')} ${s.to}`,
+          source: 'manual',
+          tags: ['debt-settlement'],
+          userId: effectiveUserId,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      // Mark all active debts as settled
+      const activeDebts = debtsList.filter(d => d.status !== 'settled');
+      for (const debt of activeDebts) {
+        await debtsApi.update(debt.id, {
+          remaining: 0,
+          status: 'settled',
+          settledDate: today,
+        });
+      }
+
+      toast.success(t('people.settlementCreated'));
+      setShowSettlement(false);
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to create settlements');
+    } finally {
+      setSettlingAll(false);
+    }
+  };
 
   // Filter people
   const filteredPeople = useMemo(() => {
@@ -236,6 +307,14 @@ export default function People() {
           <p className="text-xs text-cream-500 mt-1">{t('people.subtitle')}</p>
         </div>
         <div className="flex gap-2">
+          {activeDebtsCount > 0 && (
+            <button
+              onClick={() => setShowSettlement(true)}
+              className="btn-ghost text-xs flex items-center gap-1.5 h-9 border border-cream-200 dark:border-dark-border"
+            >
+              <Scale size={14} /> {t('people.settleUp')}
+            </button>
+          )}
           <button
             onClick={() => setShowPersonForm(true)}
             className="btn-secondary text-xs flex items-center gap-1.5 h-9"
@@ -916,6 +995,57 @@ export default function People() {
             </div>
           );
         })()}
+      </Modal>
+
+      {/* Settlement plan modal */}
+      <Modal
+        open={showSettlement}
+        onClose={() => setShowSettlement(false)}
+        title={t('people.settlementPlan')}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-cream-500">{t('people.settleUpDesc')}</p>
+
+          {settlementPlan.length > 0 ? (
+            <div className="space-y-2">
+              {settlementPlan.map((s, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-cream-50 dark:bg-cream-800/20 border border-cream-200 dark:border-dark-border"
+                >
+                  <div className="flex-1 flex items-center gap-2 text-sm">
+                    <span className="font-medium">{s.from}</span>
+                    <ArrowRight size={14} className="text-cream-400 shrink-0" />
+                    <span className="font-medium">{s.to}</span>
+                  </div>
+                  <span className="font-heading font-bold money text-accent-600 dark:text-accent-400">
+                    {formatCurrency(s.amount, currency)}
+                  </span>
+                </div>
+              ))}
+
+              <div className="pt-2 border-t border-cream-200 dark:border-dark-border">
+                <p className="text-[10px] text-cream-500 flex items-center gap-1 mb-3">
+                  <Info size={10} />
+                  {t('people.autoTransactionNote')}
+                </p>
+                <button
+                  onClick={handleSettleAll}
+                  disabled={settlingAll}
+                  className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Check size={14} />
+                  {settlingAll ? t('common.loading') : t('people.markSettled')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Check size={32} className="text-success mx-auto mb-2" />
+              <p className="text-sm text-cream-500">{t('people.noSettlementsNeeded')}</p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

@@ -16,21 +16,27 @@ export async function logActivity(db, userId, action, metadata = {}) {
   } catch {}
 }
 
-// ─── Rate Limiting (in-memory per isolate) ───────────────
-const rateLimits = new Map();
-const RATE_LIMIT_WINDOW = 60000;
-const RATE_LIMIT_MAX = 10;
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const entry = rateLimits.get(ip);
-  if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
-    rateLimits.set(ip, { start: now, count: 1 });
+// ─── Rate Limiting (D1-backed, shared across isolates) ───
+async function checkRateLimit(db, ip, path, maxRequests = 10, windowMs = 60000) {
+  const windowStart = new Date(Date.now() - windowMs).toISOString();
+  try {
+    const result = await db.prepare(
+      'SELECT COUNT(*) as count FROM api_logs WHERE ip = ? AND path = ? AND timestamp > ?'
+    ).bind(ip, path, windowStart).first();
+    return (result?.count || 0) < maxRequests;
+  } catch {
+    // If query fails, allow the request (fail open)
     return true;
   }
-  entry.count++;
-  return entry.count <= RATE_LIMIT_MAX;
 }
+
+// ─── API Versioning Middleware ────────────────────────────
+// Strip /v1 from path so /api/v1/* routes map to /api/*
+router.use(async (ctx) => {
+  if (ctx.url.pathname.startsWith('/api/v1/')) {
+    ctx.url.pathname = ctx.url.pathname.replace('/api/v1/', '/api/');
+  }
+});
 
 // ─── Auth Middleware ──────────────────────────────────────
 // Skip auth for public routes
@@ -81,7 +87,7 @@ router.get('/api/health', async () => {
 // ─── Auth Routes ──────────────────────────────────────────
 router.post('/api/auth/register', async (ctx) => {
   const ip = ctx.request.headers.get('CF-Connecting-IP') || 'unknown';
-  if (!checkRateLimit(ip)) return json({ error: 'Too many attempts. Try again later.' }, 429);
+  if (!(await checkRateLimit(ctx.env.DB, ip, '/api/auth/register'))) return json({ error: 'Too many attempts. Try again later.' }, 429);
 
   const { email, password, name, defaultCurrency } = ctx.body;
 
@@ -117,7 +123,7 @@ router.post('/api/auth/register', async (ctx) => {
 
 router.post('/api/auth/login', async (ctx) => {
   const ip = ctx.request.headers.get('CF-Connecting-IP') || 'unknown';
-  if (!checkRateLimit(ip)) return json({ error: 'Too many attempts. Try again later.' }, 429);
+  if (!(await checkRateLimit(ctx.env.DB, ip, '/api/auth/login'))) return json({ error: 'Too many attempts. Try again later.' }, 429);
 
   const { email, password } = ctx.body;
 
@@ -222,12 +228,16 @@ router.put('/api/auth/password', async (ctx) => {
 // ─── Delete Own Account ──────────────────────────────────
 router.delete('/api/auth/account', async (ctx) => {
   const userId = ctx.user.id;
-  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback'];
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback', 'challenges', 'receipts'];
   for (const table of tables) {
     await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
   }
   await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
   await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
+  // Delete family-related data (different user columns)
+  await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId).run();
+  await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
+  await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId).run();
   await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(userId).run();
   return json({ success: true });
 });
@@ -353,12 +363,13 @@ export default {
 
       ctx.waitUntil(
         env.DB.prepare(
-          `INSERT INTO api_logs (id, userId, method, path, status, responseTime, error, userAgent, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO api_logs (id, userId, method, path, status, responseTime, error, userAgent, ip, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           crypto.randomUUID(), userId, request.method, url.pathname,
           response.status, Date.now() - start,
           response.status >= 400 ? `HTTP ${response.status}` : null,
           (request.headers.get('user-agent') || '').slice(0, 200),
+          request.headers.get('CF-Connecting-IP') || null,
           new Date().toISOString()
         ).run().catch(() => {})
       );

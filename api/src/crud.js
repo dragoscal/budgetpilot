@@ -3,13 +3,20 @@ import { json } from './router.js';
 import { generateId } from './auth.js';
 import { logActivity } from './index.js';
 
-const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments'];
+const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments', 'families', 'family_members', 'shared_expenses', 'challenges', 'receipts'];
 
 // Map client-side store names to D1 table names (for sync compatibility)
-const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments' };
+const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments', familyMembers: 'family_members', sharedExpenses: 'shared_expenses' };
 
 function resolveTable(name) {
   return TABLE_ALIASES[name] || name;
+}
+
+// Map tables to their user-ownership column (defaults to 'userId')
+const USER_COLUMN = { families: 'createdBy', shared_expenses: 'paidByUserId' };
+
+function getUserColumn(table) {
+  return USER_COLUMN[table] || 'userId';
 }
 
 // JSON columns that need to be serialized/deserialized
@@ -28,6 +35,11 @@ const TABLE_COLUMNS = {
   wishlist: new Set(['id','userId','name','estimatedPrice','currency','category','priority','url','notes','purchased','purchasedDate','createdAt','updatedAt']),
   loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
   loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
+  families: new Set(['id','name','createdBy','emoji','createdAt','updatedAt']),
+  family_members: new Set(['id','familyId','userId','role','joinedAt','createdAt','updatedAt']),
+  shared_expenses: new Set(['id','familyId','paidByUserId','amount','currency','description','category','date','splitMethod','settled','createdAt','updatedAt']),
+  challenges: new Set(['id','userId','name','type','targetAmount','category','startDate','endDate','status','progress','createdAt','updatedAt']),
+  receipts: new Set(['id','userId','merchant','total','currency','category','transactionId','processedAt','createdAt','updatedAt']),
 };
 
 // Strip unknown columns so D1 doesn't throw "table X has no column named Y"
@@ -84,8 +96,9 @@ export function registerCrudRoutes(router) {
         }
 
         const now = new Date().toISOString();
+        const userCol = getUserColumn(table);
         if (action === 'create' || action === 'update') {
-          const raw = serializeRow(table, { ...data, userId: ctx.user.id, updatedAt: now });
+          const raw = serializeRow(table, { ...data, [userCol]: ctx.user.id, updatedAt: now });
           if (action === 'create') raw.createdAt = raw.createdAt || now;
           // Strip client-only fields that don't exist in D1 schema
           const row = filterColumns(table, raw);
@@ -99,10 +112,10 @@ export function registerCrudRoutes(router) {
           ).bind(...columns.map(c => row[c])).run();
         } else if (action === 'delete') {
           if (table === 'transactions') {
-            await ctx.env.DB.prepare(`UPDATE transactions SET deletedAt = ? WHERE id = ? AND userId = ?`)
+            await ctx.env.DB.prepare(`UPDATE transactions SET deletedAt = ? WHERE id = ? AND ${userCol} = ?`)
               .bind(now, data.id, ctx.user.id).run();
           } else {
-            await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE id = ? AND userId = ?`)
+            await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE id = ? AND ${userCol} = ?`)
               .bind(data.id, ctx.user.id).run();
           }
         }
@@ -122,11 +135,15 @@ export function registerCrudRoutes(router) {
     const since = ctx.query.since || '1970-01-01T00:00:00.000Z';
     const userId = ctx.user.id;
 
+    const limit = Math.min(parseInt(ctx.query.limit) || 1000, 5000);
+    const offset = parseInt(ctx.query.offset) || 0;
+
     const tables = {};
     for (const table of ALLOWED_TABLES) {
+      const userCol = getUserColumn(table);
       const result = await ctx.env.DB.prepare(
-        `SELECT * FROM ${table} WHERE userId = ? AND updatedAt > ?`
-      ).bind(userId, since).all();
+        `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ? ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
+      ).bind(userId, since, limit, offset).all();
       tables[table] = (result.results || []).map(r => deserializeRow(table, r));
     }
 
@@ -138,7 +155,8 @@ export function registerCrudRoutes(router) {
     const userId = ctx.user.id;
     const data = {};
     for (const table of ALLOWED_TABLES) {
-      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE userId = ?`).bind(userId).all();
+      const userCol = getUserColumn(table);
+      const result = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE ${userCol} = ?`).bind(userId).all();
       data[table] = (result.results || []).map(r => deserializeRow(table, r));
     }
 
@@ -181,7 +199,8 @@ export function registerCrudRoutes(router) {
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
     const userId = ctx.user.id;
-    let query = `SELECT * FROM ${table} WHERE userId = ?`;
+    const userCol = getUserColumn(table);
+    let query = `SELECT * FROM ${table} WHERE ${userCol} = ?`;
     const params = [userId];
 
     // Soft delete filter for transactions
@@ -221,7 +240,8 @@ export function registerCrudRoutes(router) {
     const { table, id } = ctx.params;
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
-    const row = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE id = ? AND userId = ?`)
+    const userCol = getUserColumn(table);
+    const row = await ctx.env.DB.prepare(`SELECT * FROM ${table} WHERE id = ? AND ${userCol} = ?`)
       .bind(id, ctx.user.id).first();
 
     if (!row) return json({ error: 'Not found' }, 404);
@@ -234,10 +254,11 @@ export function registerCrudRoutes(router) {
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
     const now = new Date().toISOString();
+    const userCol = getUserColumn(table);
     const raw = serializeRow(table, {
       ...ctx.body,
       id: ctx.body.id || generateId(),
-      userId: ctx.user.id,
+      [userCol]: ctx.user.id,
       createdAt: now,
       updatedAt: now,
     });
@@ -265,13 +286,16 @@ export function registerCrudRoutes(router) {
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
     // Check ownership
-    const existing = await ctx.env.DB.prepare(`SELECT id FROM ${table} WHERE id = ? AND userId = ?`)
+    const userCol = getUserColumn(table);
+    const existing = await ctx.env.DB.prepare(`SELECT id FROM ${table} WHERE id = ? AND ${userCol} = ?`)
       .bind(id, ctx.user.id).first();
     if (!existing) return json({ error: 'Not found' }, 404);
 
     const raw = serializeRow(table, { ...ctx.body, updatedAt: new Date().toISOString() });
     delete raw.id;
     delete raw.userId;
+    delete raw.createdBy;
+    delete raw.paidByUserId;
     delete raw.createdAt;
     // Strip unknown client-only fields
     const data = filterColumns(table, raw);
@@ -280,7 +304,7 @@ export function registerCrudRoutes(router) {
     const values = [...Object.values(data), id, ctx.user.id];
 
     await ctx.env.DB.prepare(
-      `UPDATE ${table} SET ${sets} WHERE id = ? AND userId = ?`
+      `UPDATE ${table} SET ${sets} WHERE id = ? AND ${userCol} = ?`
     ).bind(...values).run();
 
     await logSync(ctx.env.DB, ctx.user.id, table, id, 'update');
@@ -294,14 +318,15 @@ export function registerCrudRoutes(router) {
     const { table, id } = ctx.params;
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
+    const userCol = getUserColumn(table);
     if (table === 'transactions') {
       // Soft delete
       await ctx.env.DB.prepare(
-        `UPDATE transactions SET deletedAt = ? WHERE id = ? AND userId = ?`
+        `UPDATE transactions SET deletedAt = ? WHERE id = ? AND ${userCol} = ?`
       ).bind(new Date().toISOString(), id, ctx.user.id).run();
     } else {
       await ctx.env.DB.prepare(
-        `DELETE FROM ${table} WHERE id = ? AND userId = ?`
+        `DELETE FROM ${table} WHERE id = ? AND ${userCol} = ?`
       ).bind(id, ctx.user.id).run();
     }
 

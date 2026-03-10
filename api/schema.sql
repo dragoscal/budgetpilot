@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS api_logs (
   responseTime INTEGER NOT NULL,
   error TEXT,
   userAgent TEXT,
+  ip TEXT,
   timestamp TEXT NOT NULL
 );
 
@@ -251,6 +252,76 @@ CREATE TABLE IF NOT EXISTS loan_payments (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
+-- Families
+CREATE TABLE IF NOT EXISTS families (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  createdBy TEXT NOT NULL,
+  emoji TEXT DEFAULT '👨‍👩‍👧‍👦',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (createdBy) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS family_members (
+  id TEXT PRIMARY KEY,
+  familyId TEXT NOT NULL,
+  userId TEXT NOT NULL,
+  role TEXT DEFAULT 'member',
+  joinedAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (familyId) REFERENCES families(id),
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS shared_expenses (
+  id TEXT PRIMARY KEY,
+  familyId TEXT NOT NULL,
+  paidByUserId TEXT NOT NULL,
+  amount REAL NOT NULL,
+  currency TEXT DEFAULT 'RON',
+  description TEXT,
+  category TEXT DEFAULT 'other',
+  date TEXT NOT NULL,
+  splitMethod TEXT DEFAULT 'equal',
+  settled INTEGER DEFAULT 0,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (familyId) REFERENCES families(id),
+  FOREIGN KEY (paidByUserId) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS challenges (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  targetAmount REAL,
+  category TEXT,
+  startDate TEXT NOT NULL,
+  endDate TEXT NOT NULL,
+  status TEXT DEFAULT 'active',
+  progress REAL DEFAULT 0,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS receipts (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  merchant TEXT,
+  total REAL,
+  currency TEXT DEFAULT 'RON',
+  category TEXT,
+  transactionId TEXT,
+  processedAt TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_loans_userId ON loans(userId);
 CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
@@ -274,9 +345,21 @@ CREATE INDEX IF NOT EXISTS idx_wishlist_userId ON wishlist(userId);
 CREATE INDEX IF NOT EXISTS idx_api_logs_userId ON api_logs(userId);
 CREATE INDEX IF NOT EXISTS idx_api_logs_timestamp ON api_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(status);
+CREATE INDEX IF NOT EXISTS idx_api_logs_ip ON api_logs(ip);
 CREATE INDEX IF NOT EXISTS idx_activity_log_userId ON activity_log(userId);
 CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_activity_log_action ON activity_log(action);
 CREATE INDEX IF NOT EXISTS idx_transactions_subcategory ON transactions(subcategory);
 CREATE INDEX IF NOT EXISTS idx_recurring_frequency ON recurring(frequency);
 CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month);
+CREATE INDEX IF NOT EXISTS idx_families_createdBy ON families(createdBy);
+CREATE INDEX IF NOT EXISTS idx_family_members_familyId ON family_members(familyId);
+CREATE INDEX IF NOT EXISTS idx_family_members_userId ON family_members(userId);
+CREATE INDEX IF NOT EXISTS idx_shared_expenses_familyId ON shared_expenses(familyId);
+CREATE INDEX IF NOT EXISTS idx_shared_expenses_paidByUserId ON shared_expenses(paidByUserId);
+CREATE INDEX IF NOT EXISTS idx_shared_expenses_date ON shared_expenses(date);
+CREATE INDEX IF NOT EXISTS idx_challenges_userId ON challenges(userId);
+CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status);
+CREATE INDEX IF NOT EXISTS idx_challenges_type ON challenges(type);
+CREATE INDEX IF NOT EXISTS idx_receipts_userId ON receipts(userId);
+CREATE INDEX IF NOT EXISTS idx_receipts_transactionId ON receipts(transactionId);

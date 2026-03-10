@@ -6,9 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { sortByDate, formatCurrency, sumBy } from '../lib/helpers';
 import TransactionRow from '../components/TransactionRow';
+import TransactionEditModal from '../components/TransactionEditModal';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
-import ManualForm from '../components/ManualForm';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
@@ -418,9 +418,12 @@ export default function Transactions() {
       </div>
 
       {/* Edit modal */}
-      <Modal open={!!editTx} onClose={() => setEditTx(null)} title={t('transactions.editTransaction')}>
-        {editTx && <ManualForm initial={editTx} onSubmit={handleEdit} submitLabel={t('transactions.saveChanges')} />}
-      </Modal>
+      <TransactionEditModal
+        transaction={editTx}
+        open={!!editTx}
+        onClose={() => setEditTx(null)}
+        onSave={handleEdit}
+      />
 
       {/* Delete confirmation */}
       <Modal open={!!deleteTx} onClose={() => setDeleteTx(null)} title={t('transactions.deleteTransaction')}>

@@ -1,0 +1,78 @@
+import { useState, useEffect } from 'react';
+import Modal from './Modal';
+import { CATEGORIES } from '../lib/constants';
+import { useTranslation } from '../contexts/LanguageContext';
+import { todayLocal } from '../lib/helpers';
+
+export default function TransactionEditModal({ transaction, open, onClose, onSave }) {
+  const { t } = useTranslation();
+  const [form, setForm] = useState({});
+
+  useEffect(() => {
+    if (transaction) {
+      setForm({
+        merchant: transaction.merchant || '',
+        amount: transaction.amount || 0,
+        currency: transaction.currency || 'RON',
+        category: transaction.category || 'other',
+        type: transaction.type || 'expense',
+        date: transaction.date || todayLocal(),
+        description: transaction.description || '',
+      });
+    }
+  }, [transaction]);
+
+  const handleSave = () => {
+    if (!form.merchant.trim() || !form.amount) return;
+    onSave({
+      ...transaction,
+      ...form,
+      amount: Math.abs(Number(form.amount)),
+      updatedAt: new Date().toISOString(),
+    });
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={t('transactions.editTransaction')}>
+      <div className="space-y-3">
+        <div>
+          <label className="label">{t('transactions.merchant')}</label>
+          <input className="input" value={form.merchant || ''} onChange={e => setForm(f => ({...f, merchant: e.target.value}))} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">{t('transactions.amount')}</label>
+            <input className="input" type="number" step="0.01" value={form.amount || ''} onChange={e => setForm(f => ({...f, amount: e.target.value}))} />
+          </div>
+          <div>
+            <label className="label">{t('transactions.type')}</label>
+            <select className="input" value={form.type || 'expense'} onChange={e => setForm(f => ({...f, type: e.target.value}))}>
+              <option value="expense">{t('transactions.expense')}</option>
+              <option value="income">{t('transactions.income')}</option>
+              <option value="transfer">{t('transactions.transfer')}</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="label">{t('transactions.category')}</label>
+          <select className="input" value={form.category || 'other'} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
+            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {t('categories.' + c.id)}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">{t('transactions.date')}</label>
+          <input className="input" type="date" value={form.date || ''} onChange={e => setForm(f => ({...f, date: e.target.value}))} />
+        </div>
+        <div>
+          <label className="label">{t('transactions.description')}</label>
+          <input className="input" value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="btn-secondary flex-1">{t('common.cancel')}</button>
+          <button onClick={handleSave} className="btn-primary flex-1">{t('common.save')}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

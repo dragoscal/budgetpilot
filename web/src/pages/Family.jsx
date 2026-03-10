@@ -117,7 +117,7 @@ function InviteCodeDisplay({ family }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
+      // Clipboard API not available — use legacy execCommand fallback
       const input = document.createElement('input');
       input.value = family.inviteCode;
       document.body.appendChild(input);
@@ -190,7 +190,9 @@ export default function Family() {
     setExpensesLoading(true);
     sharedApi.getAll({ familyId: activeFamily.id })
       .then(setExpenses)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load shared expenses:', err);
+      })
       .finally(() => setExpensesLoading(false));
   }, [activeFamily]);
 

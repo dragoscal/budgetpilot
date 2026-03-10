@@ -3,13 +3,20 @@ import { getAll, getById, add, update, remove, clearStore, getSetting, setSettin
 // ─── SYNC ENGINE ──────────────────────────────────────────
 // Handles bidirectional sync between IndexedDB and the backend API
 
+// Sync lock — prevents concurrent sync operations
+let syncLock = false;
+
 // Table name mapping: IndexedDB store names ↔ D1 table names
 const TABLE_MAP = {
   debtPayments: 'debt_payments',
+  familyMembers: 'family_members',
+  sharedExpenses: 'shared_expenses',
 };
 
 const REVERSE_TABLE_MAP = {
   debt_payments: 'debtPayments',
+  family_members: 'familyMembers',
+  shared_expenses: 'sharedExpenses',
 };
 
 function toServerTable(storeName) {
@@ -33,6 +40,18 @@ async function getAuthHeaders() {
   return headers;
 }
 
+// Register for background sync when there are pending changes and the user goes offline
+export async function registerBackgroundSync() {
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.sync.register('sync-transactions');
+    } catch (err) {
+      console.warn('Background sync registration failed:', err);
+    }
+  }
+}
+
 // Add a change to the sync queue
 export async function addToSyncQueue(action, store, data) {
   await add('syncQueue', {
@@ -44,10 +63,20 @@ export async function addToSyncQueue(action, store, data) {
     retries: 0,
     synced: false,
   });
+
+  // If offline, register background sync so changes are pushed when connectivity returns
+  if (!navigator.onLine) {
+    registerBackgroundSync();
+  }
 }
 
 // Push all queued changes to the backend
 export async function processSyncQueue() {
+  if (syncLock) {
+    console.warn('Sync already in progress, skipping push');
+    return { synced: 0, failed: 0 };
+  }
+
   const apiUrl = await getSetting('apiUrl');
   if (!apiUrl || !hasAuthToken()) return { synced: 0, failed: 0 };
 
@@ -55,6 +84,7 @@ export async function processSyncQueue() {
   const pending = queue.filter((q) => !q.synced);
   if (pending.length === 0) return { synced: 0, failed: 0 };
 
+  syncLock = true;
   try {
     const headers = await getAuthHeaders();
 
@@ -121,17 +151,27 @@ export async function processSyncQueue() {
     for (const item of pending) {
       try {
         await update('syncQueue', { ...item, retries: (item.retries || 0) + 1 });
-      } catch {}
+      } catch {
+        // Intentionally swallowed — retry count update is best-effort during error recovery
+      }
     }
     return { synced: 0, failed: pending.length };
+  } finally {
+    syncLock = false;
   }
 }
 
 // Pull all changes from the backend since the last sync
 export async function pullFromServer() {
+  if (syncLock) {
+    console.warn('Sync already in progress, skipping pull');
+    return null;
+  }
+
   const apiUrl = await getSetting('apiUrl');
   if (!apiUrl || !hasAuthToken()) return null;
 
+  syncLock = true;
   try {
     const lastSync = await getSetting('lastSyncAt') || '1970-01-01T00:00:00.000Z';
     const headers = await getAuthHeaders();
@@ -189,7 +229,10 @@ export async function pullFromServer() {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      // Settings pull is non-critical — local settings take precedence
+      console.error('Failed to pull settings from server:', err);
+    }
 
     // Update last sync timestamp
     if (result.syncedAt) {
@@ -201,11 +244,18 @@ export async function pullFromServer() {
   } catch (err) {
     console.error('Sync pull error:', err);
     return null;
+  } finally {
+    syncLock = false;
   }
 }
 
 // Full sync: push then pull
 export async function fullSync() {
+  if (syncLock) {
+    console.warn('Sync already in progress, skipping full sync');
+    return { pushed: { synced: 0, failed: 0 }, pulled: 'skipped', timestamp: new Date().toISOString() };
+  }
+
   const pushResult = await processSyncQueue();
   const pullResult = await pullFromServer();
 
@@ -217,7 +267,9 @@ export async function fullSync() {
 
   // Notify listeners
   syncListeners.forEach((fn) => {
-    try { fn(result); } catch {}
+    try { fn(result); } catch (err) {
+      console.error('Sync listener callback error:', err);
+    }
   });
 
   return result;

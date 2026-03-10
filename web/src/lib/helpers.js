@@ -51,6 +51,20 @@ export function dateToLocalISO(date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Safely parse a YYYY-MM-DD date string as local midnight (not UTC).
+ * Prevents the UTC timezone bug where '2024-03-10' becomes March 9 in UTC+2.
+ */
+export function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date();
+  // YYYY-MM-DD format is parsed as UTC by new Date(), so we split and construct locally
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  return new Date(dateStr);
+}
+
 export function getMonthRange(date = new Date()) {
   return {
     start: startOfMonth(date),
@@ -216,6 +230,33 @@ export function calcAnnualEquivalent(amount, freqId) {
   return calcMonthlyEquivalent(amount, freqId) * 12;
 }
 
+// ─── RECURRING AUTO-CREATE HELPERS ───────────────────────
+
+/**
+ * Check if a recurring item's billing day has passed this month
+ * and no transaction exists for it yet. Returns items that need auto-creation.
+ */
+export function getRecurringDueToday(recurringItems, existingTransactions) {
+  const today = todayLocal();
+  const currentDay = new Date().getDate();
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+  return recurringItems.filter(item => {
+    if (!item.active && item.active !== undefined) return false;
+    if ((item.billingDay || 1) > currentDay) return false; // not yet due
+
+    // Check if already created this month
+    const alreadyCreated = existingTransactions.some(tx =>
+      tx.merchant === (item.name || item.merchant) &&
+      tx.date?.startsWith(currentMonth) &&
+      Math.abs(tx.amount - item.amount) < 0.01 &&
+      tx.source === 'recurring'
+    );
+
+    return !alreadyCreated;
+  });
+}
+
 /**
  * Validate a transaction before saving. Returns { valid, errors }.
  */
@@ -246,4 +287,67 @@ export function validateTransaction(tx) {
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+// ─── SETTLEMENT HELPERS ─────────────────────────────────
+
+/**
+ * Given an array of debts, calculate the minimal set of payments
+ * needed to settle all balances (balance netting algorithm).
+ *
+ * @param {Array<{ from: string, to: string, amount: number }>} debts
+ * @returns {Array<{ from: string, to: string, amount: number }>}
+ */
+export function calculateSettlements(debts) {
+  if (!debts || debts.length === 0) return [];
+
+  // 1. Calculate net balance for each person
+  const balances = {};
+  for (const debt of debts) {
+    const amt = Number(debt.amount) || 0;
+    if (amt <= 0) continue;
+    balances[debt.from] = (balances[debt.from] || 0) - amt;
+    balances[debt.to] = (balances[debt.to] || 0) + amt;
+  }
+
+  // 2. Separate into creditors (positive balance) and debtors (negative balance)
+  const creditors = []; // people who are owed money
+  const debtors = [];   // people who owe money
+
+  for (const [person, balance] of Object.entries(balances)) {
+    const rounded = Math.round(balance * 100) / 100;
+    if (rounded > 0.01) {
+      creditors.push({ person, amount: rounded });
+    } else if (rounded < -0.01) {
+      debtors.push({ person, amount: Math.abs(rounded) });
+    }
+  }
+
+  // Sort for deterministic results: largest amounts first
+  creditors.sort((a, b) => b.amount - a.amount);
+  debtors.sort((a, b) => b.amount - a.amount);
+
+  // 3. Greedily match debtors to creditors
+  const settlements = [];
+  let ci = 0;
+  let di = 0;
+
+  while (ci < creditors.length && di < debtors.length) {
+    const payment = Math.min(creditors[ci].amount, debtors[di].amount);
+    if (payment > 0.01) {
+      settlements.push({
+        from: debtors[di].person,
+        to: creditors[ci].person,
+        amount: Math.round(payment * 100) / 100,
+      });
+    }
+
+    creditors[ci].amount -= payment;
+    debtors[di].amount -= payment;
+
+    if (creditors[ci].amount < 0.01) ci++;
+    if (debtors[di].amount < 0.01) di++;
+  }
+
+  return settlements;
 }

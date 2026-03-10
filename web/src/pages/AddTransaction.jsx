@@ -12,10 +12,11 @@ import QuickAdd from '../components/QuickAdd';
 import ManualForm from '../components/ManualForm';
 import CategoryPicker from '../components/CategoryPicker';
 import BankStatementUpload from '../components/BankStatementUpload';
+import CSVImport from '../components/CSVImport';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
-  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2,
+  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -61,7 +62,10 @@ export default function AddTransaction() {
     try {
       const d = await getDrafts();
       setDrafts(d);
-    } catch (e) { /* silently fail */ }
+    } catch (e) {
+      // Drafts are non-critical — log but don't block the UI
+      console.error('Failed to load drafts:', e);
+    }
   }, []);
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
@@ -163,7 +167,10 @@ export default function AddTransaction() {
         if (alert.type === 'over') toast.error(alert.message);
         else toast.warning(alert.message);
       }
-    } catch (e) { /* silently fail */ }
+    } catch (e) {
+      // Budget alerts are non-critical — log but don't block saving
+      console.error('Budget alert check failed:', e);
+    }
   };
 
   const handleError = (msg) => toast.error(msg);
@@ -377,6 +384,7 @@ export default function AddTransaction() {
     { id: 'quick', label: t('addTransaction.quickAdd'), icon: Zap },
     { id: 'receipt', label: t('addTransaction.receipt'), icon: Camera },
     { id: 'bank', label: t('addTransaction.statement'), icon: Building2 },
+    { id: 'csv', label: t('addTransaction.csvImport'), icon: FileSpreadsheet },
   ];
 
   const reviewItemsCount = pendingResults
@@ -527,6 +535,14 @@ export default function AddTransaction() {
         <div className="card">
           <h3 className="text-sm font-semibold mb-3">{t('addTransaction.importStatement')}</h3>
           <BankStatementUpload onResult={handleAIResult} onError={handleError} />
+        </div>
+      )}
+
+      {/* CSV Import */}
+      {activeTab === 'csv' && (
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.csvImport')}</h3>
+          <CSVImport onResult={handleAIResult} onError={handleError} />
         </div>
       )}
 

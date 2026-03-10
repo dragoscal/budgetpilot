@@ -533,7 +533,8 @@ function ActivityTab({ activity }) {
       <div className="divide-y divide-cream-100 dark:divide-dark-border">
         {activity.map(a => {
           let meta = {};
-          try { meta = JSON.parse(a.metadata || '{}'); } catch {}
+          // Intentionally swallowed — malformed metadata JSON defaults to empty object
+          try { meta = JSON.parse(a.metadata || '{}'); } catch { /* non-critical parse fallback */ }
           return (
             <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50 dark:hover:bg-dark-border/50 transition-colors">
               <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-dark-border flex items-center justify-center text-xs font-medium text-cream-600 dark:text-cream-400 shrink-0">

@@ -166,7 +166,9 @@ async function generateThumbnail(base64Data, mediaType = 'image/jpeg') {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/jpeg', 0.6);
-  } catch {
+  } catch (err) {
+    // Image resize is optional — return null to use original
+    console.error('Image resize failed:', err);
     return null;
   }
 }
@@ -210,7 +212,9 @@ function repairTruncatedJSON(text) {
     // Already valid
     JSON.parse(text);
     return text;
-  } catch { /* needs repair */ }
+  } catch {
+    // Intentionally swallowed — invalid JSON falls through to repair logic below
+  }
 
   let repaired = text;
 
@@ -267,6 +271,7 @@ function repairTruncatedJSON(text) {
     JSON.parse(repaired);
     return repaired;
   } catch {
+    // Intentionally swallowed — repair failed, return null to signal unrecoverable JSON
     return null;
   }
 }
@@ -451,7 +456,10 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
       summary: result.summary || '',
       processedAt: new Date().toISOString(),
     }, userId);
-  } catch (e) { /* silently fail */ }
+  } catch (e) {
+    // Receipt gallery save is non-critical — log but don't block the result
+    console.error('Failed to save receipt to gallery:', e);
+  }
 
   return normalized;
 }

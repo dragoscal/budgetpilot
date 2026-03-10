@@ -10,7 +10,10 @@ const MAX_RECENT = 5;
 function getRecentPicks() {
   try {
     return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').slice(0, MAX_RECENT);
-  } catch { return []; }
+  } catch {
+    // Intentionally swallowed — localStorage read fallback returns empty array
+    return [];
+  }
 }
 
 function saveRecentPick(categoryId, subcategoryId) {

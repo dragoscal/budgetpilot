@@ -31,7 +31,8 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
           const existing = await sharedApi.getAll({ familyId: activeFamily?.id });
           const dup = existing.find((e) => e.transactionId === transaction.id);
           setAlreadySplit(!!dup);
-        } catch {
+        } catch (err) {
+          console.error('Failed to check existing split:', err);
           setAlreadySplit(false);
         }
       })();

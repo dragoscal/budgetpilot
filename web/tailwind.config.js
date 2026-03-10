@@ -79,6 +79,7 @@ export default {
         shimmer: 'shimmer 1.5s infinite',
         'pulse-slow': 'pulse 3s infinite',
         float: 'float 6s ease-in-out infinite',
+        'pulse-add': 'pulseAdd 2s ease-in-out 0.5s 1',
       },
       keyframes: {
         fadeUp: {
@@ -100,6 +101,11 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' },
+        },
+        pulseAdd: {
+          '0%': { boxShadow: '0 0 0 0 rgba(99,102,241,.5)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(99,102,241,0)' },
+          '100%': { boxShadow: '0 0 0 0 rgba(99,102,241,0)' },
         },
       },
     },

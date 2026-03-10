@@ -7,7 +7,8 @@ import { formatCurrency, sumBy, groupBy, getCategoryById } from '../lib/helpers'
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
 import { getTagStats } from '../lib/tagHelpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { FileText, Download, Printer, Filter, Calendar } from 'lucide-react';
+import { FileText, Download, Printer, Filter, Calendar, ClipboardList } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 
 const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#6366f1'];
@@ -41,8 +42,10 @@ export default function Reports() {
         ]);
         setAllTx(tx);
         setBudgets(budgets);
-      } catch {}
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error('Failed to load report data:', err);
+        toast.error(t('reports.failedLoad') || 'Failed to load report data');
+      } finally { setLoading(false); }
     })();
   }, []);
 
@@ -110,6 +113,19 @@ export default function Reports() {
       <div className="space-y-4">
         <h1 className="page-title">{t('reports.title')}</h1>
         <div className="card animate-pulse"><div className="h-48 bg-cream-200 dark:bg-dark-border rounded-lg" /></div>
+      </div>
+    );
+  }
+
+  if (allTx.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h1 className="page-title">{t('reports.title')}</h1>
+        <EmptyState
+          icon={ClipboardList}
+          title={t('reports.emptyTitle') || 'No reports yet'}
+          description={t('reports.emptyDesc') || 'Add some transactions first to generate reports and insights.'}
+        />
       </div>
     );
   }

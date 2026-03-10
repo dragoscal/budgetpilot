@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf, getDisplayAmount } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
+import { SUBCATEGORIES } from '../lib/constants';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
@@ -21,6 +22,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState([]);
   const [rates, setRates] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export default function Analytics() {
       const cat = getCategoryById(catId);
       const spent = sumBy(byCategory[catId] || [], 'amount');
       const budget = budgetsList.find((b) => b.category === catId);
-      return { name: t(`categories.${catId}`) || cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color };
+      return { name: t(`categories.${catId}`) || cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color, catId };
     }).filter((d) => d.spent > 0 || d.budget > 0).sort((a, b) => b.spent - a.spent).slice(0, 10);
   }, [expenses, budgetsList]);
 
@@ -139,9 +141,15 @@ export default function Analytics() {
       {/* Category vs budget */}
       <div className="card">
         <h3 className="section-title">{t('analytics.categoryVsBudget')}</h3>
+        <p className="text-xs text-cream-400 mb-2">{t('analytics.clickCategory')}</p>
         {categoryBudgetData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={categoryBudgetData} layout="vertical" margin={{ left: 60 }}>
+            <BarChart data={categoryBudgetData} layout="vertical" margin={{ left: 60 }} onClick={(data) => {
+              if (data && data.activePayload && data.activePayload[0]) {
+                const catId = data.activePayload[0].payload.catId;
+                setSelectedCategory(catId === selectedCategory ? null : catId);
+              }
+            }} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e7e5e4" />
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={60} />
@@ -152,6 +160,52 @@ export default function Analytics() {
           </ResponsiveContainer>
         ) : <p className="text-sm text-cream-500 text-center py-8">{t('analytics.noData')}</p>}
       </div>
+
+      {/* Subcategory Drill-Down */}
+      {selectedCategory && (() => {
+        const subcats = SUBCATEGORIES[selectedCategory] || [];
+        if (!subcats.length) return null;
+        const subcatData = subcats.map(sub => {
+          const spent = monthTx
+            .filter(tx => tx.subcategory === sub.id && tx.type === 'expense')
+            .reduce((s, tx) => s + getDisplayAmount(tx.amount, tx.currency, currency, rates).convertedAmount, 0);
+          return { name: t('subcategories.' + sub.id) || sub.name, spent, id: sub.id, icon: sub.icon };
+        }).filter(s => s.spent > 0).sort((a, b) => b.spent - a.spent);
+
+        const totalCatSpent = subcatData.reduce((s, d) => s + d.spent, 0);
+
+        return (
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="section-title mb-0">
+                {getCategoryById(selectedCategory)?.icon} {t('categories.' + selectedCategory)} — {t('analytics.subcategories')}
+              </h3>
+              <button onClick={() => setSelectedCategory(null)} className="text-xs text-accent-500 hover:text-accent-600 font-medium transition-colors">
+                ← {t('common.back')}
+              </button>
+            </div>
+            {subcatData.length > 0 ? (
+              <div className="space-y-2">
+                {subcatData.map(sub => {
+                  const pct = totalCatSpent > 0 ? (sub.spent / totalCatSpent) * 100 : 0;
+                  return (
+                    <div key={sub.id} className="flex items-center gap-3">
+                      <span className="text-base w-6 text-center">{sub.icon}</span>
+                      <span className="text-sm flex-1 min-w-0 truncate">{sub.name}</span>
+                      <div className="w-24 h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden hidden sm:block">
+                        <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                      </div>
+                      <span className="font-medium text-sm money whitespace-nowrap">{formatCurrency(sub.spent, currency)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-cream-500 text-center py-4">{t('analytics.noData')}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Daily spending pattern */}
       <div className="card">

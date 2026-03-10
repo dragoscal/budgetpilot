@@ -88,7 +88,10 @@ export default function Feedback() {
     try {
       const data = await feedbackApi.list();
       setMyFeedback(Array.isArray(data) ? data : []);
-    } catch { /* silently fail — backend may not be configured */ }
+    } catch (err) {
+      // Backend may not be configured — log but don't show error to user
+      console.error('Failed to load feedback history:', err);
+    }
     finally { setLoadingHistory(false); }
   };
 

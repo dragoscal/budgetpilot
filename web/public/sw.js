@@ -31,6 +31,19 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Background Sync — push pending transactions when connectivity is restored
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-transactions') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'BACKGROUND_SYNC' });
+        });
+      })
+    );
+  }
+});
+
 // Fetch — cache-first for static assets, network-first for navigation & API
 self.addEventListener('fetch', (event) => {
   const { request } = event;

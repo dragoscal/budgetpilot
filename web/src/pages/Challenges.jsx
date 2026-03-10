@@ -112,7 +112,10 @@ export default function Challenges() {
       ]);
       setItems(ch);
       setAllTx(tx);
-    } catch { toast.error(t('challenges.failedLoad')); }
+    } catch (err) {
+      console.error('Failed to load challenges:', err);
+      toast.error(t('challenges.failedLoad'));
+    }
     finally { setLoading(false); }
   };
 
