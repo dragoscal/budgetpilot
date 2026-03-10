@@ -82,7 +82,7 @@ export default function Onboarding() {
           balance: Number(accountBalance) || 0,
           currency,
           icon: acctType?.icon || '🏦',
-          color: '#6366f1',
+          color: '#14b8a6',
           userId: uid,
           createdAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),

@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 
-const DB_NAME = 'budgetpilot';
+const DB_NAME = 'lumet';
 const DB_VERSION = 9;
 
 let dbPromise = null;

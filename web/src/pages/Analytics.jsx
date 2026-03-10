@@ -8,7 +8,7 @@ import { SUBCATEGORIES } from '../lib/constants';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Lightbulb, Hash } from 'lucide-react';
+import { Lightbulb, Hash, User, Home } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
@@ -23,6 +23,7 @@ export default function Analytics() {
   const [insights, setInsights] = useState([]);
   const [rates, setRates] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [scopeFilter, setScopeFilter] = useState('all');
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
@@ -45,8 +46,12 @@ export default function Analytics() {
   const monthTx = useMemo(() => {
     const start = startOfMonth(month);
     const end = endOfMonth(month);
-    return allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
-  }, [allTx, month]);
+    let result = allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
+    if (scopeFilter !== 'all') {
+      result = result.filter((t) => (t.scope || 'personal') === scopeFilter);
+    }
+    return result;
+  }, [allTx, month, scopeFilter]);
 
   // Generate smart insights
   useEffect(() => {
@@ -113,6 +118,28 @@ export default function Analytics() {
       <div className="flex items-center justify-between">
         <h1 className="page-title mb-0">{t('analytics.title')}</h1>
         <MonthPicker value={month} onChange={setMonth} />
+      </div>
+
+      {/* Scope filter pills */}
+      <div className="flex gap-1.5">
+        {[
+          { id: 'all', label: t('household.scopeAll') },
+          { id: 'personal', label: t('household.scopePersonal'), icon: User },
+          { id: 'household', label: t('household.scopeHousehold'), icon: Home },
+        ].map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setScopeFilter(s.id)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
+              scopeFilter === s.id
+                ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
+                : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+            }`}
+          >
+            {s.icon && <s.icon size={12} />}
+            {s.label}
+          </button>
+        ))}
       </div>
 
       {/* Smart summary */}

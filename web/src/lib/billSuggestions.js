@@ -1,5 +1,5 @@
 /**
- * Rule-based bill/subscription suggestions for BudgetPilot.
+ * Rule-based bill/subscription suggestions for LUMET.
  * Identifies unused subscriptions, duplicates, price increases,
  * and annual billing opportunities.
  */

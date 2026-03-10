@@ -17,7 +17,7 @@ export async function deriveEncryptionKey(password, email) {
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: enc.encode(`budgetpilot_${email.toLowerCase()}`),
+      salt: enc.encode(`lumet_${email.toLowerCase()}`),
       iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256',
     },

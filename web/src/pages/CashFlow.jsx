@@ -171,7 +171,7 @@ export default function CashFlow() {
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Line type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} name={t('cashflow.net')} />
+            <Line type="monotone" dataKey="net" stroke="#14b8a6" strokeWidth={2} dot={{ r: 4 }} name={t('cashflow.net')} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -292,8 +292,8 @@ export default function CashFlow() {
             <AreaChart data={forecastChartData}>
               <defs>
                 <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
@@ -304,7 +304,7 @@ export default function CashFlow() {
                 formatter={(v) => formatCurrency(v, currency)}
               />
               <ReferenceLine y={0} stroke="#e11d48" strokeDasharray="4 4" />
-              <Area type="monotone" dataKey="balance" stroke="#6366f1" fill="url(#balanceGrad)" strokeWidth={2} name={t('cashflow.balance')} />
+              <Area type="monotone" dataKey="balance" stroke="#14b8a6" fill="url(#balanceGrad)" strokeWidth={2} name={t('cashflow.balance')} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

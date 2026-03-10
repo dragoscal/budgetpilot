@@ -1,5 +1,5 @@
 /**
- * Lightweight i18n engine for BudgetPilot.
+ * Lightweight i18n engine for LUMET.
  * No external dependencies — just a lookup function with interpolation.
  */
 import ro from './translations/ro';

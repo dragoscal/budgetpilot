@@ -1,5 +1,5 @@
 /**
- * Spending prediction engine for BudgetPilot.
+ * Spending prediction engine for LUMET.
  * Uses moving averages — no external ML library needed.
  */
 

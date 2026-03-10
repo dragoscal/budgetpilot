@@ -5,6 +5,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
 import { learnCategory } from '../lib/smartFeatures';
+import { User, Home } from 'lucide-react';
 
 export default function TransactionEditModal({ transaction, open, onClose, onSave }) {
   const { t } = useTranslation();
@@ -21,6 +22,7 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
         type: transaction.type || 'expense',
         date: transaction.date || todayLocal(),
         description: transaction.description || '',
+        scope: transaction.scope || 'personal',
       });
     }
   }, [transaction]);
@@ -94,6 +96,30 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
         <div>
           <label className="label">{t('transactions.description')}</label>
           <input className="input" value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
+        </div>
+        {/* Scope toggle */}
+        <div>
+          <label className="label">{t('household.title')}</label>
+          <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+            {[
+              { id: 'personal', label: t('household.personal'), icon: User },
+              { id: 'household', label: t('household.household'), icon: Home },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, scope: s.id }))}
+                className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  (form.scope || 'personal') === s.id
+                    ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                    : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
+                }`}
+              >
+                <s.icon size={14} />
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="btn-secondary flex-1">{t('common.cancel')}</button>

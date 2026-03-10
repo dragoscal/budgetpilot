@@ -1,7 +1,7 @@
 export const CATEGORIES = [
   { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#059669' },
   { id: 'dining', name: 'Dining', icon: '🍽', color: '#d97706' },
-  { id: 'transport', name: 'Transport', icon: '🚗', color: '#6366f1' },
+  { id: 'transport', name: 'Transport', icon: '🚗', color: '#14b8a6' },
   { id: 'shopping', name: 'Shopping', icon: '🛍', color: '#9b59b6' },
   { id: 'health', name: 'Health', icon: '💊', color: '#e74c3c' },
   { id: 'subscriptions', name: 'Subscriptions', icon: '📺', color: '#8e44ad' },
@@ -16,7 +16,7 @@ export const CATEGORIES = [
   { id: 'pets', name: 'Pets', icon: '🐾', color: '#795548' },
   { id: 'savings', name: 'Savings', icon: '🏦', color: '#059669' },
   { id: 'income', name: 'Income', icon: '💰', color: '#059669' },
-  { id: 'transfer', name: 'Transfer', icon: '🔄', color: '#6366f1' },
+  { id: 'transfer', name: 'Transfer', icon: '🔄', color: '#14b8a6' },
   { id: 'other', name: 'Other', icon: '📦', color: '#95a5a6' },
 ];
 
@@ -257,7 +257,7 @@ export const DEFAULT_SETTINGS = {
   defaultCategory: 'other',
   firstDayOfWeek: 1, // Monday
   darkMode: false,
-  apiUrl: 'https://budgetpilot-api.budgetpilot.workers.dev',
+  apiUrl: 'https://lumet-api.lumet.workers.dev',
   apiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',

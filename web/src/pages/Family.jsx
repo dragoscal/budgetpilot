@@ -3,14 +3,15 @@ import { useFamily } from '../contexts/FamilyContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { sharedExpenses as sharedApi } from '../lib/api';
+import { sharedExpenses as sharedApi, transactions as txApi } from '../lib/api';
 import { calculateBalances, simplifyDebts, getMemberSummary } from '../lib/settlement';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { formatCurrency } from '../lib/helpers';
+import { formatCurrency, sumBy } from '../lib/helpers';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import {
   Users, Plus, Copy, Check, LogOut, Settings, UserPlus, Crown,
-  LayoutDashboard, Receipt, ArrowRight, CheckCircle2, Eye,
+  LayoutDashboard, Receipt, ArrowRight, CheckCircle2, Eye, Home,
 } from 'lucide-react';
 
 function CreateFamilyForm({ onCreated }) {
@@ -201,6 +202,8 @@ export default function Family() {
   const [tab, setTab] = useState('dashboard');
   const [expenses, setExpenses] = useState([]);
   const [expensesLoading, setExpensesLoading] = useState(false);
+  const [householdTx, setHouseholdTx] = useState([]);
+  const [householdLoading, setHouseholdLoading] = useState(false);
 
   // Load shared expenses when family is active
   useEffect(() => {
@@ -213,6 +216,20 @@ export default function Family() {
       })
       .finally(() => setExpensesLoading(false));
   }, [activeFamily]);
+
+  // Load household-scoped transactions
+  useEffect(() => {
+    if (!activeFamily) return;
+    setHouseholdLoading(true);
+    txApi.getAll({ userId: effectiveUserId })
+      .then((allTx) => {
+        setHouseholdTx(allTx.filter((tx) => tx.scope === 'household'));
+      })
+      .catch((err) => {
+        console.error('Failed to load household transactions:', err);
+      })
+      .finally(() => setHouseholdLoading(false));
+  }, [activeFamily, effectiveUserId]);
 
   // Settlements
   const balances = useMemo(() => calculateBalances(expenses), [expenses]);
@@ -336,6 +353,7 @@ export default function Family() {
       <div className="flex border-b border-cream-200 dark:border-dark-border overflow-x-auto">
         {[
           { id: 'dashboard', label: t('family.dashboardTab'), icon: LayoutDashboard },
+          { id: 'household', label: t('household.expenses'), icon: Home },
           { id: 'expenses', label: t('family.sharedTab'), icon: Receipt },
           { id: 'members', label: t('family.membersTab'), icon: Users },
           { id: 'settings', label: t('family.settingsTab'), icon: Settings },
@@ -440,6 +458,141 @@ export default function Family() {
               <p className="text-xs text-cream-400">{t('family.splitFromTransactions')}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Household Expenses tab */}
+      {tab === 'household' && (
+        <div className="space-y-4">
+          {/* Summary stats */}
+          {(() => {
+            const now = new Date();
+            const monthStart = startOfMonth(now);
+            const monthEnd = endOfMonth(now);
+            const thisMonthTx = householdTx.filter((tx) => {
+              const d = new Date(tx.date);
+              return d >= monthStart && d <= monthEnd;
+            });
+            const totalThisMonth = sumBy(thisMonthTx.filter((tx) => tx.type === 'expense'), 'amount');
+            const perMember = members.length > 0 ? totalThisMonth / members.length : 0;
+
+            // Group by month
+            const grouped = {};
+            for (const tx of householdTx) {
+              const key = tx.date ? tx.date.slice(0, 7) : 'unknown';
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(tx);
+            }
+            const sortedMonths = Object.keys(grouped).sort().reverse();
+
+            // Per-member totals this month
+            const memberTotals = {};
+            for (const tx of thisMonthTx) {
+              if (tx.beneficiaries && Array.isArray(tx.beneficiaries)) {
+                for (const b of tx.beneficiaries) {
+                  memberTotals[b.userId] = (memberTotals[b.userId] || 0) + (b.amount || 0);
+                }
+              } else {
+                const payer = tx.paidBy || tx.userId;
+                memberTotals[payer] = (memberTotals[payer] || 0) + tx.amount;
+              }
+            }
+
+            return (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="card">
+                    <p className="text-xs text-cream-500 mb-1">{t('household.totalThisMonth')}</p>
+                    <p className="font-heading font-bold text-lg money">
+                      {formatCurrency(totalThisMonth, activeFamily?.defaultCurrency || 'RON')}
+                    </p>
+                    <p className="text-[10px] text-cream-400">
+                      {thisMonthTx.length} {t('common.transactions')}
+                    </p>
+                  </div>
+                  <div className="card">
+                    <p className="text-xs text-cream-500 mb-1">{t('household.perMember')}</p>
+                    <p className="font-heading font-bold text-lg money">
+                      {formatCurrency(perMember, activeFamily?.defaultCurrency || 'RON')}
+                    </p>
+                    <p className="text-[10px] text-cream-400">
+                      {members.length} {t('family.membersTab').toLowerCase()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Per-member breakdown */}
+                {Object.keys(memberTotals).length > 0 && (
+                  <div className="card">
+                    <h3 className="section-title">{t('household.perMember')}</h3>
+                    <div className="space-y-2">
+                      {Object.entries(memberTotals)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([userId, total]) => (
+                          <div key={userId} className="flex items-center justify-between text-sm">
+                            <span className="font-medium">{getMemberName(userId)}</span>
+                            <span className="money font-medium">
+                              {formatCurrency(total, activeFamily?.defaultCurrency || 'RON')}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grouped by month */}
+                {householdLoading ? (
+                  <div className="card animate-pulse"><div className="h-24 bg-cream-200 dark:bg-dark-border rounded-lg" /></div>
+                ) : sortedMonths.length > 0 ? (
+                  sortedMonths.map((monthKey) => {
+                    const monthTxs = grouped[monthKey].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                    const monthLabel = monthKey !== 'unknown'
+                      ? format(new Date(monthKey + '-01'), 'MMMM yyyy')
+                      : monthKey;
+                    return (
+                      <div key={monthKey}>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-cream-400 mb-2">{monthLabel}</h3>
+                        <div className="space-y-2">
+                          {monthTxs.map((tx) => (
+                            <div key={tx.id} className="card p-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <div>
+                                  <p className="text-sm font-medium">{tx.merchant || tx.description || t('common.unknown')}</p>
+                                  <p className="text-xs text-cream-500">
+                                    {tx.date}
+                                    {tx.paidBy && ` · ${t('household.paidBy')}: ${getMemberName(tx.paidBy)}`}
+                                  </p>
+                                </div>
+                                <p className="font-heading font-bold money">{formatCurrency(tx.amount, tx.currency)}</p>
+                              </div>
+                              {tx.beneficiaries && Array.isArray(tx.beneficiaries) && tx.beneficiaries.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  {tx.beneficiaries.map((b) => (
+                                    <span
+                                      key={b.userId}
+                                      className="text-[11px] px-2 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-600"
+                                    >
+                                      {getMemberName(b.userId)}: {formatCurrency(b.amount, tx.currency)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <EmptyState
+                    icon={Home}
+                    title={t('household.expenses')}
+                    description={t('household.noFamily')}
+                  />
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 

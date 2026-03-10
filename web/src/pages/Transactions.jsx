@@ -13,7 +13,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
 import { checkDuplicate } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X } from 'lucide-react';
+import { Receipt, Download, Trash2, Tag, Hash, X, User, Home } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
@@ -33,6 +33,7 @@ export default function Transactions() {
   const [amountMin, setAmountMin] = useState('');
   const [amountMax, setAmountMax] = useState('');
   const [sort, setSort] = useState('date-desc');
+  const [scopeFilter, setScopeFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
   const [deleteTx, setDeleteTx] = useState(null);
@@ -70,6 +71,11 @@ export default function Transactions() {
 
   const filtered = useMemo(() => {
     let result = [...allTx];
+
+    // Scope filter
+    if (scopeFilter !== 'all') {
+      result = result.filter(t => (t.scope || 'personal') === scopeFilter);
+    }
 
     // Date filter
     if (dateFilter !== 'all') {
@@ -124,7 +130,7 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, amountMin, amountMax]);
+  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, amountMin, amountMax, scopeFilter]);
 
   const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
   const hasMore = paginated.length < filtered.length;
@@ -213,9 +219,9 @@ export default function Transactions() {
   };
 
   const exportCSV = () => {
-    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags'];
+    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Scope'];
     const rows = filtered.map((t) => [
-      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'),
+      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ''}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -279,6 +285,31 @@ export default function Transactions() {
         category={categoryFilter} onCategory={setCategoryFilter}
         type={typeFilter} onType={setTypeFilter}
       />
+
+      {/* Scope filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-cream-500">{t('household.title')}</span>
+        <div className="flex gap-1.5">
+          {[
+            { id: 'all', label: t('household.scopeAll') },
+            { id: 'personal', label: t('household.scopePersonal'), icon: User },
+            { id: 'household', label: t('household.scopeHousehold'), icon: Home },
+          ].map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setScopeFilter(s.id)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors flex items-center gap-1 ${
+                scopeFilter === s.id
+                  ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
+                  : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+              }`}
+            >
+              {s.icon && <s.icon size={11} />}
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Amount range filter */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -410,8 +441,8 @@ export default function Transactions() {
           <EmptyState
             icon={Receipt}
             title={t('transactions.noFound')}
-            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax ? t('transactions.adjustFilters') : t('transactions.addFirst')}
-            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax ? t('transactions.addTransaction') : undefined}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax || scopeFilter !== 'all' ? t('transactions.adjustFilters') : t('transactions.addFirst')}
+            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax && scopeFilter === 'all' ? t('transactions.addTransaction') : undefined}
             onAction={() => navigate('/add')}
           />
         )}

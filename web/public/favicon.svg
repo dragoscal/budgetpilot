@@ -1,13 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="108" fill="#4f46e5"/>
-  <g transform="translate(256,256)">
-    <!-- Wallet body -->
-    <rect x="-140" y="-90" width="280" height="180" rx="24" fill="white" opacity="0.95"/>
-    <!-- Wallet flap -->
-    <path d="M-140,-90 L-140,-30 Q-140,-60 -110,-60 L80,-60 Q110,-60 110,-90 Z" fill="white"/>
-    <!-- Card slot line -->
-    <rect x="80" y="-10" width="60" height="40" rx="10" fill="#4f46e5" opacity="0.3"/>
-    <!-- Coin circle -->
-    <circle cx="110" cy="10" r="16" fill="#4f46e5" opacity="0.5"/>
-  </g>
+  <rect width="512" height="512" rx="96" fill="#0d9488"/>
+  <polygon points="256,80 160,280 352,280" fill="#115e59" opacity="0.9"/>
+  <polygon points="200,160 104,360 296,360" fill="#5eead4" opacity="0.7"/>
+  <polygon points="312,160 216,360 408,360" fill="#ffffff" opacity="0.5"/>
 </svg>

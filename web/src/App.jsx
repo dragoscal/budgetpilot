@@ -10,6 +10,7 @@ import InstallPrompt from './components/InstallPrompt';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
+import FeedbackFAB from './components/FeedbackFAB';
 
 // ─── Lazy-loaded pages (code splitting) ──────────────────
 // Auth pages (small, loaded on demand)
@@ -61,6 +62,7 @@ function AppLayout({ children }) {
           </ErrorBoundary>
         </div>
       </main>
+      <FeedbackFAB />
     </div>
   );
 }

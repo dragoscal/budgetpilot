@@ -2,7 +2,7 @@ import { getAll, add, getById, getSetting } from './storage';
 import { generateId } from './helpers';
 import { deriveEncryptionKey, storeEncryptionKey, clearEncryptionKey, pullEncryptedKeys } from './crypto';
 
-const SESSION_KEY = 'budgetpilot_session';
+const SESSION_KEY = 'lumet_session';
 const TOKEN_KEY = 'bp_token';
 
 async function getApiUrl() {

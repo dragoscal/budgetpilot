@@ -6,6 +6,8 @@ import { getAll } from '../lib/storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useFamily } from '../contexts/FamilyContext';
+import { User, Home } from 'lucide-react';
 import CategoryPicker from './CategoryPicker';
 import TagInput from './TagInput';
 
@@ -13,6 +15,10 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const familyCtx = useFamily();
+  const activeFamily = familyCtx?.activeFamily;
+  const familyMembers = familyCtx?.members || [];
+
   const [type, setType] = useState(initial.type || 'expense');
   const [merchant, setMerchant] = useState(initial.merchant || '');
   const [amount, setAmount] = useState(initial.amount || '');
@@ -24,6 +30,19 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const [tags, setTags] = useState(initial.tags || []);
   const [accountId, setAccountId] = useState(initial.accountId || '');
   const [accounts, setAccounts] = useState([]);
+
+  // Scope: personal or household
+  const [scope, setScope] = useState(initial.scope || 'personal');
+  const [paidBy, setPaidBy] = useState(initial.paidBy || effectiveUserId);
+  const [splitType, setSplitType] = useState(initial.splitType || 'equal');
+  const [customSplits, setCustomSplits] = useState(() => {
+    if (initial.beneficiaries) {
+      const map = {};
+      initial.beneficiaries.forEach(b => { map[b.userId] = b.amount || 0; });
+      return map;
+    }
+    return {};
+  });
 
   // Load accounts from IndexedDB
   useEffect(() => {
@@ -114,6 +133,20 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       learnCategory(merchant.trim(), category, subcategory);
     }
 
+    // Build beneficiaries for household split
+    let beneficiaries = null;
+    if (scope === 'household' && activeFamily && familyMembers.length > 0) {
+      const numAmount = Number(amount);
+      if (splitType === 'equal') {
+        const share = numAmount / familyMembers.length;
+        beneficiaries = familyMembers.map(m => ({ userId: m.userId, amount: Math.round(share * 100) / 100 }));
+      } else if (splitType === 'cover') {
+        beneficiaries = familyMembers.map(m => ({ userId: m.userId, amount: m.userId === (paidBy || effectiveUserId) ? numAmount : 0 }));
+      } else if (splitType === 'custom') {
+        beneficiaries = familyMembers.map(m => ({ userId: m.userId, amount: Number(customSplits[m.userId]) || 0 }));
+      }
+    }
+
     const transaction = {
       id: initial.id || generateId(),
       type,
@@ -126,6 +159,10 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       description: description.trim(),
       tags: tags.filter(Boolean),
       accountId: accountId || null,
+      scope,
+      paidBy: scope === 'household' ? (paidBy || effectiveUserId) : null,
+      splitType: scope === 'household' && activeFamily ? splitType : null,
+      beneficiaries: scope === 'household' ? beneficiaries : null,
       source: initial.source || 'manual',
       userId: effectiveUserId,
       createdAt: initial.createdAt || new Date().toISOString(),
@@ -146,6 +183,10 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       setAccountId('');
       setSubcategory(null);
       setCategoryAutoSet(false);
+      setScope('personal');
+      setPaidBy(effectiveUserId);
+      setSplitType('equal');
+      setCustomSplits({});
     }
   };
 
@@ -168,6 +209,93 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
           </button>
         ))}
       </div>
+
+      {/* Scope toggle: Personal / Household */}
+      <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+        {[
+          { id: 'personal', label: t('household.personal'), icon: User },
+          { id: 'household', label: t('household.household'), icon: Home },
+        ].map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => setScope(s.id)}
+            className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+              scope === s.id
+                ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
+            }`}
+          >
+            <s.icon size={14} />
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Household split options */}
+      {scope === 'household' && activeFamily && familyMembers.length > 0 && (
+        <div className="space-y-3 p-3 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border">
+          {/* Paid by */}
+          <div>
+            <label className="label">{t('household.paidBy')}</label>
+            <select className="input" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+              {familyMembers.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.emoji} {m.displayName} {m.userId === effectiveUserId ? `(${t('family.you')})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Split type chips */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { id: 'equal', label: t('household.splitEqually') },
+              { id: 'cover', label: t('household.illCoverIt') },
+              { id: 'custom', label: t('household.customSplit') },
+            ].map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setSplitType(st.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  splitType === st.id
+                    ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
+                    : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom split inputs */}
+          {splitType === 'custom' && (
+            <div className="space-y-2">
+              {familyMembers.map((m) => (
+                <div key={m.userId} className="flex items-center gap-2">
+                  <span className="text-sm w-24 truncate">{m.emoji} {m.displayName}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input flex-1 text-sm py-1.5"
+                    placeholder="0.00"
+                    value={customSplits[m.userId] || ''}
+                    onChange={(e) => setCustomSplits(prev => ({ ...prev, [m.userId]: e.target.value }))}
+                    inputMode="decimal"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No family info */}
+      {scope === 'household' && !activeFamily && (
+        <p className="text-xs text-cream-500 px-1">{t('household.noFamily')}</p>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {/* Merchant with autocomplete */}

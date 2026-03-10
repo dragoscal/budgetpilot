@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for BudgetPilot AI functions
+ * Comprehensive test suite for LUMET AI functions
  * Tests: extractJSON, inferCategory, normalizeReceiptResult, normalizeBankStatementResult,
  *        generateMonthlySummary, Receipt Gallery schema, amount formatting
  */
@@ -160,7 +160,7 @@ function assertIncludes(str, sub, msg = '') {
 }
 
 // ═══════════════════════════════════════════════════════════
-console.log('\n🧪 BudgetPilot AI Functions — Comprehensive Test Suite\n');
+console.log('\n🧪 LUMET AI Functions — Comprehensive Test Suite\n');
 
 // ─── TEST 1: extractJSON ─────────────────────────────────
 console.log('📋 1. extractJSON — Balanced brace matching');

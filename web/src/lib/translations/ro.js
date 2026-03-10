@@ -1,5 +1,5 @@
 /**
- * Traduceri în limba română pentru BudgetPilot.
+ * Traduceri în limba română pentru LUMET.
  * Aceasta este limba implicită.
  */
 const ro = {
@@ -95,6 +95,7 @@ const ro = {
   'nav.analytics': 'Statistici',
   'nav.reports': 'Rapoarte',
   'nav.family': 'Familie',
+  'nav.household': 'Gospodărie',
   'nav.people': 'Persoane & Datorii',
   'nav.wishlist': 'Lista de dorințe',
   'nav.challenges': 'Provocări',
@@ -1106,6 +1107,22 @@ const ro = {
   'family.changeRole': 'Schimbă rolul',
   'family.roleUpdated': 'Rol actualizat',
 
+  // ─── Gospodărie ────────────────────────────────────────
+  'household.title': 'Gospodărie',
+  'household.expenses': 'Cheltuieli comune',
+  'household.personal': 'Personal',
+  'household.household': 'Gospodărie',
+  'household.paidBy': 'Plătit de',
+  'household.splitEqually': 'Împărțit egal',
+  'household.illCoverIt': 'Plătesc eu',
+  'household.customSplit': 'Împărțire personalizată',
+  'household.noFamily': 'Alătură-te sau creează o familie pentru a folosi împărțirea',
+  'household.totalThisMonth': 'Total luna aceasta',
+  'household.perMember': 'Per membru',
+  'household.scopeAll': 'Toate',
+  'household.scopePersonal': 'Personal',
+  'household.scopeHousehold': 'Gospodărie',
+
   // ─── Rapoarte ────────────────────────────────────────
   'reports.title': 'Rapoarte',
   'reports.generate': 'Generează raport',
@@ -1254,7 +1271,7 @@ const ro = {
   'settings.telegramStep2': 'Trimite /newbot și urmează instrucțiunile pentru a-ți crea botul',
   'settings.telegramStep3': 'Copiază token-ul botului și lipește-l mai sus',
   'settings.telegramStep4': 'Află ID-ul tău de chat prin @userinfobot și lipește-l mai sus',
-  'settings.telegramStep5': 'Desfășoară API-ul BudgetPilot (Cloudflare Worker)',
+  'settings.telegramStep5': 'Desfășoară API-ul LUMET (Cloudflare Worker)',
   'settings.telegramStep6': 'URL-ul webhook va fi auto-configurat, sau setează-l manual',
   'settings.telegramStep7': 'Trimite o poză cu bonul sau un text ca "45 lei Bolt taxi" botului tău!',
   'settings.light': 'Deschisă',
@@ -1288,7 +1305,7 @@ const ro = {
   'settings.passwordChangeFailed': 'Eroare la schimbarea parolei',
 
   // ─── Configurare inițială ────────────────────────────
-  'onboarding.welcome': 'Bine ai venit la BudgetPilot',
+  'onboarding.welcome': 'Bine ai venit la LUMET',
   'onboarding.letsSetup': 'Hai să îți configurăm contul în câțiva pași rapizi.',
   'onboarding.whatName': 'Cum să te strigăm?',
   'onboarding.namePlaceholder': 'Numele tău',
@@ -1307,9 +1324,9 @@ const ro = {
   'onboarding.anthropicKey': 'Cheie API Anthropic (opțional)',
   'onboarding.keyStoredLocally': 'Stocată local — nu este trimisă nicăieri decât direct la API-ul Anthropic. O poți adăuga mai târziu în Setări.',
   'onboarding.finishSetup': 'Finalizează configurarea',
-  'onboarding.skipSetup': 'Treci peste configurare și începe să folosești BudgetPilot',
+  'onboarding.skipSetup': 'Treci peste configurare și începe să folosești LUMET',
   'onboarding.skipStep': 'Treci peste acest pas',
-  'onboarding.setupComplete': 'Configurare completă! Bine ai venit la BudgetPilot.',
+  'onboarding.setupComplete': 'Configurare completă! Bine ai venit la LUMET.',
   'onboarding.stepWelcome': 'Bine ai venit',
   'onboarding.stepAccount': 'Cont',
   'onboarding.stepBudgets': 'Bugete',
@@ -1333,7 +1350,7 @@ const ro = {
   'auth.loggingIn': 'Se conectează...',
   'auth.creating': 'Se creează contul...',
   'auth.continueOffline': 'Continuă fără cont',
-  'auth.offlineDesc': 'Folosește BudgetPilot local — datele rămân pe acest dispozitiv',
+  'auth.offlineDesc': 'Folosește LUMET local — datele rămân pe acest dispozitiv',
   'auth.welcomeBack': 'Bine ai revenit',
   'auth.createAccount': 'Creează-ți contul',
   'auth.name': 'Nume',
@@ -1363,7 +1380,7 @@ const ro = {
 
   // ─── Feedback ────────────────────────────────────────
   'feedback.title': 'Feedback',
-  'feedback.subtitle': 'Ajută-ne să îmbunătățim BudgetPilot',
+  'feedback.subtitle': 'Ajută-ne să îmbunătățim LUMET',
   'feedback.type': 'Tip feedback',
   'feedback.bug': 'Raport de bug',
   'feedback.feature': 'Cerere de funcție',
@@ -1617,7 +1634,7 @@ const ro = {
   'offline.message': 'Ești offline — modificările se vor sincroniza la reconectare',
 
   // ─── Prompt instalare ────────────────────────────────
-  'install.title': 'Instalează BudgetPilot',
+  'install.title': 'Instalează LUMET',
   'install.description': 'Adaugă pe ecranul principal pentru o experiență mai bună',
   'install.install': 'Instalează',
   'install.dismiss': 'Nu acum',

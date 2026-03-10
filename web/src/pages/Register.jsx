@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { Eye, EyeOff, Wallet, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Check, X } from 'lucide-react';
 import { CURRENCIES } from '../lib/constants';
 
 function PasswordStrength({ password, t }) {
@@ -86,11 +86,15 @@ export default function Register() {
       <div className="w-full max-w-md animate-fadeUp">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-success rounded-2xl mb-4">
-            <Wallet className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-accent-600 rounded-2xl mb-4">
+            <svg viewBox="0 0 512 512" className="w-9 h-9" aria-hidden="true">
+              <polygon points="256,80 160,280 352,280" fill="#115e59" opacity="0.9"/>
+              <polygon points="200,160 104,360 296,360" fill="#5eead4" opacity="0.7"/>
+              <polygon points="312,160 216,360 408,360" fill="#ffffff" opacity="0.5"/>
+            </svg>
           </div>
           <h1 className="text-3xl font-heading font-bold text-cream-900 dark:text-dark-text">
-            BudgetPilot
+            LUMET
           </h1>
           <p className="text-cream-700 dark:text-cream-500 mt-1">
             {t('auth.createAccount')}

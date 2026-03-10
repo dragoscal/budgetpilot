@@ -4,7 +4,7 @@ import { generateId, formatDateISO } from './helpers';
 import { extractHashtags } from './tagHelpers';
 
 // ─── ENHANCED RECEIPT SYSTEM PROMPT ───────────────────────
-const RECEIPT_SYSTEM_PROMPT = `You are an expert receipt and expense parser for a Romanian budgeting app called BudgetPilot. You excel at reading receipts in any language (especially Romanian) and categorizing every item.
+const RECEIPT_SYSTEM_PROMPT = `You are an expert receipt and expense parser for a Romanian budgeting app called LUMET. You excel at reading receipts in any language (especially Romanian) and categorizing every item.
 
 RECEIPT PARSING RULES:
 - Romanian receipts: BON FISCAL = receipt, LEI/RON = currency, BUC = pieces, TVA = VAT, CIF = tax ID, dates DD.MM.YYYY
@@ -385,7 +385,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     };
     if (provider === 'openrouter') {
       headers['HTTP-Referer'] = window.location.origin;
-      headers['X-Title'] = 'BudgetPilot';
+      headers['X-Title'] = 'LUMET';
     }
 
     const res = await fetch(baseUrl, {
@@ -465,7 +465,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
 }
 
 // ─── BANK STATEMENT PROCESSING ───────────────────────────
-const BANK_STATEMENT_PROMPT = `You are an expert bank statement parser for a Romanian budgeting app called BudgetPilot. You extract individual transactions from PDF bank statements.
+const BANK_STATEMENT_PROMPT = `You are an expert bank statement parser for a Romanian budgeting app called LUMET. You extract individual transactions from PDF bank statements.
 
 BANK STATEMENT RULES:
 - Parse EVERY transaction from the statement — debits, credits, transfers, fees

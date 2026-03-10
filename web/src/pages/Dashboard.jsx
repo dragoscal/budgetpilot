@@ -18,7 +18,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 
@@ -46,6 +46,13 @@ export default function Dashboard() {
 
   // All transactions (not just current month) for predictions
   const [allTransactions, setAllTransactions] = useState([]);
+
+  // Scope filter: 'all' | 'personal' | 'household'
+  const [scopeFilter, setScopeFilter] = useState(() => localStorage.getItem('lumet_dashboard_scope') || 'all');
+  const handleScopeChange = useCallback((newScope) => {
+    setScopeFilter(newScope);
+    localStorage.setItem('lumet_dashboard_scope', newScope);
+  }, []);
 
   // ─── Widget customization ──────────────────────────────
   const WIDGET_DEFAULTS = [
@@ -253,11 +260,28 @@ export default function Dashboard() {
     runNotificationChecks();
   }, [loading, transactions.length, budgetsList.length, recurringDue.length]);
 
+  // Apply scope filter to transactions
+  const scopedTx = useMemo(() => {
+    if (scopeFilter === 'all') return transactions;
+    return transactions.filter((tx) => {
+      const txScope = tx.scope || 'personal';
+      return txScope === scopeFilter;
+    });
+  }, [transactions, scopeFilter]);
+
+  const scopedPrevTx = useMemo(() => {
+    if (scopeFilter === 'all') return prevTransactions;
+    return prevTransactions.filter((tx) => {
+      const txScope = tx.scope || 'personal';
+      return txScope === scopeFilter;
+    });
+  }, [prevTransactions, scopeFilter]);
+
   const stats = useMemo(() => {
     const currency = user?.defaultCurrency || 'RON';
-    const expenses = transactions.filter((t) => t.type === 'expense');
-    const income = transactions.filter((t) => t.type === 'income');
-    const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
+    const expenses = scopedTx.filter((t) => t.type === 'expense');
+    const income = scopedTx.filter((t) => t.type === 'income');
+    const prevExpenses = scopedPrevTx.filter((t) => t.type === 'expense');
 
     const totalSpent = sumAmountsMultiCurrency(expenses, currency, rates);
     const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
@@ -286,7 +310,7 @@ export default function Dashboard() {
       prevTotalSpent,
       spentTrend: trendIndicator(totalSpent, prevTotalSpent),
     };
-  }, [transactions, prevTransactions, budgetsList, accountsList, recurringList, rates, user]);
+  }, [scopedTx, scopedPrevTx, budgetsList, accountsList, recurringList, rates, user]);
 
   // Spending velocity: compare current pace to last month
   const velocity = useMemo(() => {
@@ -307,7 +331,7 @@ export default function Dashboard() {
     const start = startOfMonth(month);
     const end = endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
-    const expenses = transactions.filter((t) => t.type === 'expense');
+    const expenses = scopedTx.filter((t) => t.type === 'expense');
 
     let cumulative = 0;
     return days.map((day) => {
@@ -316,11 +340,11 @@ export default function Dashboard() {
       cumulative += daySpend;
       return { date: format(day, 'dd'), daily: daySpend, cumulative };
     });
-  }, [transactions, month]);
+  }, [scopedTx, month]);
 
   // Category pie chart data
   const categoryData = useMemo(() => {
-    const expenses = transactions.filter((t) => t.type === 'expense');
+    const expenses = scopedTx.filter((t) => t.type === 'expense');
     const grouped = groupBy(expenses, 'category');
     return Object.entries(grouped)
       .map(([catId, txs]) => {
@@ -329,21 +353,21 @@ export default function Dashboard() {
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [transactions]);
+  }, [scopedTx]);
 
   // Budget progress — sorted by most critical
   const budgetProgress = useMemo(() => {
     return budgetsList
       .map((b) => {
         const spent = sumBy(
-          transactions.filter((t) => t.type === 'expense' && t.category === b.category),
+          scopedTx.filter((t) => t.type === 'expense' && t.category === b.category),
           'amount'
         );
         return { ...b, spent, pct: percentOf(spent, b.amount) };
       })
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 5);
-  }, [budgetsList, transactions]);
+  }, [budgetsList, scopedTx]);
 
   // Smart alerts
   const smartAlerts = useMemo(() => {
@@ -390,14 +414,14 @@ export default function Dashboard() {
 
   // No-spend days count
   const noSpendDays = useMemo(() => {
-    const expenses = transactions.filter((t) => t.type === 'expense');
+    const expenses = scopedTx.filter((t) => t.type === 'expense');
     const spendDates = new Set(expenses.map((t) => t.date));
     const start = startOfMonth(month);
     const today = new Date();
     const end = today < endOfMonth(month) ? today : endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
     return days.filter((d) => !spendDates.has(format(d, 'yyyy-MM-dd'))).length;
-  }, [transactions, month]);
+  }, [scopedTx, month]);
 
   // Financial Health Score (0-100)
   const healthScore = useMemo(() => {
@@ -478,17 +502,17 @@ export default function Dashboard() {
     };
   }, [stats, prevTransactions]);
 
-  const recentTx = useMemo(() => sortByDate(transactions).slice(0, 6), [transactions]);
+  const recentTx = useMemo(() => sortByDate(scopedTx).slice(0, 6), [scopedTx]);
 
   // ─── Spending Predictions ──────────────────────────────
   const predictions = useMemo(() => {
     if (allTransactions.length === 0) return null;
     const monthlyPred = predictMonthlySpending(allTransactions, 3);
     if (monthlyPred.monthsUsed < 2) return null;
-    const endOfMonth = predictEndOfMonthBalance(transactions, stats.totalIncome - stats.totalSpent);
+    const endOfMonth = predictEndOfMonthBalance(scopedTx, stats.totalIncome - stats.totalSpent);
     const anomalies = getSpendingAnomalies(allTransactions);
     return { monthly: monthlyPred, endOfMonth, anomalies };
-  }, [allTransactions, transactions, stats]);
+  }, [allTransactions, scopedTx, stats]);
 
   // ─── Bill Suggestions ─────────────────────────────────
   const billSuggestions = useMemo(() => {
@@ -668,6 +692,28 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Scope filter pills */}
+      <div className="flex gap-1.5">
+        {[
+          { id: 'all', label: t('household.scopeAll') },
+          { id: 'personal', label: t('household.scopePersonal'), icon: User },
+          { id: 'household', label: t('household.scopeHousehold'), icon: Home },
+        ].map((s) => (
+          <button
+            key={s.id}
+            onClick={() => handleScopeChange(s.id)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
+              scopeFilter === s.id
+                ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
+                : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+            }`}
+          >
+            {s.icon && <s.icon size={12} />}
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {/* Smart Alerts */}
       {smartAlerts.length > 0 && (
         <div className="space-y-2">
@@ -733,10 +779,10 @@ export default function Dashboard() {
             const STAT_CARDS = {
               totalSpent: { label: t('dashboard.totalSpent'), value: formatCurrency(stats.totalSpent, currency), trend: stats.spentTrend, icon: TrendingDown, accent: '#e11d48' },
               totalIncome: { label: t('dashboard.totalIncome'), value: formatCurrency(stats.totalIncome, currency), icon: TrendingUp, accent: '#059669' },
-              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#6366f1' },
+              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#14b8a6' },
               budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#d97706' },
               dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0ea5e9' },
-              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#6366f1' },
+              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#14b8a6' },
             };
             return (
               <div key="quickStats">

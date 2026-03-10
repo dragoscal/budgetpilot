@@ -1,4 +1,4 @@
-// Web Notification API wrapper for BudgetPilot
+// Web Notification API wrapper for LUMET
 
 export async function requestNotificationPermission() {
   if (!('Notification' in window)) return 'unsupported';
@@ -21,7 +21,7 @@ export function sendNotification(title, body, options = {}) {
       body,
       icon: '/favicon.svg',
       badge: '/favicon.svg',
-      tag: options.tag || 'budgetpilot',
+      tag: options.tag || 'lumet',
       renotify: !!options.tag,
       ...options
     });

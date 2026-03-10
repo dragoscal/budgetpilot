@@ -1,5 +1,5 @@
-// BudgetPilot Service Worker — Cache-first for app shell, network-first for data
-const CACHE_NAME = 'budgetpilot-v2';
+// LUMET Service Worker — Cache-first for app shell, network-first for data
+const CACHE_NAME = 'lumet-v3';
 const STATIC_ASSETS = [
   '/',
   '/favicon.svg',
@@ -39,7 +39,7 @@ self.addEventListener('sync', (event) => {
         try {
           // Try to open IndexedDB and replay pending sync queue items
           const db = await new Promise((resolve, reject) => {
-            const req = indexedDB.open('budgetpilot');
+            const req = indexedDB.open('lumet');
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
           });

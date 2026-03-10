@@ -43,7 +43,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
     <div className="card group">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (goal.color || '#6366f1') + '15' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (goal.color || '#14b8a6') + '15' }}>
             {goal.icon || (isSaveUp ? '🎯' : '💳')}
           </div>
           <div>

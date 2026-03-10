@@ -8,8 +8,8 @@ import { useSync } from '../contexts/SyncContext';
 import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
-  Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Wallet, Shield,
-  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera,
+  Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Shield,
+  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home,
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
 import NotificationCenter from './NotificationCenter';
@@ -55,7 +55,7 @@ export default function Sidebar() {
     {
       label: t('nav.more'),
       items: [
-        { to: '/family', icon: Heart, label: t('nav.family') },
+        { to: '/family', icon: Home, label: t('nav.household') },
         { to: '/people', icon: Users, label: t('nav.people') },
         { to: '/wishlist', icon: Star, label: t('nav.wishlist') },
         { to: '/challenges', icon: Trophy, label: t('nav.challenges') },
@@ -106,10 +106,14 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 h-14 shrink-0">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-accent-600">
-            <Wallet className="w-4 h-4 text-white" />
+            <svg viewBox="0 0 512 512" className="w-5 h-5" aria-hidden="true">
+              <polygon points="256,80 160,280 352,280" fill="#115e59" opacity="0.9"/>
+              <polygon points="200,160 104,360 296,360" fill="#5eead4" opacity="0.7"/>
+              <polygon points="312,160 216,360 408,360" fill="#ffffff" opacity="0.5"/>
+            </svg>
           </div>
           {!collapsed && (
-            <span className="font-heading font-bold text-[15px] tracking-tight">BudgetPilot</span>
+            <span className="font-heading font-bold text-[15px] tracking-tight">LUMET</span>
           )}
         </div>
 

@@ -10,7 +10,7 @@ import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 
-const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#6366f1'];
+const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#14b8a6'];
 
 export default function Reports() {
   const { effectiveUserId, user } = useAuth();
@@ -171,7 +171,7 @@ export default function Reports() {
 
       {/* Print header */}
       <div className="hidden print:block">
-        <h1 className="text-xl font-bold">BudgetPilot — {REPORT_TYPES.find((r) => r.id === reportType)?.label}</h1>
+        <h1 className="text-xl font-bold">LUMET — {REPORT_TYPES.find((r) => r.id === reportType)?.label}</h1>
         <p className="text-sm text-gray-500">{dateFrom} {t('reports.to')} {dateTo}</p>
       </div>
 
@@ -275,6 +275,7 @@ export default function Reports() {
                     <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.categoryHeader')}</th>
                     <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.tagsHeader')}</th>
                     <th className="text-right px-4 py-2 text-xs text-cream-500">{t('reports.amountHeader')}</th>
+                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('household.title')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,6 +286,7 @@ export default function Reports() {
                       <td className="px-4 py-2">{tx.category}</td>
                       <td className="px-4 py-2">{(tx.tags || []).map((tag) => `#${tag}`).join(' ')}</td>
                       <td className="px-4 py-2 text-right money">{formatCurrency(tx.amount, tx.currency)}</td>
+                      <td className="px-4 py-2 text-xs">{tx.scope === 'household' ? t('household.household') : t('household.personal')}</td>
                     </tr>
                   ))}
                 </tbody>

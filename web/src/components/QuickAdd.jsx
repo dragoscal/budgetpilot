@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowRight, Loader2, Calendar } from 'lucide-react';
+import { ArrowRight, Loader2, Calendar, User, Home } from 'lucide-react';
 import { processNaturalLanguage } from '../lib/ai';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -20,6 +20,7 @@ export default function QuickAdd({ onResult, onError, initialValue = '' }) {
   const [text, setText] = useState(initialValue);
   const [loading, setLoading] = useState(false);
   const [customDate, setCustomDate] = useState('');
+  const [scope, setScope] = useState('personal');
   const dateRef = useRef(null);
 
   const handleSubmit = async (input) => {
@@ -35,9 +36,10 @@ export default function QuickAdd({ onResult, onError, initialValue = '' }) {
     try {
       const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
       const dateOverride = customDate || todayLocal();
-      onResult?.(results.map((r) => ({ ...r, date: dateOverride, source: 'nlp' })));
+      onResult?.(results.map((r) => ({ ...r, date: dateOverride, source: 'nlp', scope })));
       setText('');
       setCustomDate('');
+      setScope('personal');
     } catch (err) {
       onError?.(err.message || t('quickAdd.failedParse'));
     } finally {
@@ -91,6 +93,27 @@ export default function QuickAdd({ onResult, onError, initialValue = '' }) {
           <button onClick={() => setCustomDate('')} className="text-cream-500 hover:text-cream-700 underline">{t('quickAdd.clear')}</button>
         </div>
       )}
+      {/* Scope toggle */}
+      <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+        {[
+          { id: 'personal', label: t('household.personal'), icon: User },
+          { id: 'household', label: t('household.household'), icon: Home },
+        ].map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => setScope(s.id)}
+            className={`flex-1 py-1.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+              scope === s.id
+                ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
+            }`}
+          >
+            <s.icon size={12} />
+            {s.label}
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-1.5">
         {EXAMPLES.map((ex) => (
           <button

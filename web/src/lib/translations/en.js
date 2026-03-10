@@ -1,5 +1,5 @@
 /**
- * English translations for BudgetPilot.
+ * English translations for LUMET.
  * This serves as the fallback language.
  */
 const en = {
@@ -95,6 +95,7 @@ const en = {
   'nav.analytics': 'Analytics',
   'nav.reports': 'Reports',
   'nav.family': 'Family',
+  'nav.household': 'Household',
   'nav.people': 'People & Debts',
   'nav.wishlist': 'Wishlist',
   'nav.challenges': 'Challenges',
@@ -1106,6 +1107,22 @@ const en = {
   'family.changeRole': 'Change role',
   'family.roleUpdated': 'Role updated',
 
+  // ─── Household ─────────────────────────────────────────
+  'household.title': 'Household',
+  'household.expenses': 'Household Expenses',
+  'household.personal': 'Personal',
+  'household.household': 'Household',
+  'household.paidBy': 'Paid by',
+  'household.splitEqually': 'Split equally',
+  'household.illCoverIt': "I'll cover it",
+  'household.customSplit': 'Custom split',
+  'household.noFamily': 'Join or create a family to use household splitting',
+  'household.totalThisMonth': 'Total this month',
+  'household.perMember': 'Per member',
+  'household.scopeAll': 'All',
+  'household.scopePersonal': 'Personal',
+  'household.scopeHousehold': 'Household',
+
   // ─── Reports ─────────────────────────────────────────
   'reports.title': 'Reports',
   'reports.generate': 'Generate report',
@@ -1254,7 +1271,7 @@ const en = {
   'settings.telegramStep2': 'Send /newbot and follow the prompts to create your bot',
   'settings.telegramStep3': 'Copy the bot token and paste it above',
   'settings.telegramStep4': 'Find your Chat ID via @userinfobot and paste it above',
-  'settings.telegramStep5': 'Deploy the BudgetPilot API (Cloudflare Worker)',
+  'settings.telegramStep5': 'Deploy the LUMET API (Cloudflare Worker)',
   'settings.telegramStep6': 'The webhook URL will be auto-configured, or set it manually',
   'settings.telegramStep7': 'Send a receipt photo or text like "45 lei Bolt taxi" to your bot!',
   'settings.light': 'Light',
@@ -1288,7 +1305,7 @@ const en = {
   'settings.passwordChangeFailed': 'Failed to change password',
 
   // ─── Onboarding ──────────────────────────────────────
-  'onboarding.welcome': 'Welcome to BudgetPilot',
+  'onboarding.welcome': 'Welcome to LUMET',
   'onboarding.letsSetup': "Let's set up your account in a few quick steps.",
   'onboarding.whatName': 'What should we call you?',
   'onboarding.namePlaceholder': 'Your name',
@@ -1307,9 +1324,9 @@ const en = {
   'onboarding.anthropicKey': 'Anthropic API Key (optional)',
   'onboarding.keyStoredLocally': 'Stored locally — never sent anywhere except directly to Anthropic\'s API. You can add this later in Settings.',
   'onboarding.finishSetup': 'Finish setup',
-  'onboarding.skipSetup': 'Skip setup and start using BudgetPilot',
+  'onboarding.skipSetup': 'Skip setup and start using LUMET',
   'onboarding.skipStep': 'Skip this step',
-  'onboarding.setupComplete': 'Setup complete! Welcome to BudgetPilot.',
+  'onboarding.setupComplete': 'Setup complete! Welcome to LUMET.',
   'onboarding.stepWelcome': 'Welcome',
   'onboarding.stepAccount': 'Account',
   'onboarding.stepBudgets': 'Budgets',
@@ -1333,7 +1350,7 @@ const en = {
   'auth.loggingIn': 'Logging in...',
   'auth.creating': 'Creating account...',
   'auth.continueOffline': 'Continue without account',
-  'auth.offlineDesc': 'Use BudgetPilot locally — your data stays on this device',
+  'auth.offlineDesc': 'Use LUMET locally — your data stays on this device',
   'auth.welcomeBack': 'Welcome back',
   'auth.createAccount': 'Create your account',
   'auth.name': 'Name',
@@ -1363,7 +1380,7 @@ const en = {
 
   // ─── Feedback ────────────────────────────────────────
   'feedback.title': 'Feedback',
-  'feedback.subtitle': 'Help us improve BudgetPilot',
+  'feedback.subtitle': 'Help us improve LUMET',
   'feedback.type': 'Feedback type',
   'feedback.bug': 'Bug report',
   'feedback.feature': 'Feature request',
@@ -1617,7 +1634,7 @@ const en = {
   'offline.message': "You're offline — changes will sync when reconnected",
 
   // ─── Install Prompt ──────────────────────────────────
-  'install.title': 'Install BudgetPilot',
+  'install.title': 'Install LUMET',
   'install.description': 'Add to your home screen for a better experience',
   'install.install': 'Install',
   'install.dismiss': 'Not now',

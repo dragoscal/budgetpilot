@@ -23,7 +23,7 @@ export default function NetWorth() {
   const [updateBalance, setUpdateBalance] = useState(null);
   const [newBalance, setNewBalance] = useState('');
 
-  const [form, setForm] = useState({ name: '', type: 'checking', balance: '', currency: user?.defaultCurrency || 'RON', icon: '🏦', color: '#6366f1' });
+  const [form, setForm] = useState({ name: '', type: 'checking', balance: '', currency: user?.defaultCurrency || 'RON', icon: '🏦', color: '#14b8a6' });
 
   const currency = user?.defaultCurrency || 'RON';
 
@@ -56,7 +56,7 @@ export default function NetWorth() {
         toast.success(t('networth.accountAdded'));
       }
       setShowForm(false); setEditAccount(null);
-      setForm({ name: '', type: 'checking', balance: '', currency, icon: '🏦', color: '#6366f1' });
+      setForm({ name: '', type: 'checking', balance: '', currency, icon: '🏦', color: '#14b8a6' });
       loadAccounts();
     } catch (err) { toast.error(err.message); }
   };
@@ -86,7 +86,7 @@ export default function NetWorth() {
 
   const handleEdit = (acct) => {
     setEditAccount(acct);
-    setForm({ name: acct.name, type: acct.type, balance: acct.balance.toString(), currency: acct.currency || currency, icon: acct.icon, color: acct.color || '#6366f1' });
+    setForm({ name: acct.name, type: acct.type, balance: acct.balance.toString(), currency: acct.currency || currency, icon: acct.icon, color: acct.color || '#14b8a6' });
     setShowForm(true);
   };
 
@@ -94,7 +94,7 @@ export default function NetWorth() {
     <div className="card group">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (account.color || '#6366f1') + '15' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: (account.color || '#14b8a6') + '15' }}>
             {account.icon || '🏦'}
           </div>
           <div>
@@ -122,7 +122,7 @@ export default function NetWorth() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="page-title mb-0">{t('networth.title')}</h1>
-        <button onClick={() => { setEditAccount(null); setForm({ name: '', type: 'checking', balance: '', currency, icon: '🏦', color: '#6366f1' }); setShowForm(true); }} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> {t('networth.addAccount')}</button>
+        <button onClick={() => { setEditAccount(null); setForm({ name: '', type: 'checking', balance: '', currency, icon: '🏦', color: '#14b8a6' }); setShowForm(true); }} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> {t('networth.addAccount')}</button>
       </div>
 
       {/* Big number */}
