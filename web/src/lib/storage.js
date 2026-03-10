@@ -288,9 +288,10 @@ export async function clearAllData() {
 
 // Settings helpers
 export async function getSetting(key) {
+  const { DEFAULT_SETTINGS } = await import('./constants.js');
   const db = await getDB();
   const record = await db.get('settings', key);
-  return record?.value;
+  return record?.value ?? DEFAULT_SETTINGS[key] ?? undefined;
 }
 
 export async function setSetting(key, value) {
@@ -299,12 +300,14 @@ export async function setSetting(key, value) {
 }
 
 export async function getAllSettings() {
+  const { DEFAULT_SETTINGS } = await import('./constants.js');
   const db = await getDB();
   const records = await db.getAll('settings');
-  return records.reduce((acc, { key, value }) => {
+  const saved = records.reduce((acc, { key, value }) => {
     acc[key] = value;
     return acc;
   }, {});
+  return { ...DEFAULT_SETTINGS, ...saved };
 }
 
 // ─── OPTIMIZED QUERIES (using IndexedDB indexes) ──────────

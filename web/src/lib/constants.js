@@ -257,7 +257,7 @@ export const DEFAULT_SETTINGS = {
   defaultCategory: 'other',
   firstDayOfWeek: 1, // Monday
   darkMode: false,
-  apiUrl: '',
+  apiUrl: 'https://budgetpilot-api.budgetpilot.workers.dev',
   apiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',
