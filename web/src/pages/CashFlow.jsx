@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle } from 'lucide-react';
@@ -17,18 +18,21 @@ export default function CashFlow() {
   const [tab, setTab] = useState('overview'); // 'overview' | 'forecast'
   const [forecast, setForecast] = useState(null);
   const [forecastDays, setForecastDays] = useState(90);
+  const [rates, setRates] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const [tx, rec] = await Promise.all([
+        const [tx, rec, ratesData] = await Promise.all([
           txApi.getAll({ userId: effectiveUserId }),
           recurringApi.getAll({ userId: effectiveUserId }),
+          getCachedRates(),
         ]);
         setAllTx(tx);
         setRecurring(rec.filter((r) => r.active !== false));
+        setRates(ratesData);
         // Load forecast
         const fc = await forecastCashFlow({ userId: effectiveUserId, days: forecastDays, defaultCurrency: currency });
         setForecast(fc);
@@ -45,8 +49,8 @@ export default function CashFlow() {
     return allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
   }, [allTx]);
 
-  const monthIncome = sumBy(currentMonthTx.filter((t) => t.type === 'income'), 'amount');
-  const monthExpenses = sumBy(currentMonthTx.filter((t) => t.type === 'expense'), 'amount');
+  const monthIncome = sumAmountsMultiCurrency(currentMonthTx.filter((t) => t.type === 'income'), currency, rates);
+  const monthExpenses = sumAmountsMultiCurrency(currentMonthTx.filter((t) => t.type === 'expense'), currency, rates);
   const netCashFlow = monthIncome - monthExpenses;
   const savingsRate = monthIncome > 0 ? percentOf(netCashFlow, monthIncome) : 0;
 
@@ -58,8 +62,8 @@ export default function CashFlow() {
       const start = startOfMonth(m);
       const end = endOfMonth(m);
       const monthTx = allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
-      const income = sumBy(monthTx.filter((t) => t.type === 'income'), 'amount');
-      const expenses = sumBy(monthTx.filter((t) => t.type === 'expense'), 'amount');
+      const income = sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'income'), currency, rates);
+      const expenses = sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'expense'), currency, rates);
       months.push({ month: format(m, 'MMM'), income, expenses, net: income - expenses });
     }
     return months;
@@ -84,8 +88,8 @@ export default function CashFlow() {
   }, [currentMonthTx]);
 
   // Forecast
-  const recurringIncome = sumBy(recurringItems.filter((r) => r.category === 'income'), 'amount');
-  const recurringExpenses = sumBy(recurringItems.filter((r) => r.category !== 'income'), 'amount');
+  const recurringIncome = sumAmountsMultiCurrency(recurringItems.filter((r) => r.category === 'income'), currency, rates);
+  const recurringExpenses = sumAmountsMultiCurrency(recurringItems.filter((r) => r.category !== 'income'), currency, rates);
 
   // Forecast chart data — sample every 3rd day for readability
   const forecastChartData = useMemo(() => {

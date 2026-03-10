@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
@@ -17,18 +18,21 @@ export default function Analytics() {
   const [budgetsList, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState([]);
+  const [rates, setRates] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const [tx, budgets] = await Promise.all([
+        const [tx, budgets, ratesData] = await Promise.all([
           txApi.getAll({ userId: effectiveUserId }),
           budgetsApi.getAll({ userId: effectiveUserId }),
+          getCachedRates(),
         ]);
         setAllTx(tx);
         setBudgets(budgets);
+        setRates(ratesData);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
@@ -85,9 +89,9 @@ export default function Analytics() {
   // Tag stats
   const tagStats = useMemo(() => getTagStats(expenses), [expenses]);
 
-  // Summary stats
-  const totalSpent = sumBy(expenses, 'amount');
-  const totalIncome = sumBy(monthTx.filter((t) => t.type === 'income'), 'amount');
+  // Summary stats (multi-currency aware)
+  const totalSpent = sumAmountsMultiCurrency(expenses, currency, rates);
+  const totalIncome = sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'income'), currency, rates);
   const now = new Date();
   const isCurrentMonth = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
   const daysElapsed = isCurrentMonth

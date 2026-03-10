@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
-import { formatCurrency, percentOf, sumBy, groupBy, trendIndicator, getDaysRemaining, formatDate, getCategoryById, sortByDate } from '../lib/helpers';
+import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getDaysRemaining, formatDate, getCategoryById, sortByDate } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
 import BudgetBar from '../components/BudgetBar';
 import TransactionRow from '../components/TransactionRow';
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const [goalsList, setGoals] = useState([]);
   const [recurringList, setRecurring] = useState([]);
   const [accountsList, setAccounts] = useState([]);
+  const [rates, setRates] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Single master toggle for hiding all amounts
@@ -39,13 +41,15 @@ export default function Dashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [allTx, budgets, goals, rec, accts] = await Promise.all([
+      const [allTx, budgets, goals, rec, accts, ratesData] = await Promise.all([
         txApi.getAll({ userId: effectiveUserId }),
         budgetsApi.getAll({ userId: effectiveUserId }),
         goalsApi.getAll({ userId: effectiveUserId }),
         recurringApi.getAll({ userId: effectiveUserId }),
         accountsApi.getAll({ userId: effectiveUserId }),
+        getCachedRates(),
       ]);
+      setRates(ratesData);
 
       const start = startOfMonth(month);
       const end = endOfMonth(month);
@@ -75,14 +79,14 @@ export default function Dashboard() {
   };
 
   const stats = useMemo(() => {
+    const currency = user?.defaultCurrency || 'RON';
     const expenses = transactions.filter((t) => t.type === 'expense');
     const income = transactions.filter((t) => t.type === 'income');
     const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
-    const prevIncome = prevTransactions.filter((t) => t.type === 'income');
 
-    const totalSpent = sumBy(expenses, 'amount');
-    const totalIncome = sumBy(income, 'amount');
-    const prevTotalSpent = sumBy(prevExpenses, 'amount');
+    const totalSpent = sumAmountsMultiCurrency(expenses, currency, rates);
+    const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
+    const prevTotalSpent = sumAmountsMultiCurrency(prevExpenses, currency, rates);
     const net = totalIncome - totalSpent;
     const totalBudget = sumBy(budgetsList, 'amount');
     const budgetRemaining = totalBudget - totalSpent;
@@ -99,7 +103,7 @@ export default function Dashboard() {
     );
 
     // "In My Pocket" — income minus budgeted minus upcoming bills
-    const recurringTotal = sumBy(recurringList, 'amount');
+    const recurringTotal = sumAmountsMultiCurrency(recurringList, currency, rates);
     const inMyPocket = totalIncome - totalSpent - Math.max(0, recurringTotal - totalSpent);
 
     return {
@@ -107,7 +111,7 @@ export default function Dashboard() {
       prevTotalSpent,
       spentTrend: trendIndicator(totalSpent, prevTotalSpent),
     };
-  }, [transactions, prevTransactions, budgetsList, accountsList, recurringList]);
+  }, [transactions, prevTransactions, budgetsList, accountsList, recurringList, rates, user]);
 
   // Spending velocity: compare current pace to last month
   const velocity = useMemo(() => {

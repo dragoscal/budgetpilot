@@ -227,23 +227,49 @@ export async function exportAll() {
   return data;
 }
 
-export async function importAll(data) {
+export async function importAll(data, { merge = false } = {}) {
   const db = await getDB();
   const stores = [
     'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
     'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
   ];
+  const stats = { imported: 0, skipped: 0, overwritten: 0 };
+
   for (const store of stores) {
     if (data[store] && Array.isArray(data[store]) && db.objectStoreNames.contains(store)) {
       const tx = db.transaction(store, 'readwrite');
-      await tx.store.clear();
-      for (const record of data[store]) {
-        await tx.store.put(record);
+
+      if (!merge) {
+        // Full replace mode (original behavior)
+        await tx.store.clear();
+        for (const record of data[store]) {
+          await tx.store.put(record);
+          stats.imported++;
+        }
+      } else {
+        // Merge mode: skip records with same ID unless incoming is newer
+        for (const record of data[store]) {
+          const existing = await tx.store.get(record.id);
+          if (existing) {
+            const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+            const incomingTime = record.updatedAt ? new Date(record.updatedAt).getTime() : 0;
+            if (incomingTime > existingTime) {
+              await tx.store.put(record);
+              stats.overwritten++;
+            } else {
+              stats.skipped++;
+            }
+          } else {
+            await tx.store.put(record);
+            stats.imported++;
+          }
+        }
       }
       await tx.done;
     }
   }
+  return stats;
 }
 
 export async function clearAllData() {

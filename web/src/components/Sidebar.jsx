@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import SyncIndicator from './SyncIndicator';
+import { useSync } from '../contexts/SyncContext';
 import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
@@ -57,6 +58,7 @@ export default function Sidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { dark, toggleTheme } = useTheme();
+  const { pendingChanges, syncing, error: syncError, hasBackend } = useSync();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -352,12 +354,18 @@ export default function Sidebar() {
         {/* More button — opens slide-up menu */}
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium min-w-[52px] transition-colors ${
             mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400'
           }`}
         >
           <Menu size={20} />
           <span>More</span>
+          {/* Sync indicator dot */}
+          {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
+            <span className={`absolute top-1 right-2 w-2 h-2 rounded-full ${
+              syncError ? 'bg-warning' : syncing ? 'bg-accent-500 animate-pulse' : 'bg-accent-500'
+            }`} />
+          )}
         </button>
       </nav>
     </>

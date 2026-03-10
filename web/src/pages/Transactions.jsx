@@ -10,7 +10,8 @@ import Modal from '../components/Modal';
 import ManualForm from '../components/ManualForm';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
-import { SORT_OPTIONS } from '../lib/constants';
+import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
+import { checkDuplicate } from '../lib/smartFeatures';
 import { Receipt, Download, Trash2, Tag, Hash, X } from 'lucide-react';
 
 const PAGE_SIZE = 30;
@@ -27,6 +28,8 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState('all');
+  const [amountMin, setAmountMin] = useState('');
+  const [amountMax, setAmountMax] = useState('');
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
@@ -96,6 +99,16 @@ export default function Transactions() {
       );
     }
 
+    // Amount range filter
+    if (amountMin !== '') {
+      const min = Number(amountMin);
+      if (!isNaN(min)) result = result.filter((t) => t.amount >= min);
+    }
+    if (amountMax !== '') {
+      const max = Number(amountMax);
+      if (!isNaN(max)) result = result.filter((t) => t.amount <= max);
+    }
+
     // Sort
     const [sortKey, sortDir] = sort.split('-');
     if (sortKey === 'date') {
@@ -109,7 +122,7 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter]);
+  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, amountMin, amountMax]);
 
   const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
   const hasMore = paginated.length < filtered.length;
@@ -119,18 +132,35 @@ export default function Transactions() {
 
   const handleDelete = async () => {
     if (!deleteTx) return;
-    try {
-      await txApi.remove(deleteTx.id);
-      setAllTx((prev) => prev.filter((t) => t.id !== deleteTx.id));
-      setDeleteTx(null);
-      toast.success('Transaction deleted');
-    } catch (err) {
-      toast.error('Failed to delete');
-    }
+    const txToDelete = { ...deleteTx };
+    // Immediately remove from UI (soft delete)
+    setAllTx((prev) => prev.filter((t) => t.id !== txToDelete.id));
+    setDeleteTx(null);
+
+    // Show undo toast — only permanently delete after timeout
+    toast.undo(`Deleted "${txToDelete.merchant || 'transaction'}"`, {
+      onUndo: () => {
+        // Restore the transaction in UI and re-save to DB
+        setAllTx((prev) => [...prev, txToDelete]);
+        txApi.update(txToDelete.id, txToDelete).catch(() => {});
+      },
+      onExpire: () => {
+        // Permanently delete from DB
+        txApi.remove(txToDelete.id).catch(() => {});
+      },
+      duration: 5000,
+    });
   };
 
   const handleEdit = async (updated) => {
     try {
+      // Check for duplicates (excluding the transaction being edited)
+      const dupes = await checkDuplicate(updated);
+      const realDupes = dupes.filter(d => d.transaction.id !== updated.id && d.confidence >= 0.7);
+      if (realDupes.length > 0) {
+        const proceed = confirm(`This looks like a duplicate of "${realDupes[0].transaction.merchant}" on ${realDupes[0].transaction.date}. Save anyway?`);
+        if (!proceed) return;
+      }
       await txApi.update(updated.id, updated);
       setAllTx((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setEditTx(null);
@@ -161,6 +191,25 @@ export default function Transactions() {
     });
   };
 
+  const [showBatchCategory, setShowBatchCategory] = useState(false);
+
+  const handleBatchCategorize = async (newCategory) => {
+    if (selected.size === 0) return;
+    try {
+      const updates = [...selected].map(id => {
+        const tx = allTx.find(t => t.id === id);
+        return tx ? txApi.update(id, { ...tx, category: newCategory }) : Promise.resolve();
+      });
+      await Promise.all(updates);
+      setAllTx((prev) => prev.map((t) => selected.has(t.id) ? { ...t, category: newCategory } : t));
+      toast.success(`${selected.size} transaction${selected.size > 1 ? 's' : ''} re-categorized`);
+      setSelected(new Set());
+      setShowBatchCategory(false);
+    } catch (err) {
+      toast.error('Failed to update categories');
+    }
+  };
+
   const exportCSV = () => {
     const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags'];
     const rows = filtered.map((t) => [
@@ -183,9 +232,32 @@ export default function Transactions() {
         <h1 className="page-title mb-0">Transactions</h1>
         <div className="flex gap-2">
           {selected.size > 0 && (
-            <button onClick={handleBulkDelete} className="btn-danger text-xs flex items-center gap-1">
-              <Trash2 size={14} /> Delete ({selected.size})
-            </button>
+            <>
+              <div className="relative">
+                <button onClick={() => setShowBatchCategory(!showBatchCategory)} className="btn-secondary text-xs flex items-center gap-1">
+                  <Tag size={14} /> Categorize ({selected.size})
+                </button>
+                {showBatchCategory && (
+                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden z-50" style={{ minWidth: '200px', maxHeight: '320px' }}>
+                    <div className="overflow-y-auto" style={{ maxHeight: '320px' }}>
+                      {CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleBatchCategorize(cat.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
+                        >
+                          <span>{cat.icon}</span>
+                          <span>{cat.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button onClick={handleBulkDelete} className="btn-danger text-xs flex items-center gap-1">
+                <Trash2 size={14} /> Delete ({selected.size})
+              </button>
+            </>
           )}
           <button onClick={exportCSV} className="btn-ghost text-xs flex items-center gap-1">
             <Download size={14} /> CSV
@@ -205,6 +277,39 @@ export default function Transactions() {
         category={categoryFilter} onCategory={setCategoryFilter}
         type={typeFilter} onType={setTypeFilter}
       />
+
+      {/* Amount range filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-cream-500">Amount:</span>
+        <input
+          type="number"
+          className="input w-24 text-xs py-1.5"
+          placeholder="Min"
+          value={amountMin}
+          onChange={(e) => setAmountMin(e.target.value)}
+          inputMode="decimal"
+          min="0"
+        />
+        <span className="text-xs text-cream-400">—</span>
+        <input
+          type="number"
+          className="input w-24 text-xs py-1.5"
+          placeholder="Max"
+          value={amountMax}
+          onChange={(e) => setAmountMax(e.target.value)}
+          inputMode="decimal"
+          min="0"
+        />
+        {(amountMin || amountMax) && (
+          <button
+            onClick={() => { setAmountMin(''); setAmountMax(''); }}
+            className="p-1 rounded-full text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border transition-colors"
+            title="Clear amount filter"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-cream-500">Period:</span>
@@ -303,8 +408,8 @@ export default function Transactions() {
           <EmptyState
             icon={Receipt}
             title="No transactions found"
-            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
-            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' ? 'Add transaction' : undefined}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
+            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax ? 'Add transaction' : undefined}
             onAction={() => navigate('/add')}
           />
         )}

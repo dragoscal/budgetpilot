@@ -8,11 +8,13 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const timers = useRef({});
 
-  const addToast = useCallback((message, type = 'info', duration = 4000) => {
+  const addToast = useCallback((message, type = 'info', duration = 4000, options = {}) => {
     const id = ++toastId;
-    setToasts((prev) => [...prev.slice(-4), { id, message, type }]);
+    setToasts((prev) => [...prev.slice(-4), { id, message, type, ...options }]);
 
     timers.current[id] = setTimeout(() => {
+      // Run onExpire callback if provided (e.g., to finalize a soft-delete)
+      if (options.onExpire) options.onExpire();
       setToasts((prev) => prev.filter((t) => t.id !== id));
       delete timers.current[id];
     }, duration);
@@ -33,6 +35,9 @@ export function ToastProvider({ children }) {
     error: (msg) => addToast(msg, 'error', 6000),
     warning: (msg) => addToast(msg, 'warning'),
     info: (msg) => addToast(msg, 'info'),
+    /** Toast with undo button. onUndo called if user clicks undo; onExpire called when timer expires. */
+    undo: (msg, { onUndo, onExpire, duration = 5000 } = {}) =>
+      addToast(msg, 'undo', duration, { onUndo, onExpire }),
   }), [addToast]);
 
   return (
