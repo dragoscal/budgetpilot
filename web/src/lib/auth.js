@@ -38,30 +38,39 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
   const apiUrl = await getApiUrl();
 
   if (apiUrl) {
-    // Server mode
-    const res = await fetch(`${apiUrl}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, defaultCurrency }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Registration failed');
-    }
-    const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.token);
-    const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-
-    // Derive encryption key from password for future AI key encryption
+    // Server mode — try API, fall through to local on network error
     try {
-      const encKey = await deriveEncryptionKey(password, email.toLowerCase());
-      await storeEncryptionKey(encKey, true);
-    } catch (e) {
-      console.warn('Encryption key setup failed:', e.message);
-    }
+      const res = await fetch(`${apiUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, defaultCurrency }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Registration failed');
+      }
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
-    return data.user;
+      // Derive encryption key from password for future AI key encryption
+      try {
+        const encKey = await deriveEncryptionKey(password, email.toLowerCase());
+        await storeEncryptionKey(encKey, true);
+      } catch (e) {
+        console.warn('Encryption key setup failed:', e.message);
+      }
+
+      return data.user;
+    } catch (err) {
+      // Network error (API unreachable) — fall through to local mode
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        console.warn('API unreachable, using local registration:', err.message);
+      } else {
+        throw err; // Re-throw server validation errors (e.g. "Email already exists")
+      }
+    }
   }
 
   // Local mode
@@ -100,33 +109,42 @@ export async function login({ email, password, remember = false }) {
   const apiUrl = await getApiUrl();
 
   if (apiUrl) {
-    // Server mode
-    const res = await fetch(`${apiUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Login failed');
-    }
-    const data = await res.json();
-    const storage = remember ? localStorage : sessionStorage;
-    storage.setItem(TOKEN_KEY, data.token);
-    const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
-    storage.setItem(SESSION_KEY, JSON.stringify(session));
-
-    // Derive encryption key from password and store for AI key decryption
+    // Server mode — try API, fall through to local on network error
     try {
-      const encKey = await deriveEncryptionKey(password, email.toLowerCase());
-      await storeEncryptionKey(encKey, remember);
-      // Pull encrypted AI keys from server (non-blocking)
-      pullEncryptedKeys().catch(() => {});
-    } catch (e) {
-      console.warn('Encryption key setup failed:', e.message);
-    }
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Login failed');
+      }
+      const data = await res.json();
+      const storage = remember ? localStorage : sessionStorage;
+      storage.setItem(TOKEN_KEY, data.token);
+      const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
+      storage.setItem(SESSION_KEY, JSON.stringify(session));
 
-    return data.user;
+      // Derive encryption key from password and store for AI key decryption
+      try {
+        const encKey = await deriveEncryptionKey(password, email.toLowerCase());
+        await storeEncryptionKey(encKey, remember);
+        // Pull encrypted AI keys from server (non-blocking)
+        pullEncryptedKeys().catch(() => {});
+      } catch (e) {
+        console.warn('Encryption key setup failed:', e.message);
+      }
+
+      return data.user;
+    } catch (err) {
+      // Network error (API unreachable) — fall through to local mode
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        console.warn('API unreachable, using local login:', err.message);
+      } else {
+        throw err; // Re-throw server validation errors (e.g. "Invalid credentials")
+      }
+    }
   }
 
   // Local mode
