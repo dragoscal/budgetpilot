@@ -627,7 +627,13 @@ export default function AddTransaction() {
               const needsReviewItems = hasItems ? tx.items.filter(i => i.needsReview) : [];
 
               // Running total for items
-              const itemsTotal = hasItems ? tx.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0) : 0;
+              // price = line total from receipt; only multiply by qty if unitPrice exists and differs
+              const itemsTotal = hasItems ? tx.items.reduce((s, it) => {
+                if (it.unitPrice && it.unitPrice !== it.price && (it.qty || 1) > 1) {
+                  return s + (it.unitPrice * (it.qty || 1));
+                }
+                return s + (it.price || 0);
+              }, 0) : 0;
               const receiptTotal = receiptMeta?.receipt?.total;
               const mismatch = receiptTotal && hasItems && Math.abs(itemsTotal - receiptTotal) / receiptTotal > 0.02;
 

@@ -555,7 +555,14 @@ function normalizeReceiptResult(result, userId = 'local') {
 
     // Amount validation: prefer items sum when items exist, fallback to AI amount
     const aiAmount = Math.abs(Number(t.amount)) || 0;
-    const itemsTotal = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    // price = line total as printed on receipt (already qty × unit price)
+    // Only multiply by qty if item has a unitPrice that differs from price (meaning price IS the unit price)
+    const itemsTotal = items.reduce((s, i) => {
+      if (i.unitPrice && i.unitPrice !== i.price && i.qty > 1) {
+        return s + (i.unitPrice * i.qty);
+      }
+      return s + i.price;
+    }, 0);
     const receiptTotal = Math.abs(Number(receipt.total)) || 0;
 
     let amount;
@@ -628,7 +635,14 @@ function inferCategory(merchant) {
   // Sort by key length descending so "bolt food" matches before "bolt"
   const entries = Object.entries(MERCHANT_CATEGORY_MAP).sort((a, b) => b[0].length - a[0].length);
   for (const [key, cat] of entries) {
-    if (lower.includes(key)) return cat;
+    // For short keys (≤3 chars like "kfc", "mol", "omv"), require word boundary
+    // to avoid false matches (e.g., "mol" inside "Moldova")
+    if (key.length <= 3) {
+      const regex = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (regex.test(lower)) return cat;
+    } else {
+      if (lower.includes(key)) return cat;
+    }
   }
   return 'other';
 }
