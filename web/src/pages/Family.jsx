@@ -350,7 +350,7 @@ export default function Family() {
       )}
 
       {/* Tab navigation */}
-      <div className="flex border-b border-cream-200 dark:border-dark-border overflow-x-auto">
+      <div className="flex border-b border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide">
         {[
           { id: 'dashboard', label: t('family.dashboardTab'), icon: LayoutDashboard },
           { id: 'household', label: t('household.expenses'), icon: Home },
@@ -361,7 +361,7 @@ export default function Family() {
           <button
             key={tb.id}
             onClick={() => setTab(tb.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors -mb-[1px] whitespace-nowrap shrink-0 ${
               tab === tb.id
                 ? 'border-accent text-accent-700 dark:text-accent-300'
                 : 'border-transparent text-cream-500 hover:text-cream-700'

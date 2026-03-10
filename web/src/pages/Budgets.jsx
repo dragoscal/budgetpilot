@@ -289,16 +289,16 @@ export default function Budgets() {
         <h1 className="page-title mb-0">{t('budgets.title')}</h1>
         <div className="flex items-center gap-2">
           {isFamilyMode && (
-            <div className="flex rounded-lg border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
+            <div className="flex rounded-lg border border-cream-300 dark:border-dark-border overflow-hidden text-xs shrink-0">
               <button
                 onClick={() => setViewMode('personal')}
-                className={`px-3 py-1.5 font-medium transition-colors ${viewMode === 'personal' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
+                className={`px-3 py-1.5 font-medium transition-colors whitespace-nowrap ${viewMode === 'personal' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
               >
                 {t('budgets.personal')}
               </button>
               <button
                 onClick={() => setViewMode('family')}
-                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${viewMode === 'family' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
+                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${viewMode === 'family' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
               >
                 <Users size={12} /> {t('budgets.family')}
               </button>

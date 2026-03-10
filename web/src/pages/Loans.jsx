@@ -620,11 +620,11 @@ export default function Loans() {
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] text-cream-500">
+                    <div className="flex items-center justify-between mt-1 gap-1">
+                      <span className="text-[10px] text-cream-500 truncate min-w-0">
                         {formatCurrency(loan.principalAmount - loan.remainingBalance, loan.currency)} {t('loans.paid')}
                       </span>
-                      <span className="text-[10px] text-cream-500">
+                      <span className="text-[10px] text-cream-500 truncate min-w-0 text-right">
                         {formatCurrency(loan.remainingBalance, loan.currency)} {t('loans.remaining')}
                       </span>
                     </div>

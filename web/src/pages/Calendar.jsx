@@ -101,7 +101,7 @@ export default function CalendarPage() {
             >
               <span className={`text-xs font-medium ${today ? 'text-success' : ''}`}>{data.dayNum}</span>
               {data.total > 0 && (
-                <span className="text-[9px] text-danger font-medium money mt-auto">
+                <span className="text-[9px] text-danger font-medium money mt-auto truncate w-full">
                   -{formatCurrency(data.total, currency).replace(/\s/g, '')}
                 </span>
               )}
