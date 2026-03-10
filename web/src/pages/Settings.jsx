@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useSync } from '../contexts/SyncContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { getSetting, setSetting, getAllSettings } from '../lib/storage';
 import { exportData, importData, clearData } from '../lib/api';
 import { deleteAccount } from '../lib/auth';
@@ -19,6 +20,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { hideAmounts, updateHideAmounts } = useHideAmounts();
   const { refreshStatus: refreshSyncStatus, syncNow } = useSync();
+  const { t, language, setLanguage, languages } = useTranslation();
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
@@ -121,27 +123,27 @@ export default function SettingsPage() {
         setKeySyncStatus('local');
       }
 
-      toast.success('Settings saved');
+      toast.success(t('settings.saved'));
     } catch (err) {
       toast.error(err.message);
     }
   };
 
   const testConnection = async () => {
-    if (!apiUrl) { setTestResult({ ok: false, msg: 'No API URL configured' }); return; }
+    if (!apiUrl) { setTestResult({ ok: false, msg: t('settings.noApiUrl') }); return; }
     try {
       const url = apiUrl.replace(/\/$/, '');
       const res = await fetch(`${url}/api/health`);
       const data = await res.json().catch(() => ({}));
-      setTestResult({ ok: res.ok, msg: res.ok ? `Connected! (${data.version || 'ok'})` : `Error: ${res.status}` });
+      setTestResult({ ok: res.ok, msg: res.ok ? `${t('settings.connected')} (${data.version || 'ok'})` : `${t('settings.error')}: ${res.status}` });
     } catch (err) {
-      setTestResult({ ok: false, msg: 'Connection failed — check the URL' });
+      setTestResult({ ok: false, msg: t('settings.connectionFailed') });
     }
   };
 
   const testAiKey = async () => {
     const key = aiProvider === 'anthropic' ? anthropicKey : aiProvider === 'openai' ? openaiKey : openrouterKey;
-    if (!key) { setAiTestResult({ ok: false, msg: 'No API key entered' }); return; }
+    if (!key) { setAiTestResult({ ok: false, msg: t('settings.noApiKey') }); return; }
     setAiTesting(true);
     setAiTestResult(null);
     try {
@@ -156,24 +158,24 @@ export default function SettingsPage() {
           },
           body: JSON.stringify({ model: aiModel || 'claude-sonnet-4-20250514', max_tokens: 10, messages: [{ role: 'user', content: 'Hi' }] }),
         });
-        if (res.ok) setAiTestResult({ ok: true, msg: 'Anthropic key valid!' });
+        if (res.ok) setAiTestResult({ ok: true, msg: t('settings.keyValid', { provider: 'Anthropic' }) });
         else {
           const err = await res.json().catch(() => ({}));
-          setAiTestResult({ ok: false, msg: err.error?.message || `Error: ${res.status}` });
+          setAiTestResult({ ok: false, msg: err.error?.message || `${t('settings.error')}: ${res.status}` });
         }
       } else {
         const baseUrl = aiProvider === 'openrouter' ? 'https://openrouter.ai/api/v1/models' : 'https://api.openai.com/v1/models';
         const headers = { 'Authorization': `Bearer ${key}` };
         if (aiProvider === 'openrouter') headers['HTTP-Referer'] = window.location.origin;
         const res = await fetch(baseUrl, { headers });
-        if (res.ok) setAiTestResult({ ok: true, msg: `${aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter'} key valid!` });
+        if (res.ok) setAiTestResult({ ok: true, msg: t('settings.keyValid', { provider: aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter' }) });
         else {
           const err = await res.json().catch(() => ({}));
-          setAiTestResult({ ok: false, msg: err.error?.message || `Error: ${res.status}` });
+          setAiTestResult({ ok: false, msg: err.error?.message || `${t('settings.error')}: ${res.status}` });
         }
       }
     } catch (err) {
-      setAiTestResult({ ok: false, msg: 'Connection failed — check your key' });
+      setAiTestResult({ ok: false, msg: t('settings.aiConnectionFailed') });
     } finally {
       setAiTesting(false);
     }
@@ -189,9 +191,9 @@ export default function SettingsPage() {
       a.download = `budgetpilot_backup_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Backup exported');
+      toast.success(t('settings.backupExported'));
     } catch (err) {
-      toast.error('Export failed');
+      toast.error(t('settings.exportFailed'));
     }
   };
 
@@ -202,74 +204,94 @@ export default function SettingsPage() {
       const text = await file.text();
       const data = JSON.parse(text);
       await importData(data);
-      toast.success('Data imported successfully!');
+      toast.success(t('settings.dataImported'));
       window.location.reload();
     } catch (err) {
-      toast.error('Invalid backup file');
+      toast.error(t('settings.invalidBackup'));
     }
   };
 
   const handleClearAll = async () => {
     if (clearConfirm !== 'DELETE MY DATA') {
-      toast.error('Type "DELETE MY DATA" to confirm');
+      toast.error(t('settings.typeDeleteMyData'));
       return;
     }
     try {
       await clearData();
-      toast.success('All data cleared');
+      toast.success(t('settings.allDataCleared'));
       setShowClear(false);
       setClearConfirm('');
     } catch (err) {
-      toast.error('Failed to clear data');
+      toast.error(t('settings.failedClear'));
     }
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Settings</h1>
+      <h1 className="page-title">{t('settings.title')}</h1>
 
       {/* Display */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><EyeOff size={14} /> Display</h3>
+        <h3 className="section-title flex items-center gap-2"><EyeOff size={14} /> {t('settings.display')}</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Theme</p>
-              <p className="text-xs text-cream-500">{dark ? 'Dark mode' : 'Light mode'}</p>
+              <p className="text-sm font-medium">{t('settings.theme')}</p>
+              <p className="text-xs text-cream-500">{dark ? t('settings.darkMode') : t('settings.lightMode')}</p>
             </div>
             <button onClick={toggleTheme} className="btn-secondary flex items-center gap-2">
               {dark ? <Sun size={16} /> : <Moon size={16} />}
-              {dark ? 'Light' : 'Dark'}
+              {dark ? t('settings.light') : t('settings.dark')}
             </button>
           </div>
           <div className="border-t border-cream-200 dark:border-dark-border pt-3">
-            <label className="label">Hide amounts</label>
+            <label className="label">{t('settings.language')}</label>
+            <div className="flex gap-2">
+              {languages.map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => setLanguage(lang.code)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                    language === lang.code
+                      ? 'border-cream-900 bg-cream-900/5 dark:border-cream-100 dark:bg-cream-100/5'
+                      : 'border-cream-300 hover:border-cream-400 dark:border-dark-border'
+                  }`}
+                >
+                  <span className="text-lg">{lang.flag}</span>
+                  {lang.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-cream-200 dark:border-dark-border pt-3">
+            <label className="label">{t('settings.hideAmounts')}</label>
             <select
               className="input"
               value={hideAmounts}
               onChange={(e) => updateHideAmounts(e.target.value)}
             >
               {HIDE_AMOUNTS_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
+                <option key={o.id} value={o.id}>{t('hideOptions.' + o.id)}</option>
               ))}
             </select>
-            <p className="text-xs text-cream-400 mt-1">Mask financial amounts for privacy when sharing your screen</p>
+            <p className="text-xs text-cream-400 mt-1">{t('settings.hideAmountsDesc')}</p>
           </div>
         </div>
       </div>
 
       {/* Profile */}
       <div className="card">
-        <h3 className="section-title">Profile</h3>
+        <h3 className="section-title">{t('settings.profile')}</h3>
         <div className="space-y-3">
           <div>
-            <label className="label">Display name</label>
+            <label className="label">{t('settings.displayName')}</label>
             <input className="input" value={userName} onChange={(e) => setUserName(e.target.value)} autoComplete="name" />
           </div>
           <div>
-            <label className="label">Default currency</label>
+            <label className="label">{t('settings.defaultCurrency')}</label>
             <select className="input" value={defaultCurrency} onChange={(e) => setDefaultCurrency(e.target.value)}>
-              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}
+              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} — {t('currencies.' + c.code) || c.name}</option>)}
             </select>
           </div>
         </div>
@@ -277,13 +299,13 @@ export default function SettingsPage() {
 
       {/* AI Provider */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><Bot size={14} /> AI Configuration</h3>
+        <h3 className="section-title flex items-center gap-2"><Bot size={14} /> {t('settings.aiConfig')}</h3>
         <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
-          Powers receipt scanning and natural language expense input.
+          {t('settings.aiConfigDesc')}
         </p>
         <div className="space-y-3">
           <div>
-            <label className="label">AI Provider</label>
+            <label className="label">{t('settings.aiProvider')}</label>
             <select
               className="input"
               value={aiProvider}
@@ -300,7 +322,7 @@ export default function SettingsPage() {
             </select>
           </div>
           <div>
-            <label className="label">Model</label>
+            <label className="label">{t('settings.aiModel')}</label>
             <select className="input" value={aiModel || currentProvider.defaultModel} onChange={(e) => setAiModel(e.target.value)}>
               {currentProvider.models.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
@@ -308,7 +330,7 @@ export default function SettingsPage() {
             </select>
           </div>
           <div>
-            <label className="label">{currentProvider.name} API Key</label>
+            <label className="label">{currentProvider.name} {t('settings.apiKey')}</label>
             <input
               type="password"
               className="input"
@@ -322,9 +344,9 @@ export default function SettingsPage() {
               placeholder={aiProvider === 'anthropic' ? 'sk-ant-...' : aiProvider === 'openai' ? 'sk-...' : 'sk-or-...'}
             />
             <p className="text-xs text-cream-400 mt-1">
-              {aiProvider === 'anthropic' ? 'Get your key from console.anthropic.com' :
-               aiProvider === 'openai' ? 'Get your key from platform.openai.com' :
-               'Get your key from openrouter.ai/keys — access many models with one key'}
+              {aiProvider === 'anthropic' ? t('settings.getKeyFrom', { provider: 'console.anthropic.com' }) :
+               aiProvider === 'openai' ? t('settings.getKeyFrom', { provider: 'platform.openai.com' }) :
+               t('settings.openrouterDesc')}
             </p>
             {keySyncStatus && (
               <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
@@ -332,20 +354,20 @@ export default function SettingsPage() {
                 keySyncStatus === 'syncing' ? 'text-accent-500' :
                 'text-cream-500'
               }`}>
-                {keySyncStatus === 'synced' && <><CheckCircle2 size={12} /> Encrypted &amp; synced to your account</>}
-                {keySyncStatus === 'syncing' && <><CloudUpload size={12} className="animate-pulse" /> Syncing encrypted key...</>}
-                {keySyncStatus === 'local' && <><Key size={12} /> Local only — log in with backend to sync across devices</>}
+                {keySyncStatus === 'synced' && <><CheckCircle2 size={12} /> {t('settings.keyEncrypted')}</>}
+                {keySyncStatus === 'syncing' && <><CloudUpload size={12} className="animate-pulse" /> {t('settings.keySyncing')}</>}
+                {keySyncStatus === 'local' && <><Key size={12} /> {t('settings.keyLocal')}</>}
               </div>
             )}
             {user?.aiProxyAllowed && !anthropicKey && !openaiKey && !openrouterKey && (
               <div className="flex items-center gap-1.5 mt-1.5 text-xs text-accent-500">
-                <CheckCircle2 size={12} /> Using shared AI key from admin — no personal key needed
+                <CheckCircle2 size={12} /> {t('settings.sharedKey')}
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={testAiKey} disabled={aiTesting} className="btn-secondary text-xs">
-              {aiTesting ? 'Testing...' : 'Test API key'}
+              {aiTesting ? t('settings.testing') : t('settings.testApiKey')}
             </button>
             {aiTestResult && (
               <span className={`text-xs ${aiTestResult.ok ? 'text-success' : 'text-danger'}`}>{aiTestResult.msg}</span>
@@ -356,36 +378,36 @@ export default function SettingsPage() {
 
       {/* Backend API Config */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><Key size={14} /> Backend API</h3>
+        <h3 className="section-title flex items-center gap-2"><Key size={14} /> {t('settings.backendApi')}</h3>
         <div className="space-y-3">
           <div>
-            <label className="label">Backend API URL (optional)</label>
-            <input className="input" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} autoComplete="off" placeholder="https://your-worker.workers.dev" />
-            <p className="text-xs text-cream-400 mt-1">Leave blank for standalone mode</p>
+            <label className="label">{t('settings.backendUrl')}</label>
+            <input className="input" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} autoComplete="off" placeholder={t('settings.backendUrlPlaceholder')} />
+            <p className="text-xs text-cream-400 mt-1">{t('settings.leaveBlank')}</p>
           </div>
           {apiUrl && (
             <div>
-              <label className="label">API Key</label>
-              <input type="password" className="input" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="off" placeholder="Bearer token" />
+              <label className="label">{t('settings.apiKey')}</label>
+              <input type="password" className="input" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="off" placeholder={t('settings.bearerToken')} />
             </div>
           )}
           <div className="flex gap-2 flex-wrap">
             {apiUrl && (
-              <button onClick={testConnection} className="btn-secondary text-xs">Test connection</button>
+              <button onClick={testConnection} className="btn-secondary text-xs">{t('settings.testConnection')}</button>
             )}
             {apiUrl && (
               <button
                 onClick={async () => {
                   try {
                     await syncNow();
-                    toast.success('Sync completed');
+                    toast.success(t('settings.syncCompleted'));
                   } catch {
-                    toast.error('Sync failed');
+                    toast.error(t('settings.syncFailed'));
                   }
                 }}
                 className="btn-secondary text-xs"
               >
-                Sync now
+                {t('settings.syncNow')}
               </button>
             )}
             {testResult && (
@@ -394,7 +416,7 @@ export default function SettingsPage() {
           </div>
           {apiUrl && (
             <p className="text-xs text-cream-400 mt-1">
-              Data syncs automatically every 60 seconds. AI keys are encrypted with your password before syncing — the server never sees them in plaintext.
+              {t('settings.dataSyncInfo')}
             </p>
           )}
         </div>
@@ -402,35 +424,35 @@ export default function SettingsPage() {
 
       {/* Data */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><Database size={14} /> Data Management</h3>
+        <h3 className="section-title flex items-center gap-2"><Database size={14} /> {t('settings.dataManagement')}</h3>
         <div className="space-y-3">
           <div className="flex gap-2">
             <button onClick={handleExportJSON} className="btn-secondary flex items-center gap-2 text-xs">
-              <Download size={14} /> Export JSON backup
+              <Download size={14} /> {t('settings.exportJson')}
             </button>
             <button onClick={() => fileRef.current?.click()} className="btn-secondary flex items-center gap-2 text-xs">
-              <Upload size={14} /> Import backup
+              <Upload size={14} /> {t('settings.importBackup')}
             </button>
             <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
           </div>
           <div className="border-t border-cream-200 dark:border-dark-border pt-3">
             {!showClear ? (
               <button onClick={() => setShowClear(true)} className="btn-danger text-xs flex items-center gap-2">
-                <Trash2 size={14} /> Clear all data
+                <Trash2 size={14} /> {t('settings.clearAllData')}
               </button>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/5 border border-danger/20">
                   <AlertTriangle size={16} className="text-danger mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-danger">This will permanently delete all your data.</p>
-                    <p className="text-xs text-cream-600 mt-1">Type <strong>DELETE MY DATA</strong> to confirm.</p>
+                    <p className="text-sm font-medium text-danger">{t('settings.clearWarning')}</p>
+                    <p className="text-xs text-cream-600 mt-1">{t('settings.clearConfirmText')}</p>
                   </div>
                 </div>
-                <input className="input" value={clearConfirm} onChange={(e) => setClearConfirm(e.target.value)} autoComplete="off" placeholder="Type DELETE MY DATA" />
+                <input className="input" value={clearConfirm} onChange={(e) => setClearConfirm(e.target.value)} autoComplete="off" placeholder={t('settings.clearConfirmPlaceholder')} />
                 <div className="flex gap-2">
-                  <button onClick={handleClearAll} className="btn-danger text-xs">Confirm delete</button>
-                  <button onClick={() => { setShowClear(false); setClearConfirm(''); }} className="btn-ghost text-xs">Cancel</button>
+                  <button onClick={handleClearAll} className="btn-danger text-xs">{t('settings.confirmDelete')}</button>
+                  <button onClick={() => { setShowClear(false); setClearConfirm(''); }} className="btn-ghost text-xs">{t('common.cancel')}</button>
                 </div>
               </div>
             )}
@@ -440,13 +462,13 @@ export default function SettingsPage() {
 
       {/* Telegram Bot Configuration */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><MessageSquare size={14} /> Telegram Bot</h3>
+        <h3 className="section-title flex items-center gap-2"><MessageSquare size={14} /> {t('settings.telegram')}</h3>
         <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
-          Connect a Telegram bot to add expenses by sending photos of receipts or text messages.
+          {t('settings.telegramDesc')}
         </p>
         <div className="space-y-3">
           <div>
-            <label className="label">Telegram Bot Token</label>
+            <label className="label">{t('settings.telegramBotToken')}</label>
             <input
               type="password"
               className="input"
@@ -455,21 +477,21 @@ export default function SettingsPage() {
               autoComplete="off"
               placeholder="123456789:ABCdefGhIjKlMnOpQrStUvWxYz"
             />
-            <p className="text-xs text-cream-400 mt-1">Get this from @BotFather on Telegram.</p>
+            <p className="text-xs text-cream-400 mt-1">{t('settings.telegramBotTokenHint')}</p>
           </div>
           <div>
-            <label className="label">Allowed Telegram Chat ID</label>
+            <label className="label">{t('settings.telegramChatId')}</label>
             <input
               className="input"
               value={telegramChatId}
               onChange={(e) => setTelegramChatId(e.target.value)}
               autoComplete="off"
-              placeholder="Your Telegram user/chat ID"
+              placeholder={t('settings.telegramChatIdPlaceholder')}
             />
-            <p className="text-xs text-cream-400 mt-1">Your Telegram user ID to restrict bot access. Send /start to @userinfobot to find it.</p>
+            <p className="text-xs text-cream-400 mt-1">{t('settings.telegramChatIdHint')}</p>
           </div>
           <div>
-            <label className="label">Webhook URL (auto-configured when API is deployed)</label>
+            <label className="label">{t('settings.webhookUrl')}</label>
             <input
               className="input"
               value={webhookUrl}
@@ -481,21 +503,21 @@ export default function SettingsPage() {
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                if (!telegramBotToken) { setTelegramTestResult({ ok: false, msg: 'No bot token' }); return; }
+                if (!telegramBotToken) { setTelegramTestResult({ ok: false, msg: t('settings.noBotToken') }); return; }
                 try {
                   const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/getMe`);
                   const data = await res.json();
                   setTelegramTestResult({
                     ok: data.ok,
-                    msg: data.ok ? `Connected to @${data.result.username}` : data.description || 'Failed',
+                    msg: data.ok ? t('settings.connectedToBot', { username: data.result.username }) : data.description || t('settings.failed'),
                   });
                 } catch {
-                  setTelegramTestResult({ ok: false, msg: 'Connection failed' });
+                  setTelegramTestResult({ ok: false, msg: t('settings.telegramConnectionFailed') });
                 }
               }}
               className="btn-secondary text-xs"
             >
-              Test bot token
+              {t('settings.testBotToken')}
             </button>
             {telegramBotToken && webhookUrl && (
               <button
@@ -505,15 +527,15 @@ export default function SettingsPage() {
                     const data = await res.json();
                     setTelegramTestResult({
                       ok: data.ok,
-                      msg: data.ok ? 'Webhook set!' : data.description || 'Failed',
+                      msg: data.ok ? t('settings.webhookSet') : data.description || t('settings.failed'),
                     });
                   } catch {
-                    setTelegramTestResult({ ok: false, msg: 'Failed to set webhook' });
+                    setTelegramTestResult({ ok: false, msg: t('settings.webhookFailed') });
                   }
                 }}
                 className="btn-secondary text-xs"
               >
-                Set webhook
+                {t('settings.setWebhook')}
               </button>
             )}
             {telegramTestResult && (
@@ -524,29 +546,29 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-cream-200 dark:border-dark-border">
-          <p className="text-xs font-medium text-cream-600 dark:text-cream-400 mb-2">Setup guide:</p>
+          <p className="text-xs font-medium text-cream-600 dark:text-cream-400 mb-2">{t('settings.telegramSetupGuide')}</p>
           <ol className="text-xs text-cream-500 space-y-1.5 list-decimal list-inside">
-            <li>Open Telegram and search for @BotFather</li>
-            <li>Send /newbot and follow the prompts to create your bot</li>
-            <li>Copy the bot token and paste it above</li>
-            <li>Find your Chat ID via @userinfobot and paste it above</li>
-            <li>Deploy the BudgetPilot API (Cloudflare Worker)</li>
-            <li>The webhook URL will be auto-configured, or set it manually</li>
-            <li>Send a receipt photo or text like "45 lei Bolt taxi" to your bot!</li>
+            <li>{t('settings.telegramStep1')}</li>
+            <li>{t('settings.telegramStep2')}</li>
+            <li>{t('settings.telegramStep3')}</li>
+            <li>{t('settings.telegramStep4')}</li>
+            <li>{t('settings.telegramStep5')}</li>
+            <li>{t('settings.telegramStep6')}</li>
+            <li>{t('settings.telegramStep7')}</li>
           </ol>
         </div>
       </div>
 
       {/* Exchange Rates */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><DollarSign size={14} /> Exchange Rates</h3>
+        <h3 className="section-title flex items-center gap-2"><DollarSign size={14} /> {t('settings.exchangeRates')}</h3>
         <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
-          Auto-fetched rates for multi-currency conversion. Override any rate manually.
+          {t('settings.exchangeRatesDesc')}
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-xs text-cream-500">
-              {ratesUpdatedAt ? `Last updated: ${new Date(ratesUpdatedAt).toLocaleString()}` : 'Using default rates'}
+              {ratesUpdatedAt ? t('settings.lastUpdated', { date: new Date(ratesUpdatedAt).toLocaleString() }) : t('settings.usingDefaultRates')}
             </div>
             <button
               onClick={async () => {
@@ -557,9 +579,9 @@ export default function SettingsPage() {
                   setExchangeRates({ ...rates, ...overrides });
                   const updAt = await getRatesUpdatedAt();
                   setRatesUpdatedAt(updAt);
-                  toast.success('Exchange rates updated');
+                  toast.success(t('settings.ratesUpdated'));
                 } catch {
-                  toast.error('Failed to fetch rates — check connection');
+                  toast.error(t('settings.ratesFailed'));
                 } finally {
                   setRatesFetching(false);
                 }
@@ -568,7 +590,7 @@ export default function SettingsPage() {
               className="btn-secondary text-xs flex items-center gap-1.5"
             >
               <RefreshCw size={12} className={ratesFetching ? 'animate-spin' : ''} />
-              {ratesFetching ? 'Fetching...' : 'Refresh rates'}
+              {ratesFetching ? t('settings.fetching') : t('settings.refreshRates')}
             </button>
           </div>
 
@@ -606,10 +628,10 @@ export default function SettingsPage() {
                         }
                       }
                     }}
-                    placeholder="Override"
+                    placeholder={t('settings.override')}
                   />
                   {hasOverride && (
-                    <span className="text-[10px] text-warning font-medium">manual</span>
+                    <span className="text-[10px] text-warning font-medium">{t('settings.manual')}</span>
                   )}
                 </div>
               );
@@ -623,11 +645,11 @@ export default function SettingsPage() {
                 setRateOverrides({});
                 const rates = await getRates(defaultCurrency);
                 setExchangeRates(rates);
-                toast.success('Overrides cleared');
+                toast.success(t('settings.overridesCleared'));
               }}
               className="btn-ghost text-xs text-warning"
             >
-              Clear all manual overrides
+              {t('settings.clearOverrides')}
             </button>
           )}
         </div>
@@ -635,22 +657,22 @@ export default function SettingsPage() {
 
       {/* Danger Zone — Delete Account */}
       <div className="card border border-danger/20">
-        <h3 className="section-title flex items-center gap-2 text-danger"><UserX size={14} /> Danger Zone</h3>
+        <h3 className="section-title flex items-center gap-2 text-danger"><UserX size={14} /> {t('settings.dangerZone')}</h3>
         {!showDeleteAccount ? (
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Delete your account</p>
-              <p className="text-xs text-cream-500">Permanently remove your account and all associated data.</p>
+              <p className="text-sm font-medium">{t('settings.deleteYourAccount')}</p>
+              <p className="text-xs text-cream-500">{t('settings.deleteAccountDesc')}</p>
             </div>
-            <button onClick={() => setShowDeleteAccount(true)} className="btn-danger text-xs">Delete account</button>
+            <button onClick={() => setShowDeleteAccount(true)} className="btn-danger text-xs">{t('settings.deleteAccount')}</button>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/5 border border-danger/20">
               <AlertTriangle size={16} className="text-danger mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-danger">This action cannot be undone.</p>
-                <p className="text-xs text-cream-600 mt-1">All your transactions, budgets, goals, accounts, and other data will be permanently deleted. Type <strong>DELETE MY ACCOUNT</strong> to confirm.</p>
+                <p className="text-sm font-medium text-danger">{t('settings.deleteAccountWarning')}</p>
+                <p className="text-xs text-cream-600 mt-1">{t('settings.deleteAccountDetails')}</p>
               </div>
             </div>
             <input
@@ -658,13 +680,13 @@ export default function SettingsPage() {
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
               autoComplete="off"
-              placeholder="Type DELETE MY ACCOUNT"
+              placeholder={t('settings.deleteAccountPlaceholder')}
             />
             <div className="flex gap-2">
               <button
                 onClick={async () => {
                   if (deleteConfirm !== 'DELETE MY ACCOUNT') {
-                    toast.error('Type "DELETE MY ACCOUNT" to confirm');
+                    toast.error(t('settings.typeDeleteMyAccount'));
                     return;
                   }
                   try {
@@ -676,15 +698,15 @@ export default function SettingsPage() {
                 }}
                 className="btn-danger text-xs"
               >
-                Permanently delete my account
+                {t('settings.permanentlyDelete')}
               </button>
-              <button onClick={() => { setShowDeleteAccount(false); setDeleteConfirm(''); }} className="btn-ghost text-xs">Cancel</button>
+              <button onClick={() => { setShowDeleteAccount(false); setDeleteConfirm(''); }} className="btn-ghost text-xs">{t('common.cancel')}</button>
             </div>
           </div>
         )}
       </div>
 
-      <button onClick={saveSettings} className="btn-primary w-full">Save settings</button>
+      <button onClick={saveSettings} className="btn-primary w-full">{t('settings.saveSettings')}</button>
 
       {/* Feedback link */}
       <button
@@ -692,7 +714,7 @@ export default function SettingsPage() {
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-info hover:bg-info/8 transition-colors border border-info/20"
       >
         <MessageSquare size={16} />
-        Report bug or suggest a feature
+        {t('settings.reportBug')}
       </button>
 
       {/* Sign out — always visible, especially important on mobile where sidebar is hidden */}
@@ -701,7 +723,7 @@ export default function SettingsPage() {
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-danger hover:bg-danger/8 transition-colors"
       >
         <LogOut size={16} />
-        Sign out
+        {t('settings.signOut')}
       </button>
     </div>
   );

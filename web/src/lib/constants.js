@@ -240,6 +240,7 @@ export const DEFAULT_SETTINGS = {
   aiProvider: 'anthropic',
   aiModel: 'claude-sonnet-4-20250514',
   hideAmounts: 'none',
+  language: 'ro',
   userName: '',
   budgetAlerts: { 50: false, 80: true, 100: true },
   weeklyDigest: false,

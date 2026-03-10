@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useFamily } from '../contexts/FamilyContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { ChevronDown, User, Users } from 'lucide-react';
 
 export default function FamilyPicker({ collapsed }) {
+  const { t } = useTranslation();
   const { myFamilies, activeFamily, switchFamily, isFamilyMode } = useFamily();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -42,7 +44,7 @@ export default function FamilyPicker({ collapsed }) {
             <User size={16} className="shrink-0" />
             {!collapsed && (
               <>
-                <span className="truncate">Personal</span>
+                <span className="truncate">{t('family.personal')}</span>
                 <ChevronDown size={12} className="ml-auto shrink-0" />
               </>
             )}
@@ -60,12 +62,12 @@ export default function FamilyPicker({ collapsed }) {
             }`}
           >
             <User size={14} className="shrink-0 text-cream-500" />
-            <span>Personal</span>
+            <span>{t('family.personal')}</span>
           </button>
 
           {myFamilies.length > 0 && (
             <div className="border-t border-cream-100 dark:border-dark-border">
-              <p className="px-3 py-1 text-[10px] uppercase tracking-wider text-cream-400 font-semibold">Families</p>
+              <p className="px-3 py-1 text-[10px] uppercase tracking-wider text-cream-400 font-semibold">{t('family.families')}</p>
               {myFamilies.map((f) => (
                 <button
                   key={f.id}

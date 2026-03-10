@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
@@ -11,6 +12,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { forecastCashFlow } from '../lib/forecasting';
 
 export default function CashFlow() {
+  const { t } = useTranslation();
   const { user, effectiveUserId } = useAuth();
   const [allTx, setAllTx] = useState([]);
   const [recurringItems, setRecurring] = useState([]);
@@ -81,7 +83,7 @@ export default function CashFlow() {
   // Income sources
   const incomeSources = useMemo(() => {
     const income = currentMonthTx.filter((t) => t.type === 'income');
-    const grouped = groupBy(income, (t) => t.merchant || t.description || 'Other');
+    const grouped = groupBy(income, (tx) => tx.merchant || tx.description || t('common.other'));
     return Object.entries(grouped)
       .map(([source, txs]) => ({ source, total: sumBy(txs, 'amount') }))
       .sort((a, b) => b.total - a.total);
@@ -109,23 +111,23 @@ export default function CashFlow() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">Cash Flow</h1>
+        <h1 className="page-title mb-0">{t('cashflow.title')}</h1>
         <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
           {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'forecast', label: 'Forecast', icon: Zap },
-          ].map(t => (
+            { id: 'overview', label: t('cashflow.overview') },
+            { id: 'forecast', label: t('cashflow.forecast'), icon: Zap },
+          ].map(tb => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tb.id}
+              onClick={() => setTab(tb.id)}
               className={`px-4 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                tab === t.id
+                tab === tb.id
                   ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                   : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
               }`}
             >
-              {t.icon && <t.icon size={12} />}
-              {t.label}
+              {tb.icon && <tb.icon size={12} />}
+              {tb.label}
             </button>
           ))}
         </div>
@@ -133,43 +135,43 @@ export default function CashFlow() {
 
       {tab === 'overview' && <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard label="Monthly Income" value={formatCurrency(monthIncome, currency)} icon={TrendingUp} />
-        <StatCard label="Monthly Expenses" value={formatCurrency(monthExpenses, currency)} icon={TrendingDown} />
-        <StatCard label="Net Cash Flow" value={formatCurrency(netCashFlow, currency)} icon={DollarSign} />
+        <StatCard label={t('cashflow.monthlyIncome')} value={formatCurrency(monthIncome, currency)} icon={TrendingUp} />
+        <StatCard label={t('cashflow.monthlyExpenses')} value={formatCurrency(monthExpenses, currency)} icon={TrendingDown} />
+        <StatCard label={t('cashflow.netCashFlow')} value={formatCurrency(netCashFlow, currency)} icon={DollarSign} />
       </div>
 
       <div className="card">
-        <h3 className="section-title">Savings rate</h3>
+        <h3 className="section-title">{t('cashflow.savingsRate')}</h3>
         <div className="flex items-end gap-3">
           <span className={`text-4xl font-heading font-bold ${savingsRate >= 0 ? 'text-success' : 'text-danger'}`}>{savingsRate}%</span>
-          <span className="text-sm text-cream-500 mb-1">of income saved</span>
+          <span className="text-sm text-cream-500 mb-1">{t('cashflow.ofIncomeSaved')}</span>
         </div>
       </div>
 
       {/* 6-month chart */}
       <div className="card">
-        <h3 className="section-title">Income vs Expenses (6 months)</h3>
+        <h3 className="section-title">{t('cashflow.incomeVsExpenses6m')}</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Bar dataKey="income" fill="#059669" radius={[4, 4, 0, 0]} name="Income" />
-            <Bar dataKey="expenses" fill="#e11d48" radius={[4, 4, 0, 0]} name="Expenses" />
+            <Bar dataKey="income" fill="#059669" radius={[4, 4, 0, 0]} name={t('cashflow.income')} />
+            <Bar dataKey="expenses" fill="#e11d48" radius={[4, 4, 0, 0]} name={t('cashflow.expenses')} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Net cash flow trend */}
       <div className="card">
-        <h3 className="section-title">Net cash flow trend</h3>
+        <h3 className="section-title">{t('cashflow.netCashFlowTrend')}</h3>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData}>
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Line type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} name="Net" />
+            <Line type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} name={t('cashflow.net')} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -177,7 +179,7 @@ export default function CashFlow() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Income breakdown */}
         <div className="card">
-          <h3 className="section-title">Income sources</h3>
+          <h3 className="section-title">{t('cashflow.incomeSources')}</h3>
           {incomeSources.length > 0 ? (
             <div className="space-y-2">
               {incomeSources.map((s) => (
@@ -187,30 +189,30 @@ export default function CashFlow() {
                 </div>
               ))}
             </div>
-          ) : <p className="text-sm text-cream-500">No income this month</p>}
+          ) : <p className="text-sm text-cream-500">{t('cashflow.noIncomeThisMonth')}</p>}
         </div>
 
         {/* Expense breakdown */}
         <div className="card">
-          <h3 className="section-title">Expenses by category</h3>
+          <h3 className="section-title">{t('cashflow.expensesByCategory')}</h3>
           {expenseByCategory.length > 0 ? (
             <div className="space-y-2">
               {expenseByCategory.slice(0, 8).map((c) => (
                 <div key={c.id} className="flex justify-between text-sm">
-                  <span>{c.icon} {c.name}</span>
+                  <span>{c.icon} {t(`categories.${c.id}`) || c.name}</span>
                   <span className="money font-medium">{formatCurrency(c.total, currency)}</span>
                 </div>
               ))}
             </div>
-          ) : <p className="text-sm text-cream-500">No expenses this month</p>}
+          ) : <p className="text-sm text-cream-500">{t('cashflow.noExpensesThisMonth')}</p>}
         </div>
       </div>
 
       {/* Projection */}
       <div className="card">
-        <h3 className="section-title">Next month projection</h3>
+        <h3 className="section-title">{t('cashflow.nextMonthProjection')}</h3>
         <p className="text-sm text-cream-600 dark:text-cream-400">
-          Based on recurring items: est. income {formatCurrency(recurringIncome, currency)}, est. expenses {formatCurrency(recurringExpenses, currency)}, est. net {formatCurrency(recurringIncome - recurringExpenses, currency)}.
+          {t('cashflow.projectionDesc', { income: formatCurrency(recurringIncome, currency), expenses: formatCurrency(recurringExpenses, currency), net: formatCurrency(recurringIncome - recurringExpenses, currency) })}
         </p>
       </div>
       </>}
@@ -220,17 +222,17 @@ export default function CashFlow() {
         {/* Forecast summary cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="card text-center">
-            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Current Balance</p>
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">{t('cashflow.currentBalance')}</p>
             <p className="text-lg font-heading font-bold money">{formatCurrency(forecast.summary.startingBalance, currency)}</p>
           </div>
           <div className="card text-center">
-            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Projected End</p>
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">{t('cashflow.projectedEnd')}</p>
             <p className={`text-lg font-heading font-bold money ${forecast.summary.endBalance >= 0 ? 'text-success' : 'text-danger'}`}>
               {formatCurrency(forecast.summary.endBalance, currency)}
             </p>
           </div>
           <div className="card text-center">
-            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Lowest Point</p>
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">{t('cashflow.lowestPoint')}</p>
             <p className={`text-lg font-heading font-bold money ${forecast.summary.lowestBalance >= 0 ? '' : 'text-danger'}`}>
               {formatCurrency(forecast.summary.lowestBalance, currency)}
             </p>
@@ -239,7 +241,7 @@ export default function CashFlow() {
             )}
           </div>
           <div className="card text-center">
-            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Avg Daily Spend</p>
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">{t('cashflow.avgDailySpend')}</p>
             <p className="text-lg font-heading font-bold money">{formatCurrency(forecast.summary.avgDailySpend, currency)}</p>
           </div>
         </div>
@@ -249,10 +251,10 @@ export default function CashFlow() {
           <div className="card border-danger/30 bg-danger/5">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle size={16} className="text-danger" />
-              <h3 className="text-sm font-semibold text-danger">Danger Zones</h3>
+              <h3 className="text-sm font-semibold text-danger">{t('cashflow.dangerZones')}</h3>
             </div>
             <p className="text-xs text-cream-600 dark:text-cream-400 mb-2">
-              Your projected balance goes negative in {forecast.dangerZones.length} period{forecast.dangerZones.length > 1 ? 's' : ''}:
+              {t('cashflow.balanceGoesNegative', { count: forecast.dangerZones.length })}
             </p>
             <div className="space-y-1">
               {forecast.dangerZones.map((z, i) => (
@@ -267,7 +269,7 @@ export default function CashFlow() {
 
         {/* Forecast period selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-cream-500">Forecast period:</span>
+          <span className="text-xs text-cream-500">{t('cashflow.forecastPeriod')}</span>
           {[30, 60, 90, 180].map(d => (
             <button
               key={d}
@@ -285,7 +287,7 @@ export default function CashFlow() {
 
         {/* Forecast chart */}
         <div className="card">
-          <h3 className="section-title">Projected balance ({forecastDays} days)</h3>
+          <h3 className="section-title">{t('cashflow.projectedBalance', { days: forecastDays })}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={forecastChartData}>
               <defs>
@@ -302,7 +304,7 @@ export default function CashFlow() {
                 formatter={(v) => formatCurrency(v, currency)}
               />
               <ReferenceLine y={0} stroke="#e11d48" strokeDasharray="4 4" />
-              <Area type="monotone" dataKey="balance" stroke="#6366f1" fill="url(#balanceGrad)" strokeWidth={2} name="Balance" />
+              <Area type="monotone" dataKey="balance" stroke="#6366f1" fill="url(#balanceGrad)" strokeWidth={2} name={t('cashflow.balance')} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -310,7 +312,7 @@ export default function CashFlow() {
         {/* Upcoming recurring events */}
         {forecast.projections.some(p => p.events.length > 0) && (
           <div className="card">
-            <h3 className="section-title">Upcoming bills & income</h3>
+            <h3 className="section-title">{t('cashflow.upcomingBillsIncome')}</h3>
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {forecast.projections
                 .filter(p => p.events.length > 0)

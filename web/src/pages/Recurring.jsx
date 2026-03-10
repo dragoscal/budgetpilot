@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { recurring as recurringApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { CATEGORIES, CURRENCIES, RECURRING_FREQUENCIES } from '../lib/constants';
 import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
@@ -16,6 +17,7 @@ import { SkeletonPage } from '../components/LoadingSkeleton';
 export default function Recurring() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -43,7 +45,7 @@ export default function Recurring() {
       setSuggestions(patterns);
       getCachedRates().then(setRates).catch(() => {});
     } catch (err) {
-      toast.error('Failed to load');
+      toast.error(t('recurring.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function Recurring() {
   );
 
   const handleSave = async () => {
-    if (!form.name || !form.amount) { toast.error('Name and amount required'); return; }
+    if (!form.name || !form.amount) { toast.error(t('recurring.nameAndAmountRequired')); return; }
     try {
       const data = {
         ...form,
@@ -82,10 +84,10 @@ export default function Recurring() {
       };
       if (editItem) {
         await recurringApi.update(editItem.id, data);
-        toast.success('Updated');
+        toast.success(t('recurring.updated'));
       } else {
         await recurringApi.create({ id: generateId(), ...data, createdAt: new Date().toISOString() });
-        toast.success('Added');
+        toast.success(t('recurring.added'));
       }
       setShowForm(false);
       setEditItem(null);
@@ -99,17 +101,17 @@ export default function Recurring() {
       await recurringApi.update(item.id, { active: item.active === false ? true : false });
       loadItems();
     } catch (err) {
-      toast.error(err.message || 'Failed to toggle');
+      toast.error(err.message || t('recurring.failedToggle'));
     }
   };
 
   const handleDelete = async (item) => {
     try {
       await recurringApi.remove(item.id);
-      toast.success('Deleted');
+      toast.success(t('recurring.deletedMsg'));
       loadItems();
     } catch (err) {
-      toast.error(err.message || 'Failed to delete');
+      toast.error(err.message || t('recurring.failedDelete'));
     }
   };
 
@@ -143,7 +145,7 @@ export default function Recurring() {
         autoDetected: true,
         createdAt: new Date().toISOString(),
       });
-      toast.success(`Added "${suggestion.merchant}" as recurring`);
+      toast.success(t('recurring.addedAsRecurring', { name: suggestion.merchant }));
       setDismissedSuggestions((prev) => new Set([...prev, suggestion.merchant.toLowerCase()]));
       loadItems();
     } catch (err) { toast.error(err.message); }
@@ -164,24 +166,24 @@ export default function Recurring() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">Recurring & Subscriptions</h1>
+        <h1 className="page-title mb-0">{t('recurring.recurringAndSubscriptions')}</h1>
         <button onClick={openNewForm} className="btn-primary text-xs flex items-center gap-1">
-          <Plus size={14} /> Add
+          <Plus size={14} /> {t('common.add')}
         </button>
       </div>
 
-      {/* Summary — frequency-aware */}
+      {/* Summary -- frequency-aware */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">Active</p>
+          <p className="text-xs text-cream-500 mb-1">{t('recurring.active')}</p>
           <p className="text-xl font-heading font-bold">{activeItems.length}</p>
         </div>
         <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">Monthly</p>
+          <p className="text-xs text-cream-500 mb-1">{t('common.monthly')}</p>
           <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(monthlyTotal * 100) / 100, currency)}</p>
         </div>
         <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">Annual</p>
+          <p className="text-xs text-cream-500 mb-1">{t('common.yearly')}</p>
           <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(annualTotal * 100) / 100, currency)}</p>
         </div>
       </div>
@@ -191,10 +193,10 @@ export default function Recurring() {
         <div className="card border-info/30 bg-info-light/30">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={16} className="text-info" />
-            <h3 className="text-sm font-semibold">Detected recurring payments</h3>
+            <h3 className="text-sm font-semibold">{t('recurring.detectedRecurring')}</h3>
           </div>
           <p className="text-xs text-cream-600 dark:text-cream-400 mb-3">
-            We noticed these payments repeat. Add them to track automatically.
+            {t('recurring.detectedDesc')}
           </p>
           <div className="space-y-2">
             {activeSuggestions.map((s, i) => {
@@ -206,15 +208,15 @@ export default function Recurring() {
                     <div>
                       <p className="text-sm font-medium">{s.merchant}</p>
                       <p className="text-xs text-cream-500">
-                        ~{formatCurrency(s.amount, s.currency)} · Day {s.billingDay} · {s.consecutiveMonths} months in a row
+                        ~{formatCurrency(s.amount, s.currency)} · {t('recurring.dayBilling', { day: s.billingDay })} · {t('recurring.monthsInRow', { count: s.consecutiveMonths })}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => acceptSuggestion(s)} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors" title="Add as recurring">
+                    <button onClick={() => acceptSuggestion(s)} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors" title={t('recurring.addAsRecurring')}>
                       <Check size={14} />
                     </button>
-                    <button onClick={() => dismissSuggestion(s)} className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors" title="Dismiss">
+                    <button onClick={() => dismissSuggestion(s)} className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors" title={t('recurring.dismiss')}>
                       <X size={14} />
                     </button>
                   </div>
@@ -238,7 +240,7 @@ export default function Recurring() {
           )}
           {pausedItems.length > 0 && (
             <div>
-              <h3 className="section-title">Paused</h3>
+              <h3 className="section-title">{t('recurring.paused')}</h3>
               <div className="card p-0">
                 <div className="divide-y divide-cream-100 dark:divide-dark-border">
                   {pausedItems.map((item) => <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} />)}
@@ -248,7 +250,7 @@ export default function Recurring() {
           )}
         </>
       ) : !loading && activeSuggestions.length === 0 ? (
-        <EmptyState icon={RotateCcw} title="No recurring items" description="Track subscriptions and recurring bills" action="Add recurring" onAction={openNewForm} />
+        <EmptyState icon={RotateCcw} title={t('recurring.noRecurringItems')} description={t('recurring.noRecurringItemsDesc')} action={t('recurring.addRecurring')} onAction={openNewForm} />
       ) : null}
 
       {/* Subscription Audit */}
@@ -257,7 +259,7 @@ export default function Recurring() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Search size={14} className="text-accent-500" />
-              <h3 className="section-title mb-0">Subscription Audit</h3>
+              <h3 className="section-title mb-0">{t('recurring.subscriptionAudit')}</h3>
             </div>
             <button
               onClick={async () => {
@@ -267,14 +269,14 @@ export default function Recurring() {
                   const result = await auditSubscriptions();
                   setAudit(result);
                   setShowAudit(true);
-                } catch { toast.error('Audit failed'); }
+                } catch { toast.error(t('recurring.auditFailed')); }
                 finally { setAuditLoading(false); }
               }}
               className="btn-secondary text-xs flex items-center gap-1.5"
               disabled={auditLoading}
             >
               <Search size={12} />
-              {auditLoading ? 'Analyzing...' : showAudit ? 'Hide audit' : 'Run audit'}
+              {auditLoading ? t('recurring.analyzing') : showAudit ? t('recurring.hideAudit') : t('recurring.runAudit')}
             </button>
           </div>
 
@@ -283,15 +285,15 @@ export default function Recurring() {
               {/* Audit summary */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
-                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Monthly</p>
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">{t('recurring.auditMonthly')}</p>
                   <p className="text-sm font-heading font-bold money">{formatCurrency(audit.totalMonthly, currency)}</p>
                 </div>
                 <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
-                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Annual</p>
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">{t('recurring.auditAnnual')}</p>
                   <p className="text-sm font-heading font-bold money">{formatCurrency(audit.totalAnnual, currency)}</p>
                 </div>
                 <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
-                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Issues</p>
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">{t('recurring.auditIssues')}</p>
                   <p className={`text-sm font-heading font-bold ${audit.issueCount > 0 ? 'text-warning' : 'text-success'}`}>
                     {audit.issueCount}
                   </p>
@@ -310,8 +312,8 @@ export default function Recurring() {
                           <span className="text-sm font-medium">{item.name}</span>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium money">{formatCurrency(item.monthlyCost, item.currency)}/mo</p>
-                          <p className="text-[10px] text-cream-500">{formatCurrency(item.annualCost, item.currency)}/yr</p>
+                          <p className="text-sm font-medium money">{formatCurrency(item.monthlyCost, item.currency)}{t('recurring.perMo')}</p>
+                          <p className="text-[10px] text-cream-400">{formatCurrency(item.annualCost, item.currency)}{t('recurring.perYr')}</p>
                         </div>
                       </div>
                       {item.issues.length > 0 && (
@@ -338,36 +340,36 @@ export default function Recurring() {
       )}
 
       {/* Form Modal */}
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} title={editItem ? 'Edit recurring' : 'New recurring'}>
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} title={editItem ? t('recurring.editRecurringTitle') : t('recurring.newRecurring')}>
         <div className="space-y-4">
           <div>
-            <label className="label">Name</label>
-            <input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Netflix" />
+            <label className="label">{t('recurring.name')}</label>
+            <input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('recurring.namePlaceholderShort')} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Amount</label>
+              <label className="label">{t('recurring.amount')}</label>
               <input type="number" className="input" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" inputMode="decimal" />
             </div>
             <div>
-              <label className="label">Billing day</label>
+              <label className="label">{t('recurring.billingDay')}</label>
               <input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => setForm((f) => ({ ...f, billingDay: e.target.value }))} />
             </div>
           </div>
 
           <div>
-            <label className="label">Frequency</label>
+            <label className="label">{t('recurring.frequency')}</label>
             <select className="input" value={form.frequency} onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}>
               {RECURRING_FREQUENCIES.map((freq) => (
-                <option key={freq.id} value={freq.id}>{freq.label}</option>
+                <option key={freq.id} value={freq.id}>{t(`frequencies.${freq.id}`)}</option>
               ))}
             </select>
           </div>
 
           <div>
             <CategoryPicker
-              label="Category"
+              label={t('recurring.category')}
               value={form.category}
               onChange={(catId) => setForm((f) => ({ ...f, category: catId }))}
               exclude={['income', 'transfer']}
@@ -375,11 +377,11 @@ export default function Recurring() {
           </div>
 
           <div>
-            <label className="label">End date (optional)</label>
+            <label className="label">{t('recurring.endDate')}</label>
             <input type="date" className="input" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
           </div>
 
-          <button onClick={handleSave} className="btn-primary w-full">{editItem ? 'Update' : 'Add'}</button>
+          <button onClick={handleSave} className="btn-primary w-full">{editItem ? t('budgets.update') : t('common.add')}</button>
         </div>
       </Modal>
     </div>

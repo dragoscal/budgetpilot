@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { wishlistApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { CATEGORIES } from '../lib/constants';
 import { generateId, formatCurrency, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
@@ -9,17 +10,20 @@ import EmptyState from '../components/EmptyState';
 import { Star, Plus, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 
-const PRIORITIES = [
-  { value: 1, label: 'Low', color: 'text-cream-400' },
-  { value: 2, label: 'Medium-Low', color: 'text-cream-500' },
-  { value: 3, label: 'Medium', color: 'text-warning' },
-  { value: 4, label: 'High', color: 'text-warning' },
-  { value: 5, label: 'Must Have', color: 'text-danger' },
+const PRIORITIES_CONFIG = [
+  { value: 1, key: 'wishlist.priorityLow', color: 'text-cream-400' },
+  { value: 2, key: 'wishlist.priorityMediumLow', color: 'text-cream-500' },
+  { value: 3, key: 'wishlist.priorityMedium', color: 'text-warning' },
+  { value: 4, key: 'wishlist.priorityHigh', color: 'text-warning' },
+  { value: 5, key: 'wishlist.priorityMustHave', color: 'text-danger' },
 ];
 
 export default function Wishlist() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const PRIORITIES = PRIORITIES_CONFIG.map(p => ({ ...p, label: t(p.key) }));
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -33,12 +37,12 @@ export default function Wishlist() {
   const loadItems = async () => {
     setLoading(true);
     try { setItems(await wishlistApi.getAll({ userId: effectiveUserId })); }
-    catch (err) { toast.error('Failed to load'); }
+    catch (err) { toast.error(t('wishlist.failedLoad')); }
     finally { setLoading(false); }
   };
 
   const handleAdd = async () => {
-    if (!form.name) { toast.error('Name required'); return; }
+    if (!form.name) { toast.error(t('wishlist.nameRequired')); return; }
     try {
       await wishlistApi.create({
         id: generateId(), ...form,
@@ -46,32 +50,32 @@ export default function Wishlist() {
         priority: Number(form.priority),
         currency, status: 'wanted', userId: effectiveUserId, createdAt: new Date().toISOString(),
       });
-      toast.success('Added to wishlist');
+      toast.success(t('wishlist.saved'));
       setShowForm(false);
       setForm({ name: '', estimatedPrice: '', category: 'shopping', priority: '3', url: '', notes: '' });
       loadItems();
     } catch (err) {
-      toast.error(err.message || 'Failed to add');
+      toast.error(err.message || t('wishlist.failedAdd'));
     }
   };
 
   const handlePurchase = async (item) => {
     try {
       await wishlistApi.update(item.id, { status: 'purchased', purchasedDate: todayLocal() });
-      toast.success(`${item.name} marked as purchased`);
+      toast.success(t('wishlist.purchased'));
       loadItems();
     } catch (err) {
-      toast.error(err.message || 'Failed to mark as purchased');
+      toast.error(err.message || t('wishlist.failedPurchase'));
     }
   };
 
   const handleDelete = async (item) => {
     try {
       await wishlistApi.remove(item.id);
-      toast.success('Removed');
+      toast.success(t('wishlist.deleted'));
       loadItems();
     } catch (err) {
-      toast.error(err.message || 'Failed to remove');
+      toast.error(err.message || t('wishlist.failedRemove'));
     }
   };
 
@@ -83,8 +87,8 @@ export default function Wishlist() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">Wishlist</h1>
-        <button onClick={() => setShowForm(true)} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> Add item</button>
+        <h1 className="page-title mb-0">{t('wishlist.title')}</h1>
+        <button onClick={() => setShowForm(true)} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> {t('wishlist.add')}</button>
       </div>
 
       {wantedItems.length > 0 ? (
@@ -102,7 +106,7 @@ export default function Wishlist() {
                     {item.notes && <p className="text-xs text-cream-500 mt-0.5">{item.notes}</p>}
                     {item.url && (
                       <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-info hover:underline flex items-center gap-1 mt-0.5">
-                        Link <ExternalLink size={10} />
+                        {t('wishlist.link')} <ExternalLink size={10} />
                       </a>
                     )}
                   </div>
@@ -111,7 +115,7 @@ export default function Wishlist() {
                       <span className="text-lg font-heading font-bold money">{formatCurrency(item.estimatedPrice, currency)}</span>
                     )}
                     <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handlePurchase(item)} className="p-1.5 rounded-lg hover:bg-success/10 text-cream-400 hover:text-success" title="Mark purchased"><ShoppingCart size={14} /></button>
+                      <button onClick={() => handlePurchase(item)} className="p-1.5 rounded-lg hover:bg-success/10 text-cream-400 hover:text-success" title={t('wishlist.markPurchased')}><ShoppingCart size={14} /></button>
                       <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger"><Trash2 size={14} /></button>
                     </div>
                   </div>
@@ -121,12 +125,12 @@ export default function Wishlist() {
           })}
         </div>
       ) : (
-        <EmptyState icon={Star} title="Wishlist empty" description="Track things you want to buy — resist impulse purchases!" action="Add to wishlist" onAction={() => setShowForm(true)} />
+        <EmptyState icon={Star} title={t('wishlist.noItems')} description={t('wishlist.noItemsDesc')} action={t('wishlist.createFirst')} onAction={() => setShowForm(true)} />
       )}
 
       {purchasedItems.length > 0 && (
         <div>
-          <h3 className="section-title">Purchased</h3>
+          <h3 className="section-title">{t('wishlist.purchasedSection')}</h3>
           <div className="space-y-2">
             {purchasedItems.map((item) => (
               <div key={item.id} className="card opacity-60">
@@ -140,17 +144,17 @@ export default function Wishlist() {
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Add to wishlist">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t('wishlist.addToWishlist')}>
         <div className="space-y-4">
-          <div><label className="label">Item name</label><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus /></div>
+          <div><label className="label">{t('wishlist.itemName')}</label><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Estimated price</label><input type="number" className="input" value={form.estimatedPrice} onChange={(e) => setForm((f) => ({ ...f, estimatedPrice: e.target.value }))} inputMode="decimal" /></div>
-            <div><label className="label">Priority</label><select className="input" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>{PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+            <div><label className="label">{t('wishlist.estimatedPrice')}</label><input type="number" className="input" value={form.estimatedPrice} onChange={(e) => setForm((f) => ({ ...f, estimatedPrice: e.target.value }))} inputMode="decimal" /></div>
+            <div><label className="label">{t('wishlist.priority')}</label><select className="input" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>{PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
           </div>
-          <div><label className="label">Category</label><select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>{CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
-          <div><label className="label">Link (optional)</label><input className="input" value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://..." /></div>
-          <div><label className="label">Notes</label><input className="input" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
-          <button onClick={handleAdd} className="btn-primary w-full">Add to wishlist</button>
+          <div><label className="label">{t('common.category')}</label><select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>{CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>)}</select></div>
+          <div><label className="label">{t('wishlist.url')}</label><input className="input" value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://..." /></div>
+          <div><label className="label">{t('common.notes')}</label><input className="input" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
+          <button onClick={handleAdd} className="btn-primary w-full">{t('wishlist.addToWishlist')}</button>
         </div>
       </Modal>
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { generateInsights } from '../lib/smartFeatures';
@@ -12,6 +13,7 @@ import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
 
 export default function Analytics() {
+  const { t } = useTranslation();
   const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [allTx, setAllTx] = useState([]);
@@ -63,7 +65,7 @@ export default function Analytics() {
       const cat = getCategoryById(catId);
       const spent = sumBy(byCategory[catId] || [], 'amount');
       const budget = budgetsList.find((b) => b.category === catId);
-      return { name: cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color };
+      return { name: t(`categories.${catId}`) || cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color };
     }).filter((d) => d.spent > 0 || d.budget > 0).sort((a, b) => b.spent - a.spent).slice(0, 10);
   }, [expenses, budgetsList]);
 
@@ -79,7 +81,7 @@ export default function Analytics() {
 
   // Top merchants
   const topMerchants = useMemo(() => {
-    const grouped = groupBy(expenses, (t) => t.merchant || 'Unknown');
+    const grouped = groupBy(expenses, (tx) => tx.merchant || t('common.unknown'));
     return Object.entries(grouped)
       .map(([merchant, txs]) => ({ merchant, total: sumBy(txs, 'amount'), count: txs.length }))
       .sort((a, b) => b.total - a.total)
@@ -107,36 +109,36 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">Analytics</h1>
+        <h1 className="page-title mb-0">{t('analytics.title')}</h1>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 
       {/* Smart summary */}
       <div className="card">
-        <h3 className="section-title">Smart summary</h3>
+        <h3 className="section-title">{t('analytics.smartSummary')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-cream-500 text-xs">Transactions</p><p className="font-heading font-bold text-lg">{monthTx.length}</p></div>
-          <div><p className="text-cream-500 text-xs">Total spent</p><p className="font-heading font-bold text-lg money">{formatCurrency(totalSpent, currency)}</p></div>
-          <div><p className="text-cream-500 text-xs">Daily avg</p><p className="font-heading font-bold text-lg money">{formatCurrency(dailyAvg, currency)}</p></div>
-          <div><p className="text-cream-500 text-xs">Projected total</p><p className="font-heading font-bold text-lg money">{formatCurrency(projected, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.totalTransactions')}</p><p className="font-heading font-bold text-lg">{monthTx.length}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.totalSpent')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(totalSpent, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.dailyAvg')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(dailyAvg, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.projectedTotal')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(projected, currency)}</p></div>
         </div>
         {totalBudget > 0 && (
           <p className="text-xs text-cream-500 mt-3">
             {projected > totalBudget
-              ? `At this pace, you'll be ${formatCurrency(projected - totalBudget, currency)} over budget.`
-              : `On track — projected ${formatCurrency(totalBudget - projected, currency)} under budget.`}
+              ? t('analytics.overBudgetPace', { amount: formatCurrency(projected - totalBudget, currency) })
+              : t('analytics.underBudgetPace', { amount: formatCurrency(totalBudget - projected, currency) })}
           </p>
         )}
         {daysLeft > 0 && totalBudget > totalSpent && (
           <p className="text-xs text-success mt-1">
-            Safe to spend: {formatCurrency((totalBudget - totalSpent) / daysLeft, currency)}/day
+            {t('analytics.safeToSpend', { amount: formatCurrency((totalBudget - totalSpent) / daysLeft, currency) })}
           </p>
         )}
       </div>
 
       {/* Category vs budget */}
       <div className="card">
-        <h3 className="section-title">Category spending vs budget</h3>
+        <h3 className="section-title">{t('analytics.categoryVsBudget')}</h3>
         {categoryBudgetData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={categoryBudgetData} layout="vertical" margin={{ left: 60 }}>
@@ -144,16 +146,16 @@ export default function Analytics() {
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={60} />
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-              <Bar dataKey="spent" fill="#e11d48" radius={[0, 4, 4, 0]} name="Spent" />
-              <Bar dataKey="budget" fill="#e7e5e4" radius={[0, 4, 4, 0]} name="Budget" />
+              <Bar dataKey="spent" fill="#e11d48" radius={[0, 4, 4, 0]} name={t('analytics.spent')} />
+              <Bar dataKey="budget" fill="#e7e5e4" radius={[0, 4, 4, 0]} name={t('analytics.budget')} />
             </BarChart>
           </ResponsiveContainer>
-        ) : <p className="text-sm text-cream-500 text-center py-8">No data</p>}
+        ) : <p className="text-sm text-cream-500 text-center py-8">{t('analytics.noData')}</p>}
       </div>
 
       {/* Daily spending pattern */}
       <div className="card">
-        <h3 className="section-title">Daily spending</h3>
+        <h3 className="section-title">{t('analytics.dailySpending')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dailySpending}>
             <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} />
@@ -169,7 +171,7 @@ export default function Analytics() {
         <div className="card border-info/20 bg-info-light/20">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={16} className="text-info" />
-            <h3 className="section-title mb-0">Smart insights</h3>
+            <h3 className="section-title mb-0">{t('analytics.smartInsights')}</h3>
           </div>
           <div className="space-y-2">
             {insights.map((insight, i) => (
@@ -187,7 +189,7 @@ export default function Analytics() {
 
       {/* Top merchants */}
       <div className="card">
-        <h3 className="section-title">Top merchants</h3>
+        <h3 className="section-title">{t('analytics.topMerchants')}</h3>
         {topMerchants.length > 0 ? (
           <div className="space-y-2">
             {topMerchants.map((m, i) => (
@@ -201,7 +203,7 @@ export default function Analytics() {
               </div>
             ))}
           </div>
-        ) : <p className="text-sm text-cream-500">No data</p>}
+        ) : <p className="text-sm text-cream-500">{t('analytics.noData')}</p>}
       </div>
 
       {/* Spending by tag */}
@@ -209,23 +211,23 @@ export default function Analytics() {
         <div className="card">
           <div className="flex items-center gap-2 mb-3">
             <Hash size={16} className="text-accent" />
-            <h3 className="section-title mb-0">Spending by tag</h3>
+            <h3 className="section-title mb-0">{t('analytics.spendingByTag')}</h3>
           </div>
           <div className="space-y-2">
-            {tagStats.slice(0, 10).map((t, i) => {
-              const pct = totalSpent > 0 ? (t.total / totalSpent) * 100 : 0;
+            {tagStats.slice(0, 10).map((ts, i) => {
+              const pct = totalSpent > 0 ? (ts.total / totalSpent) * 100 : 0;
               return (
-                <div key={t.tag} className="flex items-center gap-3">
+                <div key={ts.tag} className="flex items-center gap-3">
                   <span className="text-xs text-cream-400 w-5">{i + 1}.</span>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-50 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 text-xs font-medium">
-                    <Hash size={10} className="opacity-60" />{t.tag}
+                    <Hash size={10} className="opacity-60" />{ts.tag}
                   </span>
                   <div className="flex-1 h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
                     <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
                   </div>
                   <div className="text-right min-w-[80px]">
-                    <span className="text-sm money font-medium">{formatCurrency(t.total, currency)}</span>
-                    <span className="text-[10px] text-cream-400 ml-1">({t.count}x)</span>
+                    <span className="text-sm money font-medium">{formatCurrency(ts.total, currency)}</span>
+                    <span className="text-[10px] text-cream-400 ml-1">({ts.count}x)</span>
                   </div>
                 </div>
               );

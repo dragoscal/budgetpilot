@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Hash } from 'lucide-react';
 import { suggestTags } from '../lib/tagHelpers';
+import { useTranslation } from '../contexts/LanguageContext';
 
 /**
  * Chip-style tag input with autocomplete from tag history
  * @param {{ tags: string[], onChange: (tags: string[]) => void, userId?: string }} props
  */
 export default function TagInput({ tags = [], onChange, userId }) {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -82,7 +84,7 @@ export default function TagInput({ tags = [], onChange, userId }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <label className="label">Tags</label>
+      <label className="label">{t('manualForm.tags')}</label>
       <div
         className="flex flex-wrap items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-xl border border-cream-300 dark:border-dark-border bg-white dark:bg-dark-card focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent transition-colors cursor-text"
         onClick={() => inputRef.current?.focus()}
@@ -110,7 +112,7 @@ export default function TagInput({ tags = [], onChange, userId }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          placeholder={tags.length === 0 ? 'Add tags...' : ''}
+          placeholder={tags.length === 0 ? t('manualForm.addTags') : ''}
           className="flex-1 min-w-[80px] bg-transparent border-none outline-none text-sm placeholder:text-cream-400 dark:placeholder:text-cream-600 p-0"
         />
       </div>

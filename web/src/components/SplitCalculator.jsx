@@ -1,20 +1,21 @@
 import { useState, useMemo } from 'react';
 import { Equal, Percent, Sliders } from 'lucide-react';
 import { formatCurrency } from '../lib/helpers';
-
-const SPLIT_TYPES = [
-  { id: 'equal', label: 'Equal', icon: Equal, description: 'Split equally among all' },
-  { id: 'percentage', label: 'Percentage', icon: Percent, description: 'Custom % for each' },
-  { id: 'custom', label: 'Custom', icon: Sliders, description: 'Set exact amounts' },
-];
+import { useTranslation } from '../contexts/LanguageContext';
 
 /**
  * @param {{ members: Array, totalAmount: number, currency: string, splits: Array, onChange: Function }} props
  */
 export default function SplitCalculator({ members, totalAmount, currency, splits, onChange }) {
+  const { t } = useTranslation();
   const [splitType, setSplitType] = useState('equal');
 
-  // When split type changes, recalculate
+  const SPLIT_TYPES = useMemo(() => [
+    { id: 'equal', label: t('split.equal'), icon: Equal },
+    { id: 'percentage', label: t('split.percentage'), icon: Percent },
+    { id: 'custom', label: t('split.custom'), icon: Sliders },
+  ], [t]);
+
   const handleTypeChange = (type) => {
     setSplitType(type);
 
@@ -38,7 +39,6 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
       }));
       onChange(newSplits, type);
     } else {
-      // Custom — start equal
       const perPerson = Math.round((totalAmount / members.length) * 100) / 100;
       const newSplits = members.map((m) => ({
         userId: m.userId,
@@ -79,19 +79,19 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
     <div className="space-y-4">
       {/* Split type selector */}
       <div className="flex gap-2">
-        {SPLIT_TYPES.map((t) => (
+        {SPLIT_TYPES.map((st) => (
           <button
-            key={t.id}
+            key={st.id}
             type="button"
-            onClick={() => handleTypeChange(t.id)}
+            onClick={() => handleTypeChange(st.id)}
             className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-medium transition-colors ${
-              splitType === t.id
+              splitType === st.id
                 ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                 : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >
-            <t.icon size={16} />
-            {t.label}
+            <st.icon size={16} />
+            {st.label}
           </button>
         ))}
       </div>
@@ -143,10 +143,10 @@ export default function SplitCalculator({ members, totalAmount, currency, splits
       <div className={`flex items-center justify-between text-sm p-2 rounded-lg ${
         Math.abs(diff) < 0.01 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
       }`}>
-        <span>Total allocated</span>
+        <span>{t('split.totalAllocated')}</span>
         <span className="font-medium money">
           {formatCurrency(totalAllocated, currency)} / {formatCurrency(totalAmount, currency)}
-          {Math.abs(diff) >= 0.01 && ` (${diff > 0 ? '+' : ''}${formatCurrency(diff, currency)} remaining)`}
+          {Math.abs(diff) >= 0.01 && ` (${formatCurrency(Math.abs(diff), currency)} ${t('budgets.remaining')})`}
         </span>
       </div>
     </div>

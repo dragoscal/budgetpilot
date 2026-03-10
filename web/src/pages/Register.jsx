@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { Eye, EyeOff, Wallet, Check, X } from 'lucide-react';
 import { CURRENCIES } from '../lib/constants';
 
-function PasswordStrength({ password }) {
+function PasswordStrength({ password, t }) {
   const checks = [
-    { label: 'At least 8 characters', pass: password.length >= 8 },
-    { label: 'Contains a number', pass: /\d/.test(password) },
-    { label: 'Contains uppercase', pass: /[A-Z]/.test(password) },
-    { label: 'Contains special char', pass: /[^A-Za-z0-9]/.test(password) },
+    { label: t('auth.atLeast8Chars'), pass: password.length >= 8 },
+    { label: t('auth.containsNumber'), pass: /\d/.test(password) },
+    { label: t('auth.containsUppercase'), pass: /[A-Z]/.test(password) },
+    { label: t('auth.containsSpecialChar'), pass: /[^A-Za-z0-9]/.test(password) },
   ];
   const score = checks.filter((c) => c.pass).length;
 
@@ -47,6 +48,7 @@ function PasswordStrength({ password }) {
 
 export default function Register() {
   const { register } = useAuth();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,11 +63,11 @@ export default function Register() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsDoNotMatch'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -91,12 +93,12 @@ export default function Register() {
             BudgetPilot
           </h1>
           <p className="text-cream-700 dark:text-cream-500 mt-1">
-            Create your account
+            {t('auth.createAccount')}
           </p>
         </div>
 
         <div className="card">
-          <h2 className="text-xl font-heading font-semibold mb-6 text-center">Get started</h2>
+          <h2 className="text-xl font-heading font-semibold mb-6 text-center">{t('auth.getStarted')}</h2>
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-danger/10 text-danger text-sm">{error}</div>
@@ -104,12 +106,12 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="label">Full name</label>
+              <label htmlFor="name" className="label">{t('auth.fullName')}</label>
               <input
                 id="name"
                 type="text"
                 className="input"
-                placeholder="John Doe"
+                placeholder={t('auth.fullNamePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -118,12 +120,12 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="reg-email" className="label">Email</label>
+              <label htmlFor="reg-email" className="label">{t('auth.email')}</label>
               <input
                 id="reg-email"
                 type="email"
                 className="input"
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -132,13 +134,13 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="reg-password" className="label">Password</label>
+              <label htmlFor="reg-password" className="label">{t('auth.password')}</label>
               <div className="relative">
                 <input
                   id="reg-password"
                   type={showPassword ? 'text' : 'password'}
                   className="input pr-10"
-                  placeholder="Create a strong password"
+                  placeholder={t('auth.createStrongPassword')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -153,28 +155,28 @@ export default function Register() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <PasswordStrength password={password} />
+              <PasswordStrength password={password} t={t} />
             </div>
 
             <div>
-              <label htmlFor="confirm-password" className="label">Confirm password</label>
+              <label htmlFor="confirm-password" className="label">{t('auth.confirmPassword')}</label>
               <input
                 id="confirm-password"
                 type="password"
                 className="input"
-                placeholder="Repeat your password"
+                placeholder={t('auth.repeatPassword')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
               />
               {confirmPassword && confirmPassword !== password && (
-                <p className="text-xs text-danger mt-1">Passwords don't match</p>
+                <p className="text-xs text-danger mt-1">{t('auth.passwordsDontMatch')}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="currency" className="label">Default currency</label>
+              <label htmlFor="currency" className="label">{t('auth.defaultCurrency')}</label>
               <select
                 id="currency"
                 className="input"
@@ -194,20 +196,20 @@ export default function Register() {
               disabled={loading}
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? t('auth.creatingAccount') : t('auth.register')}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-cream-600 dark:text-cream-500">
-            Already have an account?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link to="/login" className="text-cream-900 dark:text-dark-text font-medium hover:underline">
-              Sign in
+              {t('auth.signIn')}
             </Link>
           </p>
         </div>
 
         <p className="mt-6 text-center text-xs text-cream-500">
-          Your data is stored locally. Nothing is sent to any server.
+          {t('auth.dataStoredLocally')}
         </p>
       </div>
     </div>

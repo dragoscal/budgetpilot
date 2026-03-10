@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, SUBCATEGORIES } from '../lib/constants';
 import { getSubcategoryById, getCategoryById } from '../lib/helpers';
 import { Search, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const RECENT_KEY = 'bp_recentCategories';
 const MAX_RECENT = 5;
@@ -28,6 +29,7 @@ export default function CategoryPicker({
   compact = false,
   label = null,
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedParent, setExpandedParent] = useState(null);
@@ -63,17 +65,19 @@ export default function CategoryPicker({
   const filteredCategories = CATEGORIES.filter((c) => !exclude.includes(c.id));
   const lowerSearch = search.toLowerCase();
 
-  // Filter categories and subcategories by search
+  // Filter categories and subcategories by search (search both translated and original names)
   const searchResults = [];
   if (lowerSearch) {
     for (const cat of filteredCategories) {
-      if (cat.name.toLowerCase().includes(lowerSearch)) {
-        searchResults.push({ type: 'category', ...cat });
+      const catName = t(`categories.${cat.id}`);
+      if (catName.toLowerCase().includes(lowerSearch) || cat.name.toLowerCase().includes(lowerSearch)) {
+        searchResults.push({ type: 'category', ...cat, translatedName: catName });
       }
       if (showSubcategories && SUBCATEGORIES[cat.id]) {
         for (const sub of SUBCATEGORIES[cat.id]) {
-          if (sub.name.toLowerCase().includes(lowerSearch)) {
-            searchResults.push({ type: 'subcategory', parentId: cat.id, parentIcon: cat.icon, parentName: cat.name, ...sub });
+          const subName = t(`subcategories.${sub.id}`);
+          if (subName.toLowerCase().includes(lowerSearch) || sub.name.toLowerCase().includes(lowerSearch)) {
+            searchResults.push({ type: 'subcategory', parentId: cat.id, parentIcon: cat.icon, parentName: catName, ...sub, translatedName: subName });
           }
         }
       }
@@ -113,7 +117,7 @@ export default function CategoryPicker({
       >
         <span className="shrink-0">{currentSub?.icon || currentCat.icon}</span>
         <span className="truncate font-medium">
-          {currentSub ? currentSub.name : currentCat.name}
+          {currentSub ? t(`subcategories.${currentSub.id}`) : t(`categories.${currentCat.id}`)}
         </span>
         <ChevronRight size={compact ? 10 : 14} className="ml-auto text-cream-400 shrink-0" />
       </button>
@@ -133,7 +137,7 @@ export default function CategoryPicker({
                 autoFocus
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setExpandedParent(null); }}
-                placeholder="Search categories..."
+                placeholder={t('filter.searchCategories')}
                 className="w-full pl-8 pr-8 py-1.5 text-sm bg-cream-50 dark:bg-dark-bg rounded-lg border-0 outline-none focus:ring-1 focus:ring-cream-400 placeholder:text-cream-400"
               />
               {search && (
@@ -163,7 +167,7 @@ export default function CategoryPicker({
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
                     >
                       <span>{item.icon}</span>
-                      <span className="font-medium">{item.name}</span>
+                      <span className="font-medium">{item.translatedName}</span>
                       {item.type === 'subcategory' && (
                         <span className="text-[10px] text-cream-400 ml-auto">{item.parentName}</span>
                       )}
@@ -171,7 +175,7 @@ export default function CategoryPicker({
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-sm text-cream-400">No matches</div>
+                <div className="p-4 text-center text-sm text-cream-400">{t('common.noResults')}</div>
               )
             ) : expandedParent ? (
               /* Subcategory view */
@@ -182,7 +186,7 @@ export default function CategoryPicker({
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left text-cream-500"
                 >
                   <ChevronLeft size={14} />
-                  <span>Back</span>
+                  <span>{t('common.back')}</span>
                 </button>
 
                 {/* Select parent as-is */}
@@ -194,7 +198,7 @@ export default function CategoryPicker({
                   }`}
                 >
                   <span>{getCategoryById(expandedParent).icon}</span>
-                  <span>{getCategoryById(expandedParent).name} (general)</span>
+                  <span>{t(`categories.${expandedParent}`)} ({t('common.general')})</span>
                 </button>
 
                 <div className="mx-3 my-1 border-t border-cream-100 dark:border-dark-border" />
@@ -209,7 +213,7 @@ export default function CategoryPicker({
                     }`}
                   >
                     <span>{sub.icon}</span>
-                    <span>{sub.name}</span>
+                    <span>{t(`subcategories.${sub.id}`)}</span>
                   </button>
                 ))}
               </div>
@@ -219,7 +223,7 @@ export default function CategoryPicker({
                 {/* Recent picks */}
                 {recentPicks.length > 0 && (
                   <>
-                    <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-cream-400 uppercase tracking-wider">Recent</p>
+                    <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-cream-400 uppercase tracking-wider">{t('common.recent')}</p>
                     {recentPicks.map((r) => {
                       const cat = getCategoryById(r.categoryId);
                       const sub = r.subcategoryId ? getSubcategoryById(r.subcategoryId) : null;
@@ -231,8 +235,8 @@ export default function CategoryPicker({
                           className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
                         >
                           <span>{sub?.icon || cat.icon}</span>
-                          <span>{sub ? `${sub.name}` : cat.name}</span>
-                          {sub && <span className="text-[10px] text-cream-400 ml-auto">{cat.name}</span>}
+                          <span>{sub ? t(`subcategories.${sub.id}`) : t(`categories.${cat.id}`)}</span>
+                          {sub && <span className="text-[10px] text-cream-400 ml-auto">{t(`categories.${cat.id}`)}</span>}
                         </button>
                       );
                     })}
@@ -241,7 +245,7 @@ export default function CategoryPicker({
                 )}
 
                 {/* All categories */}
-                <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-cream-400 uppercase tracking-wider">All categories</p>
+                <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-cream-400 uppercase tracking-wider">{t('filter.allCategories')}</p>
                 {filteredCategories.map((cat) => {
                   const hasSubs = showSubcategories && SUBCATEGORIES[cat.id]?.length > 0;
                   return (
@@ -254,7 +258,7 @@ export default function CategoryPicker({
                       }`}
                     >
                       <span>{cat.icon}</span>
-                      <span className="font-medium">{cat.name}</span>
+                      <span className="font-medium">{t(`categories.${cat.id}`)}</span>
                       {hasSubs && <ChevronRight size={12} className="ml-auto text-cream-400" />}
                     </button>
                   );

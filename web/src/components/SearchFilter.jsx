@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 import { CATEGORIES } from '../lib/constants';
+import { useTranslation } from '../contexts/LanguageContext';
 
 function CategoryDropdown({ value, onChange }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -27,10 +29,10 @@ function CategoryDropdown({ value, onChange }) {
         {current ? (
           <>
             <span className="shrink-0">{current.icon}</span>
-            <span className="truncate text-sm">{current.name}</span>
+            <span className="truncate text-sm">{t(`categories.${current.id}`)}</span>
           </>
         ) : (
-          <span className="text-cream-400 text-sm">All categories</span>
+          <span className="text-cream-400 text-sm">{t('filter.allCategories')}</span>
         )}
         <ChevronDown size={14} className="ml-auto text-cream-400 shrink-0" />
       </button>
@@ -45,7 +47,7 @@ function CategoryDropdown({ value, onChange }) {
                 !value ? 'bg-cream-100 dark:bg-dark-border font-medium' : ''
               }`}
             >
-              <span className="text-cream-400">All categories</span>
+              <span className="text-cream-400">{t('filter.allCategories')}</span>
             </button>
             {CATEGORIES.map((cat) => (
               <button
@@ -57,7 +59,7 @@ function CategoryDropdown({ value, onChange }) {
                 }`}
               >
                 <span>{cat.icon}</span>
-                <span>{cat.name}</span>
+                <span>{t(`categories.${cat.id}`)}</span>
               </button>
             ))}
           </div>
@@ -68,6 +70,7 @@ function CategoryDropdown({ value, onChange }) {
 }
 
 export default function SearchFilter({ search, onSearch, category, onCategory, type, onType, showFilters = true }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col sm:flex-row gap-2">
       <div className="relative flex-1">
@@ -75,7 +78,7 @@ export default function SearchFilter({ search, onSearch, category, onCategory, t
         <input
           type="text"
           className="input pl-9 pr-8"
-          placeholder="Search transactions..."
+          placeholder={t('filter.searchTransactions')}
           value={search}
           onChange={(e) => onSearch(e.target.value)}
         />
@@ -89,10 +92,10 @@ export default function SearchFilter({ search, onSearch, category, onCategory, t
         <div className="flex gap-2">
           <CategoryDropdown value={category} onChange={onCategory} />
           <select className="input w-auto min-w-[110px]" value={type} onChange={(e) => onType(e.target.value)}>
-            <option value="">All types</option>
-            <option value="expense">Expenses</option>
-            <option value="income">Income</option>
-            <option value="transfer">Transfers</option>
+            <option value="">{t('filter.allTypes')}</option>
+            <option value="expense">{t('filter.expenses')}</option>
+            <option value="income">{t('filter.income')}</option>
+            <option value="transfer">{t('filter.transfers')}</option>
           </select>
         </div>
       )}

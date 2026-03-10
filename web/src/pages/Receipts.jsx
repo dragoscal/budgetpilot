@@ -3,6 +3,7 @@ import { getAll } from '../lib/storage';
 import { transactions as txApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, formatDate, getCategoryById } from '../lib/helpers';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
@@ -12,6 +13,7 @@ import { Camera, Search, X, Receipt, ExternalLink, Calendar, Tag } from 'lucide-
 export default function ReceiptGallery() {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [receipts, setReceipts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export default function ReceiptGallery() {
       rcpts.sort((a, b) => (b.processedAt || b.createdAt || '').localeCompare(a.processedAt || a.createdAt || ''));
       setReceipts(rcpts);
       setTransactions(tx);
-    } catch { toast.error('Failed to load'); }
+    } catch { toast.error(t('receipts.failedLoad')); }
     finally { setLoading(false); }
   };
 
@@ -73,8 +75,8 @@ export default function ReceiptGallery() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">Receipt Gallery</h1>
-        <span className="text-sm text-cream-500">{receipts.length} receipt{receipts.length !== 1 ? 's' : ''}</span>
+        <h1 className="page-title mb-0">{t('receipts.gallery')}</h1>
+        <span className="text-sm text-cream-500">{receipts.length} {receipts.length !== 1 ? t('receipts.receipts') : t('receipts.receipt')}</span>
       </div>
 
       {/* Search & filters */}
@@ -86,7 +88,7 @@ export default function ReceiptGallery() {
               className="input pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search receipts (merchant, items, text...)"
+              placeholder={t('receipts.searchPlaceholder')}
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-cream-400 hover:text-cream-600">
@@ -96,7 +98,7 @@ export default function ReceiptGallery() {
           </div>
           <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
             {[
-              { id: 'all', label: 'All' },
+              { id: 'all', label: t('common.all') },
               { id: '7d', label: '7d' },
               { id: '30d', label: '30d' },
               { id: '90d', label: '90d' },
@@ -172,18 +174,18 @@ export default function ReceiptGallery() {
       ) : receipts.length > 0 ? (
         <div className="text-center py-12">
           <Search size={32} className="mx-auto text-cream-300 mb-3" />
-          <p className="text-sm text-cream-500">No receipts match your search</p>
+          <p className="text-sm text-cream-500">{t('receipts.noSearchResults')}</p>
         </div>
       ) : (
         <EmptyState
           icon={Camera}
-          title="No receipts yet"
-          description="Scan receipts from the Add Transaction page to build your gallery"
+          title={t('receipts.noReceipts')}
+          description={t('receipts.noReceiptsDesc')}
         />
       )}
 
       {/* Detail modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title="Receipt details">
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={t('receipts.receiptDetails')}>
         {selected && (() => {
           const merchant = selected.result?.merchant || selected.merchant || 'Unknown';
           const total = selected.result?.total ?? selected.total;
@@ -224,7 +226,7 @@ export default function ReceiptGallery() {
                   )}
                   {cat && (
                     <span className="flex items-center gap-1">
-                      <Tag size={12} /> {cat.icon} {cat.name}
+                      <Tag size={12} /> {cat.icon} {t(`categories.${category}`)}
                     </span>
                   )}
                 </div>
@@ -233,7 +235,7 @@ export default function ReceiptGallery() {
               {/* Items */}
               {items.length > 0 && (
                 <div>
-                  <h4 className="section-title">Items</h4>
+                  <h4 className="section-title">{t('receipts.itemsSection')}</h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {items.map((item, i) => (
                       <div key={i} className="flex justify-between text-sm py-1 border-b border-cream-100 dark:border-dark-border last:border-0">
@@ -253,7 +255,7 @@ export default function ReceiptGallery() {
               {/* OCR text */}
               {selected.result?.rawText && (
                 <div>
-                  <h4 className="section-title">OCR text</h4>
+                  <h4 className="section-title">{t('receipts.ocrText')}</h4>
                   <pre className="text-xs text-cream-500 bg-cream-50 dark:bg-dark-border rounded-lg p-3 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
                     {selected.result.rawText}
                   </pre>
@@ -263,7 +265,7 @@ export default function ReceiptGallery() {
               {/* Linked transaction */}
               {linked && (
                 <div className="p-3 rounded-lg bg-success/5 border border-success/20">
-                  <p className="text-xs text-success font-medium mb-1">Linked to transaction</p>
+                  <p className="text-xs text-success font-medium mb-1">{t('receipts.linkedToTransaction')}</p>
                   <p className="text-sm">{linked.merchant || linked.description} — {formatCurrency(linked.amount, linked.currency)}</p>
                   <p className="text-xs text-cream-500">{formatDate(linked.date)}</p>
                 </div>

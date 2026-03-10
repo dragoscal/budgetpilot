@@ -1,7 +1,9 @@
 import { getCategoryById, formatCurrency, percentOf } from '../lib/helpers';
 import { useHideAmounts } from '../contexts/SettingsContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export default function BudgetBar({ category, spent, budgeted, currency = 'RON', compact = false, hide: hideProp }) {
+  const { t } = useTranslation();
   const { shouldHide } = useHideAmounts();
   const hide = hideProp !== undefined ? hideProp : shouldHide('expense');
   const cat = getCategoryById(category);
@@ -15,7 +17,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5">
             <span>{cat.icon}</span>
-            <span className="font-medium">{cat.name}</span>
+            <span className="font-medium">{t(`categories.${cat.id}`)}</span>
           </span>
           <span className="text-cream-500">{pct}%</span>
         </div>
@@ -32,7 +34,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
         <div className="flex items-center gap-2">
           <span className="text-xl">{cat.icon}</span>
           <div>
-            <p className="font-medium text-sm">{cat.name}</p>
+            <p className="font-medium text-sm">{t(`categories.${cat.id}`)}</p>
             <p className="text-xs text-cream-500">
               {formatCurrency(spent, currency, { hide })} / {formatCurrency(budgeted, currency, { hide })}
             </p>
@@ -47,8 +49,8 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
       </div>
       <p className="text-xs text-cream-500 mt-2">
         {remaining >= 0
-          ? `${formatCurrency(remaining, currency, { hide })} remaining`
-          : `${formatCurrency(Math.abs(remaining), currency, { hide })} over budget`}
+          ? t('budgets.remainingAmount', { amount: formatCurrency(remaining, currency, { hide }) })
+          : t('budgets.overAmount', { amount: formatCurrency(Math.abs(remaining), currency, { hide }) })}
       </p>
     </div>
   );

@@ -3,8 +3,10 @@ import { Upload, FileText, X, Loader2, Building2, Calendar, CreditCard, AlertTri
 import { processBankStatement } from '../lib/ai';
 import { formatCurrency } from '../lib/helpers';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export default function BankStatementUpload({ onResult, onError }) {
+  const { t } = useTranslation();
   const { effectiveUserId } = useAuth();
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState(null);
@@ -17,22 +19,20 @@ export default function BankStatementUpload({ onResult, onError }) {
   const handleFile = useCallback(async (file) => {
     if (!file) return;
 
-    // Validate PDF
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      onError?.('Please upload a PDF file. Bank statements are typically in PDF format.');
+      onError?.(t('addTransaction.pdfOnly'));
       return;
     }
 
-    // Size check (max 20MB)
     if (file.size > 20 * 1024 * 1024) {
-      onError?.('File too large. Maximum size is 20MB.');
+      onError?.(t('addTransaction.fileTooLarge'));
       return;
     }
 
     setFileName(file.name);
     setProcessing(true);
     setProgress(10);
-    setStatus('Reading PDF...');
+    setStatus(t('addTransaction.readingPdf'));
     setBankInfo(null);
 
     const reader = new FileReader();
@@ -42,33 +42,31 @@ export default function BankStatementUpload({ onResult, onError }) {
         const base64Data = base64Full.split(',')[1];
 
         setProgress(25);
-        setStatus('AI analyzing bank statement...');
+        setStatus(t('addTransaction.aiAnalyzing'));
 
         const results = await processBankStatement(base64Data, { userId: effectiveUserId });
 
         setProgress(90);
-        setStatus('Preparing transactions...');
+        setStatus(t('addTransaction.preparingTx'));
 
-        // Store bank info for display
         if (results.bankInfo) {
           setBankInfo(results.bankInfo);
         }
 
         setProgress(100);
-        setStatus('Done!');
+        setStatus(t('common.done'));
 
-        // Transform into the format handleAIResult expects
         const enrichedResult = {
           transactions: results.transactions,
           receipt: {
-            store: results.bankInfo?.bankName || 'Bank Statement',
+            store: results.bankInfo?.bankName || t('addTransaction.bankStatement'),
             date: results.bankInfo?.period?.from
               ? `${results.bankInfo.period.from} to ${results.bankInfo.period.to}`
-              : 'Unknown period',
+              : t('addTransaction.unknownPeriod'),
             currency: results.bankInfo?.currency || 'RON',
           },
           warnings: results.warnings || [],
-          summary: results.summary || `${results.transactions.length} transactions extracted from bank statement`,
+          summary: results.summary || `${results.transactions.length} ${t('addTransaction.txExtracted')}`,
           hasItemsToReview: results.hasItemsToReview,
           _bankStatement: true,
           _bankInfo: results.bankInfo,
@@ -77,7 +75,7 @@ export default function BankStatementUpload({ onResult, onError }) {
         onResult?.(enrichedResult);
         setTimeout(() => setStatus(''), 1500);
       } catch (err) {
-        onError?.(err.message || 'Failed to process bank statement');
+        onError?.(err.message || t('addTransaction.failedProcess'));
         setStatus('');
       } finally {
         setProcessing(false);
@@ -86,14 +84,14 @@ export default function BankStatementUpload({ onResult, onError }) {
     };
 
     reader.onerror = () => {
-      onError?.('Failed to read the PDF file');
+      onError?.(t('addTransaction.failedReadPdf'));
       setProcessing(false);
       setProgress(0);
       setStatus('');
     };
 
     reader.readAsDataURL(file);
-  }, [onResult, onError]);
+  }, [onResult, onError, t]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -113,7 +111,6 @@ export default function BankStatementUpload({ onResult, onError }) {
 
   return (
     <div className="space-y-3">
-      {/* Upload area */}
       {!fileName ? (
         <div
           className={`border-2 border-dashed rounded-2xl p-4 md:p-8 text-center transition-colors cursor-pointer ${
@@ -127,8 +124,8 @@ export default function BankStatementUpload({ onResult, onError }) {
           onClick={() => fileRef.current?.click()}
         >
           <Building2 size={32} className="mx-auto mb-3 text-cream-400" />
-          <p className="text-sm font-medium">Drop bank statement PDF here or click to upload</p>
-          <p className="text-xs text-cream-500 mt-1">Supports PDF bank statements from any Romanian bank</p>
+          <p className="text-sm font-medium">{t('addTransaction.dropPdf')}</p>
+          <p className="text-xs text-cream-500 mt-1">{t('addTransaction.supportsPdf')}</p>
           <p className="text-[10px] text-cream-400 mt-2">
             BRD, BCR, ING, Raiffeisen, Banca Transilvania, CEC, UniCredit, OTP, Alpha Bank
           </p>
@@ -179,7 +176,6 @@ export default function BankStatementUpload({ onResult, onError }) {
         </div>
       )}
 
-      {/* Processing indicator */}
       {processing && (
         <div className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30">
           <Loader2 size={18} className="text-indigo-500 animate-spin shrink-0" />
@@ -195,24 +191,22 @@ export default function BankStatementUpload({ onResult, onError }) {
         </div>
       )}
 
-      {/* Tips */}
       {!processing && !fileName && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border">
           <AlertTriangle size={14} className="text-cream-400 mt-0.5 shrink-0" />
           <div className="text-[11px] text-cream-500 space-y-1">
-            <p>For best results, upload the <strong>official PDF</strong> from your bank's online portal.</p>
-            <p>The AI will extract all transactions, categorize them, and check for duplicates with your existing records.</p>
+            <p>{t('addTransaction.pdfTip1')}</p>
+            <p>{t('addTransaction.pdfTip2')}</p>
           </div>
         </div>
       )}
 
-      {/* Upload button */}
       <button
         onClick={() => fileRef.current?.click()}
         disabled={processing}
         className="btn-secondary w-full flex items-center justify-center gap-2 disabled:opacity-50"
       >
-        <Upload size={16} /> {fileName ? 'Upload different PDF' : 'Select PDF'}
+        <Upload size={16} /> {fileName ? t('addTransaction.uploadDifferent') : t('addTransaction.selectPdf')}
       </button>
     </div>
   );

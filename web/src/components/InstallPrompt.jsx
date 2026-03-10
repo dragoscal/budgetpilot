@@ -1,27 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const DISMISS_KEY = 'bp_installDismissed';
 const DISMISS_COUNT_KEY = 'bp_installDismissCount';
 const MAX_DISMISSALS = 3;
 
 export default function InstallPrompt() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [show, setShow] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
                        window.navigator.standalone === true;
     setIsStandalone(standalone);
     if (standalone) return;
 
-    // Check dismiss count
     const dismissCount = parseInt(localStorage.getItem(DISMISS_COUNT_KEY) || '0', 10);
     if (dismissCount >= MAX_DISMISSALS) return;
 
-    // Check if recently dismissed (within 7 days)
     const lastDismissed = localStorage.getItem(DISMISS_KEY);
     if (lastDismissed) {
       const daysSince = (Date.now() - parseInt(lastDismissed, 10)) / (1000 * 60 * 60 * 24);
@@ -31,7 +30,6 @@ export default function InstallPrompt() {
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      // Show after a delay so it doesn't interrupt initial load
       setTimeout(() => setShow(true), 3000);
     };
 
@@ -66,22 +64,22 @@ export default function InstallPrompt() {
             <Download size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Install BudgetPilot</p>
+            <p className="text-sm font-semibold">{t('install.title')}</p>
             <p className="text-xs text-cream-500 mt-0.5">
-              Add to your home screen for quick access, offline support, and a native app experience.
+              {t('install.description')}
             </p>
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleInstall}
                 className="btn-primary text-xs py-1.5 px-4"
               >
-                Install
+                {t('install.install')}
               </button>
               <button
                 onClick={handleDismiss}
                 className="btn-ghost text-xs py-1.5"
               >
-                Not now
+                {t('install.notNow')}
               </button>
             </div>
           </div>

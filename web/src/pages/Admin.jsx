@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { adminApi } from '../lib/adminApi';
 import { formatDate } from '../lib/helpers';
 import Modal from '../components/Modal';
@@ -13,16 +14,6 @@ import {
   KeyRound, Ban, CheckCircle, Trash2, Clock, UserX, UserCheck, Trash, Bot, DollarSign,
   MessageSquare, Bug, Lightbulb, Eye, ChevronDown, ChevronUp,
 } from 'lucide-react';
-
-const TABS = [
-  { id: 'overview', label: 'Overview', icon: Shield },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'ai-costs', label: 'AI Costs', icon: DollarSign },
-  { id: 'activity', label: 'Activity', icon: Activity },
-  { id: 'errors', label: 'Errors', icon: AlertTriangle },
-  { id: 'performance', label: 'Performance', icon: Zap },
-  { id: 'feedback', label: 'Feedback', icon: MessageSquare },
-];
 
 const ACTION_LABELS = {
   login: 'Logged in',
@@ -42,22 +33,26 @@ const ACTION_LABELS = {
   admin_update_feedback: 'Updated feedback (admin)',
 };
 
-function timeAgo(ts) {
-  if (!ts) return 'Never';
-  const diff = Date.now() - new Date(ts).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return formatDate(ts, 'dd MMM');
+function useTimeAgo() {
+  const { t } = useTranslation();
+  return (ts) => {
+    if (!ts) return t('admin.never');
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t('admin.justNow');
+    if (mins < 60) return t('admin.minutesAgo', { count: mins });
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return t('admin.hoursAgo', { count: hours });
+    const days = Math.floor(hours / 24);
+    if (days < 7) return t('admin.daysAgo', { count: days });
+    return formatDate(ts, 'dd MMM');
+  };
 }
 
 export default function Admin() {
   const { user } = useAuth();
   const toast = useToast();
+  const { t } = useTranslation();
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -71,6 +66,16 @@ export default function Admin() {
   const [deleteModal, setDeleteModal] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  const TABS = useMemo(() => [
+    { id: 'overview', label: t('admin.tabOverview'), icon: Shield },
+    { id: 'users', label: t('admin.tabUsers'), icon: Users },
+    { id: 'ai-costs', label: t('admin.tabAiCosts'), icon: DollarSign },
+    { id: 'activity', label: t('admin.tabActivity'), icon: Activity },
+    { id: 'errors', label: t('admin.tabErrors'), icon: AlertTriangle },
+    { id: 'performance', label: t('admin.tabPerformance'), icon: Zap },
+    { id: 'feedback', label: t('admin.tabFeedback'), icon: MessageSquare },
+  ], [t]);
 
   useEffect(() => { loadTabData(); }, [tab]);
 
@@ -99,12 +104,12 @@ export default function Admin() {
 
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.error(t('admin.passwordMinLength'));
       return;
     }
     try {
       await adminApi.resetPassword(resetModal.id, newPassword);
-      toast.success(`Password reset for ${resetModal.name}`);
+      toast.success(t('admin.passwordResetSuccess', { name: resetModal.name }));
       setResetModal(null);
       setNewPassword('');
     } catch (err) {
@@ -115,7 +120,7 @@ export default function Admin() {
   const handleToggleUser = async (u) => {
     try {
       const result = await adminApi.toggleUser(u.id);
-      toast.success(`${u.name} ${result.suspended ? 'suspended' : 'activated'}`);
+      toast.success(t(result.suspended ? 'admin.userSuspended' : 'admin.userActivated', { name: u.name }));
       loadTabData();
     } catch (err) {
       toast.error(err.message);
@@ -125,7 +130,7 @@ export default function Admin() {
   const handleDeleteUser = async () => {
     try {
       await adminApi.deleteUser(deleteModal.id);
-      toast.success(`${deleteModal.name}'s account deleted`);
+      toast.success(t('admin.accountDeleted', { name: deleteModal.name }));
       setDeleteModal(null);
       loadTabData();
     } catch (err) {
@@ -136,7 +141,7 @@ export default function Admin() {
   const handleToggleAiAccess = async (u) => {
     try {
       const result = await adminApi.toggleAiAccess(u.id, !u.aiProxyAllowed);
-      toast.success(`AI proxy ${result.allowed ? 'enabled' : 'disabled'} for ${u.name}`);
+      toast.success(t(result.allowed ? 'admin.aiEnabled' : 'admin.aiDisabled', { name: u.name }));
       loadTabData();
     } catch (err) {
       toast.error(err.message);
@@ -147,8 +152,8 @@ export default function Admin() {
     return (
       <div className="text-center py-20">
         <Shield className="mx-auto text-cream-400 mb-4" size={48} />
-        <h2 className="text-xl font-heading font-semibold mb-2 dark:text-dark-text">Access Denied</h2>
-        <p className="text-cream-600 dark:text-cream-500">You don't have admin privileges.</p>
+        <h2 className="text-xl font-heading font-semibold mb-2 dark:text-dark-text">{t('admin.accessDenied')}</h2>
+        <p className="text-cream-600 dark:text-cream-500">{t('admin.noAdminPrivileges')}</p>
       </div>
     );
   }
@@ -158,27 +163,27 @@ export default function Admin() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title mb-0 flex items-center gap-2">
-            <Shield size={24} /> Admin Panel
+            <Shield size={24} /> {t('admin.title')}
           </h1>
-          <p className="text-sm text-cream-600 dark:text-cream-500">System monitoring & user management</p>
+          <p className="text-sm text-cream-600 dark:text-cream-500">{t('admin.subtitle')}</p>
         </div>
         <button onClick={() => { setRefreshing(true); loadTabData().finally(() => setRefreshing(false)); }}
           className="btn-secondary flex items-center gap-2 text-xs">
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> {t('admin.refresh')}
         </button>
       </div>
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-cream-200 dark:bg-dark-border rounded-xl p-1">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+        {TABS.map(tb => (
+          <button key={tb.id} onClick={() => setTab(tb.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all flex-1 justify-center ${
-              tab === t.id
+              tab === tb.id
                 ? 'bg-white dark:bg-dark-card shadow-sm text-cream-900 dark:text-dark-text'
                 : 'text-cream-600 dark:text-cream-500 hover:text-cream-800'
             }`}>
-            <t.icon size={14} />
-            <span className="hidden sm:inline">{t.label}</span>
+            <tb.icon size={14} />
+            <span className="hidden sm:inline">{tb.label}</span>
           </button>
         ))}
       </div>
@@ -196,26 +201,26 @@ export default function Admin() {
       )}
 
       {/* Reset password modal */}
-      <Modal open={!!resetModal} onClose={() => { setResetModal(null); setNewPassword(''); }} title={`Reset Password — ${resetModal?.name}`}>
+      <Modal open={!!resetModal} onClose={() => { setResetModal(null); setNewPassword(''); }} title={t('admin.resetPasswordTitle', { name: resetModal?.name })}>
         <div className="space-y-4">
-          <p className="text-sm text-cream-600 dark:text-cream-500">Set a new password for {resetModal?.email}</p>
-          <input type="text" className="input" placeholder="New password (min 8 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          <p className="text-sm text-cream-600 dark:text-cream-500">{t('admin.setNewPasswordFor', { email: resetModal?.email })}</p>
+          <input type="text" className="input" placeholder={t('admin.newPasswordPlaceholder')} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
           <div className="flex gap-2 justify-end">
-            <button className="btn-secondary text-sm" onClick={() => { setResetModal(null); setNewPassword(''); }}>Cancel</button>
-            <button className="btn-primary text-sm" onClick={handleResetPassword}>Reset Password</button>
+            <button className="btn-secondary text-sm" onClick={() => { setResetModal(null); setNewPassword(''); }}>{t('common.cancel')}</button>
+            <button className="btn-primary text-sm" onClick={handleResetPassword}>{t('admin.resetPassword')}</button>
           </div>
         </div>
       </Modal>
 
       {/* Delete user modal */}
-      <Modal open={!!deleteModal} onClose={() => setDeleteModal(null)} title="Delete User Account">
+      <Modal open={!!deleteModal} onClose={() => setDeleteModal(null)} title={t('admin.deleteUserAccount')}>
         <div className="space-y-4">
           <p className="text-sm text-cream-600 dark:text-cream-500">
-            This will permanently delete <strong>{deleteModal?.name}</strong> ({deleteModal?.email}) and all their data. This cannot be undone.
+            {t('admin.deleteUserWarning', { name: deleteModal?.name, email: deleteModal?.email })}
           </p>
           <div className="flex gap-2 justify-end">
-            <button className="btn-secondary text-sm" onClick={() => setDeleteModal(null)}>Cancel</button>
-            <button className="px-4 py-2 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors" onClick={handleDeleteUser}>Delete Account</button>
+            <button className="btn-secondary text-sm" onClick={() => setDeleteModal(null)}>{t('common.cancel')}</button>
+            <button className="px-4 py-2 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors" onClick={handleDeleteUser}>{t('admin.deleteAccount')}</button>
           </div>
         </div>
       </Modal>
@@ -225,11 +230,13 @@ export default function Admin() {
 
 // ─── Overview Tab ────────────────────────────────────────
 function OverviewTab({ stats }) {
+  const { t } = useTranslation();
+
   const statCards = [
-    { label: 'Total Users', value: stats.totalUsers, sub: `${stats.recentSignups} new this week` },
-    { label: 'Active Today', value: stats.activeToday, sub: `${stats.activeWeek} this week` },
-    { label: 'Active This Month', value: stats.activeMonth },
-    { label: 'Total Records', value: stats.totalTransactions, sub: 'transactions across all users' },
+    { label: t('admin.totalUsers'), value: stats.totalUsers, sub: t('admin.newThisWeek', { count: stats.recentSignups }) },
+    { label: t('admin.activeToday'), value: stats.activeToday, sub: t('admin.thisWeek', { count: stats.activeWeek }) },
+    { label: t('admin.activeThisMonth'), value: stats.activeMonth },
+    { label: t('admin.totalRecords'), value: stats.totalTransactions, sub: t('admin.transactionsAcrossUsers') },
   ];
 
   return (
@@ -247,7 +254,7 @@ function OverviewTab({ stats }) {
       <div className="grid md:grid-cols-2 gap-6">
         {/* API Calls Chart */}
         <div className="card">
-          <h3 className="section-title mb-4">API Calls (7 days)</h3>
+          <h3 className="section-title mb-4">{t('admin.apiCalls7Days')}</h3>
           {stats.apiCallsByDay.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={stats.apiCallsByDay}>
@@ -258,12 +265,12 @@ function OverviewTab({ stats }) {
                 <Area type="monotone" dataKey="count" stroke="#059669" fill="#059669" fillOpacity={0.15} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <p className="text-sm text-cream-500 text-center py-8">No data yet</p>}
+          ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
         </div>
 
         {/* Feature Usage */}
         <div className="card">
-          <h3 className="section-title mb-4">Feature Usage (30 days)</h3>
+          <h3 className="section-title mb-4">{t('admin.featureUsage30Days')}</h3>
           {stats.featureUsage.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={stats.featureUsage.slice(0, 8)} layout="vertical">
@@ -274,21 +281,21 @@ function OverviewTab({ stats }) {
                 <Bar dataKey="count" fill="#059669" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <p className="text-sm text-cream-500 text-center py-8">No data yet</p>}
+          ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
         </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card text-center">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Total API Calls</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.totalApiCalls')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{stats.totalApiCalls}</p>
         </div>
         <div className="card text-center">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Avg Response Time</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.avgResponseTime')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{stats.avgResponseTime}ms</p>
         </div>
         <div className="card text-center">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Errors (all time)</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.errorsAllTime')}</p>
           <p className="text-2xl font-heading font-bold text-red-600 mt-1">{stats.errorCount}</p>
         </div>
       </div>
@@ -298,20 +305,23 @@ function OverviewTab({ stats }) {
 
 // ─── Users Tab ───────────────────────────────────────────
 function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, currentUserId }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
+
   return (
     <div className="card overflow-hidden p-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg">
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">User</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Role</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">AI</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Records</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Last Active</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Joined</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Actions</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colUser')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colRole')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('common.status')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colAi')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colRecords')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colLastActive')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colJoined')}</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-cream-100 dark:divide-dark-border">
@@ -326,7 +336,7 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
                         {u.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-cream-900 dark:text-dark-text">{u.name}{isSelf ? ' (you)' : ''}</p>
+                        <p className="font-medium text-cream-900 dark:text-dark-text">{u.name}{isSelf ? ` (${t('admin.you')})` : ''}</p>
                         <p className="text-xs text-cream-500">{u.email}</p>
                       </div>
                     </div>
@@ -334,18 +344,18 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       u.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-cream-200 text-cream-600 dark:bg-dark-border dark:text-cream-500'
-                    }`}>{u.role || 'user'}</span>
+                    }`}>{u.role || t('admin.roleUser')}</span>
                   </td>
                   <td className="px-4 py-3">
                     {u.suspended ? (
-                      <span className="flex items-center gap-1 text-red-600 text-xs"><Ban size={12} /> Suspended</span>
+                      <span className="flex items-center gap-1 text-red-600 text-xs"><Ban size={12} /> {t('admin.suspended')}</span>
                     ) : (
-                      <span className="flex items-center gap-1 text-green-600 text-xs"><CheckCircle size={12} /> Active</span>
+                      <span className="flex items-center gap-1 text-green-600 text-xs"><CheckCircle size={12} /> {t('common.active')}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {u.role === 'admin' ? (
-                      <span className="flex items-center gap-1 text-purple-600 text-xs"><Bot size={12} /> Owner</span>
+                      <span className="flex items-center gap-1 text-purple-600 text-xs"><Bot size={12} /> {t('admin.owner')}</span>
                     ) : (
                       <button
                         onClick={() => onToggleAi(u)}
@@ -354,10 +364,10 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200'
                             : 'bg-cream-200 text-cream-500 dark:bg-dark-border dark:text-cream-600 hover:bg-cream-300'
                         }`}
-                        title={u.aiProxyAllowed ? 'Click to revoke shared AI key access' : 'Click to grant shared AI key access'}
+                        title={u.aiProxyAllowed ? t('admin.clickToRevokeAi') : t('admin.clickToGrantAi')}
                       >
                         <Bot size={12} />
-                        {u.aiProxyAllowed ? 'Allowed' : 'Off'}
+                        {u.aiProxyAllowed ? t('admin.allowed') : t('admin.off')}
                       </button>
                     )}
                   </td>
@@ -367,13 +377,13 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
                   <td className="px-4 py-3">
                     {!isSelf && (
                       <div className="flex gap-1 justify-end">
-                        <button onClick={() => onResetPassword(u)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border transition-colors" title="Reset password">
+                        <button onClick={() => onResetPassword(u)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border transition-colors" title={t('admin.resetPassword')}>
                           <KeyRound size={14} className="text-cream-600" />
                         </button>
-                        <button onClick={() => onToggle(u)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border transition-colors" title={u.suspended ? 'Activate' : 'Suspend'}>
+                        <button onClick={() => onToggle(u)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border transition-colors" title={u.suspended ? t('admin.activate') : t('admin.suspend')}>
                           {u.suspended ? <UserCheck size={14} className="text-green-600" /> : <UserX size={14} className="text-orange-600" />}
                         </button>
-                        <button onClick={() => onDelete(u)} className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors" title="Delete account">
+                        <button onClick={() => onDelete(u)} className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors" title={t('admin.deleteAccount')}>
                           <Trash2 size={14} className="text-red-500" />
                         </button>
                       </div>
@@ -384,7 +394,7 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
             })}
           </tbody>
         </table>
-        {users.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">No users yet</p>}
+        {users.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">{t('admin.noUsersYet')}</p>}
       </div>
     </div>
   );
@@ -392,6 +402,8 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
 
 // ─── AI Costs Tab ───────────────────────────────────────
 function AiCostsTab({ data }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
   const { users, grandTotal } = data;
 
   function formatCost(usd) {
@@ -411,22 +423,22 @@ function AiCostsTab({ data }) {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Cost</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.totalCost')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{formatCost(grandTotal)}</p>
-          <p className="text-xs text-cream-500 mt-1">estimated from token usage</p>
+          <p className="text-xs text-cream-500 mt-1">{t('admin.estimatedFromTokens')}</p>
         </div>
         <div className="card">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Active AI Users</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.activeAiUsers')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">{users.length}</p>
         </div>
         <div className="card">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Requests</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.totalRequests')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">
             {users.reduce((sum, u) => sum + u.totalRequests, 0)}
           </p>
         </div>
         <div className="card">
-          <p className="text-xs text-cream-500 uppercase tracking-wide">Total Tokens</p>
+          <p className="text-xs text-cream-500 uppercase tracking-wide">{t('admin.totalTokens')}</p>
           <p className="text-2xl font-heading font-bold text-cream-900 dark:text-dark-text mt-1">
             {formatTokens(users.reduce((sum, u) => sum + u.totalInputTokens + u.totalOutputTokens, 0))}
           </p>
@@ -436,7 +448,7 @@ function AiCostsTab({ data }) {
       {/* Cost breakdown chart */}
       {users.length > 0 && (
         <div className="card">
-          <h3 className="section-title mb-4">Cost by User</h3>
+          <h3 className="section-title mb-4">{t('admin.costByUser')}</h3>
           <ResponsiveContainer width="100%" height={Math.max(120, users.length * 45)}>
             <BarChart data={users} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
@@ -444,7 +456,7 @@ function AiCostsTab({ data }) {
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={100} />
               <Tooltip
                 contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                formatter={(v) => [`$${v.toFixed(4)}`, 'Cost (USD)']}
+                formatter={(v) => [`$${v.toFixed(4)}`, t('admin.costUsd')]}
               />
               <Bar dataKey="totalCostUSD" fill="#059669" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -458,12 +470,12 @@ function AiCostsTab({ data }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg">
-                <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">User</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Requests</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Input Tokens</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Output Tokens</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Est. Cost</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">Last Used</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colUser')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colRequests')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colInputTokens')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colOutputTokens')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colEstCost')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colLastUsed')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-cream-100 dark:divide-dark-border">
@@ -484,7 +496,7 @@ function AiCostsTab({ data }) {
               ))}
               {users.length > 1 && (
                 <tr className="bg-cream-50 dark:bg-dark-bg font-semibold">
-                  <td className="px-4 py-3 text-cream-900 dark:text-dark-text">Total</td>
+                  <td className="px-4 py-3 text-cream-900 dark:text-dark-text">{t('common.total')}</td>
                   <td className="px-4 py-3 text-right font-mono">{users.reduce((s, u) => s + u.totalRequests, 0)}</td>
                   <td className="px-4 py-3 text-right font-mono">{formatTokens(users.reduce((s, u) => s + u.totalInputTokens, 0))}</td>
                   <td className="px-4 py-3 text-right font-mono">{formatTokens(users.reduce((s, u) => s + u.totalOutputTokens, 0))}</td>
@@ -497,15 +509,15 @@ function AiCostsTab({ data }) {
           {users.length === 0 && (
             <div className="text-center py-12">
               <Bot className="mx-auto text-cream-400 mb-3" size={32} />
-              <p className="text-cream-500 text-sm">No AI usage tracked yet</p>
-              <p className="text-cream-400 text-xs mt-1">Cost tracking starts with the next AI request</p>
+              <p className="text-cream-500 text-sm">{t('admin.noAiUsageYet')}</p>
+              <p className="text-cream-400 text-xs mt-1">{t('admin.costTrackingStarts')}</p>
             </div>
           )}
         </div>
       </div>
 
       <p className="text-xs text-cream-400 text-center">
-        Costs are estimated based on Anthropic's published pricing. Actual billing may differ slightly.
+        {t('admin.costDisclaimer')}
       </p>
     </div>
   );
@@ -513,6 +525,9 @@ function AiCostsTab({ data }) {
 
 // ─── Activity Tab ────────────────────────────────────────
 function ActivityTab({ activity }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
+
   return (
     <div className="card p-0">
       <div className="divide-y divide-cream-100 dark:divide-dark-border">
@@ -526,11 +541,11 @@ function ActivityTab({ activity }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-cream-900 dark:text-dark-text">
-                  <span className="font-medium">{a.userName || 'Unknown'}</span>
+                  <span className="font-medium">{a.userName || t('admin.unknown')}</span>
                   {' '}
                   <span className="text-cream-600 dark:text-cream-500">
                     {ACTION_LABELS[a.action] || a.action}
-                    {meta.table && ` in ${meta.table}`}
+                    {meta.table && ` ${t('admin.inTable', { table: meta.table })}`}
                   </span>
                 </p>
               </div>
@@ -538,7 +553,7 @@ function ActivityTab({ activity }) {
             </div>
           );
         })}
-        {activity.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">No activity yet</p>}
+        {activity.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">{t('admin.noActivityYet')}</p>}
       </div>
     </div>
   );
@@ -546,18 +561,21 @@ function ActivityTab({ activity }) {
 
 // ─── Errors Tab ──────────────────────────────────────────
 function ErrorsTab({ errors }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
+
   return (
     <div className="card overflow-hidden p-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg">
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Time</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Method</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Path</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">User</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">Response</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colTime')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colMethod')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colPath')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('common.status')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colUser')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-cream-500 uppercase">{t('admin.colResponse')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-cream-100 dark:divide-dark-border">
@@ -579,7 +597,7 @@ function ErrorsTab({ errors }) {
             ))}
           </tbody>
         </table>
-        {errors.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">No errors — all good!</p>}
+        {errors.length === 0 && <p className="text-center text-cream-500 py-8 text-sm">{t('admin.noErrors')}</p>}
       </div>
     </div>
   );
@@ -587,10 +605,12 @@ function ErrorsTab({ errors }) {
 
 // ─── Performance Tab ─────────────────────────────────────
 function PerformanceTab({ performance }) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       <div className="card">
-        <h3 className="section-title mb-4">Response Time by Endpoint (7 days)</h3>
+        <h3 className="section-title mb-4">{t('admin.responseTimeByEndpoint')}</h3>
         {performance.byPath.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(200, performance.byPath.length * 30)}>
             <BarChart data={performance.byPath} layout="vertical">
@@ -598,16 +618,16 @@ function PerformanceTab({ performance }) {
               <XAxis type="number" tick={{ fontSize: 10 }} unit="ms" />
               <YAxis dataKey="path" type="category" tick={{ fontSize: 10 }} width={180} />
               <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                formatter={(v, name) => [`${v}ms`, name === 'avgTime' ? 'Avg' : name === 'maxTime' ? 'Max' : name]} />
-              <Bar dataKey="avgTime" fill="#059669" radius={[0, 4, 4, 0]} name="Avg" />
-              <Bar dataKey="maxTime" fill="#059669" fillOpacity={0.3} radius={[0, 4, 4, 0]} name="Max" />
+                formatter={(v, name) => [`${v}ms`, name === 'avgTime' ? t('admin.avg') : name === 'maxTime' ? t('admin.max') : name]} />
+              <Bar dataKey="avgTime" fill="#059669" radius={[0, 4, 4, 0]} name={t('admin.avg')} />
+              <Bar dataKey="maxTime" fill="#059669" fillOpacity={0.3} radius={[0, 4, 4, 0]} name={t('admin.max')} />
             </BarChart>
           </ResponsiveContainer>
-        ) : <p className="text-sm text-cream-500 text-center py-8">No data yet</p>}
+        ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
       </div>
 
       <div className="card">
-        <h3 className="section-title mb-4">Hourly Traffic (24h)</h3>
+        <h3 className="section-title mb-4">{t('admin.hourlyTraffic')}</h3>
         {performance.hourly.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={performance.hourly}>
@@ -615,11 +635,11 @@ function PerformanceTab({ performance }) {
               <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={h => `${h}:00`} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                formatter={(v, name) => [name === 'avgTime' ? `${v}ms` : v, name === 'avgTime' ? 'Avg Time' : 'Requests']} />
-              <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name="Requests" />
+                formatter={(v, name) => [name === 'avgTime' ? `${v}ms` : v, name === 'avgTime' ? t('admin.avgTime') : t('admin.requests')]} />
+              <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name={t('admin.requests')} />
             </BarChart>
           </ResponsiveContainer>
-        ) : <p className="text-sm text-cream-500 text-center py-8">No data yet</p>}
+        ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
       </div>
     </div>
   );
@@ -628,6 +648,8 @@ function PerformanceTab({ performance }) {
 // ─── Feedback Tab ───────────────────────────────────────
 function FeedbackTab({ data, counts, onUpdate }) {
   const toast = useToast();
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [noteInput, setNoteInput] = useState('');
@@ -641,6 +663,13 @@ function FeedbackTab({ data, counts, onUpdate }) {
     closed: 'bg-cream-200 dark:bg-dark-border text-cream-500',
   };
 
+  const statusLabels = {
+    open: t('admin.statusOpen'),
+    in_progress: t('admin.statusInProgress'),
+    resolved: t('admin.statusResolved'),
+    closed: t('admin.statusClosed'),
+  };
+
   const countMap = {};
   for (const c of counts) countMap[c.status] = c.count;
   const totalCount = data.length;
@@ -651,7 +680,7 @@ function FeedbackTab({ data, counts, onUpdate }) {
   const handleStatusChange = async (id, status) => {
     try {
       await adminApi.updateFeedback(id, { status });
-      toast.success(`Status updated to ${status}`);
+      toast.success(t('admin.statusUpdatedTo', { status: statusLabels[status] || status }));
       onUpdate();
     } catch (err) { toast.error(err.message); }
   };
@@ -660,7 +689,7 @@ function FeedbackTab({ data, counts, onUpdate }) {
     if (!noteInput.trim()) return;
     try {
       await adminApi.updateFeedback(id, { adminNote: noteInput.trim() });
-      toast.success('Note added');
+      toast.success(t('admin.noteAdded'));
       setNoteInput('');
       onUpdate();
     } catch (err) { toast.error(err.message); }
@@ -669,7 +698,7 @@ function FeedbackTab({ data, counts, onUpdate }) {
   const handleDelete = async (id) => {
     try {
       await adminApi.deleteFeedback(id);
-      toast.success('Feedback deleted');
+      toast.success(t('admin.feedbackDeleted'));
       onUpdate();
     } catch (err) { toast.error(err.message); }
   };
@@ -679,10 +708,10 @@ function FeedbackTab({ data, counts, onUpdate }) {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: totalCount, onClick: () => setFilter('all'), active: filter === 'all' },
-          { label: 'Open', value: openCount, onClick: () => setFilter('open'), active: filter === 'open' },
-          { label: 'In Progress', value: countMap['in_progress'] || 0, onClick: () => setFilter('in_progress'), active: filter === 'in_progress' },
-          { label: 'Resolved', value: countMap['resolved'] || 0, onClick: () => setFilter('resolved'), active: filter === 'resolved' },
+          { label: t('common.total'), value: totalCount, onClick: () => setFilter('all'), active: filter === 'all' },
+          { label: t('admin.statusOpen'), value: openCount, onClick: () => setFilter('open'), active: filter === 'open' },
+          { label: t('admin.statusInProgress'), value: countMap['in_progress'] || 0, onClick: () => setFilter('in_progress'), active: filter === 'in_progress' },
+          { label: t('admin.statusResolved'), value: countMap['resolved'] || 0, onClick: () => setFilter('resolved'), active: filter === 'resolved' },
         ].map((card) => (
           <button key={card.label} onClick={card.onClick}
             className={`card text-center transition-all ${card.active ? 'ring-2 ring-cream-900 dark:ring-cream-100' : ''}`}>
@@ -706,12 +735,12 @@ function FeedbackTab({ data, counts, onUpdate }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{fb.title}</span>
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColors[fb.status]}`}>
-                      {fb.status?.replace('_', ' ')}
+                      {statusLabels[fb.status] || fb.status?.replace('_', ' ')}
                     </span>
                   </div>
                   <p className="text-xs text-cream-500 mt-0.5">
-                    {fb.userName || 'Unknown'} · {timeAgo(fb.createdAt)}
-                    {fb.page && ` · on ${fb.page}`}
+                    {fb.userName || t('admin.unknown')} · {timeAgo(fb.createdAt)}
+                    {fb.page && ` · ${t('admin.onPage', { page: fb.page })}`}
                   </p>
                 </div>
                 {isExpanded ? <ChevronUp size={14} className="text-cream-400 mt-1 shrink-0" /> : <ChevronDown size={14} className="text-cream-400 mt-1 shrink-0" />}
@@ -727,23 +756,23 @@ function FeedbackTab({ data, counts, onUpdate }) {
                     <div className="rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border">
                       <img
                         src={fb.screenshot}
-                        alt="Bug screenshot"
+                        alt={t('admin.bugScreenshot')}
                         className="w-full max-h-64 object-contain bg-cream-50 dark:bg-dark-bg cursor-pointer"
                         onClick={() => window.open(fb.screenshot, '_blank')}
-                        title="Click to view full size"
+                        title={t('admin.clickToViewFull')}
                       />
                     </div>
                   )}
 
                   {fb.adminNote && (
                     <div className="p-2.5 rounded-lg bg-info/5 border border-info/20">
-                      <p className="text-[10px] font-medium text-info mb-0.5">Admin note:</p>
+                      <p className="text-[10px] font-medium text-info mb-0.5">{t('admin.adminNote')}:</p>
                       <p className="text-xs text-cream-600 dark:text-cream-400">{fb.adminNote}</p>
                     </div>
                   )}
 
                   <p className="text-[10px] text-cream-400">
-                    From: {fb.userEmail || '—'} · User agent: {fb.userAgent?.slice(0, 60) || '—'}
+                    {t('admin.from')}: {fb.userEmail || '—'} · {t('admin.userAgent')}: {fb.userAgent?.slice(0, 60) || '—'}
                   </p>
 
                   {/* Actions */}
@@ -756,12 +785,12 @@ function FeedbackTab({ data, counts, onUpdate }) {
                             ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                             : 'bg-cream-200 dark:bg-dark-border text-cream-600 hover:bg-cream-300'
                         }`}>
-                        {s.replace('_', ' ')}
+                        {statusLabels[s] || s.replace('_', ' ')}
                       </button>
                     ))}
                     <button onClick={() => handleDelete(fb.id)}
                       className="text-[11px] px-2.5 py-1 rounded-lg font-medium text-danger bg-danger/10 hover:bg-danger/20 transition-colors ml-auto">
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </div>
 
@@ -770,13 +799,13 @@ function FeedbackTab({ data, counts, onUpdate }) {
                     <input
                       value={expandedId === fb.id ? noteInput : ''}
                       onChange={(e) => setNoteInput(e.target.value)}
-                      placeholder="Add admin note..."
+                      placeholder={t('admin.addAdminNote')}
                       className="flex-1 text-xs px-3 py-2 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(fb.id); }}
                     />
                     <button onClick={() => handleAddNote(fb.id)}
                       className="btn-primary text-xs px-3 py-2">
-                      Note
+                      {t('admin.note')}
                     </button>
                   </div>
                 </div>
@@ -787,7 +816,9 @@ function FeedbackTab({ data, counts, onUpdate }) {
         {filtered.length === 0 && (
           <div className="text-center py-12">
             <MessageSquare className="mx-auto text-cream-400 mb-3" size={32} />
-            <p className="text-cream-500 text-sm">No feedback {filter !== 'all' ? `with status "${filter.replace('_', ' ')}"` : 'yet'}</p>
+            <p className="text-cream-500 text-sm">
+              {filter !== 'all' ? t('admin.noFeedbackWithStatus', { status: statusLabels[filter] || filter }) : t('admin.noFeedbackYet')}
+            </p>
           </div>
         )}
       </div>

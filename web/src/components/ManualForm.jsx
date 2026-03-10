@@ -4,12 +4,14 @@ import { generateId, formatDateISO, validateTransaction } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import CategoryPicker from './CategoryPicker';
 import TagInput from './TagInput';
 
-export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add transaction' }) {
+export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [type, setType] = useState(initial.type || 'expense');
   const [merchant, setMerchant] = useState(initial.merchant || '');
   const [amount, setAmount] = useState(initial.amount || '');
@@ -26,6 +28,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
   const [categoryAutoSet, setCategoryAutoSet] = useState(false);
   const merchantRef = useRef(null);
   const suggestionsRef = useRef(null);
+
+  // Type label map
+  const typeLabels = {
+    expense: t('manualForm.expense'),
+    income: t('manualForm.income'),
+    transfer: t('manualForm.transfer'),
+  };
 
   // Fetch merchant suggestions as user types
   useEffect(() => {
@@ -134,18 +143,18 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Type toggle */}
       <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
-        {TRANSACTION_TYPES.map((t) => (
+        {TRANSACTION_TYPES.map((txType) => (
           <button
-            key={t}
+            key={txType}
             type="button"
-            onClick={() => setType(t)}
-            className={`flex-1 py-2 text-sm font-medium capitalize transition-colors ${
-              type === t
+            onClick={() => setType(txType)}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              type === txType
                 ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                 : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >
-            {t}
+            {typeLabels[txType] || txType}
           </button>
         ))}
       </div>
@@ -153,14 +162,14 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       <div className="grid grid-cols-2 gap-3">
         {/* Merchant with autocomplete */}
         <div className="col-span-2 relative">
-          <label className="label">Merchant / Source</label>
+          <label className="label">{t('manualForm.merchant')}</label>
           <input
             ref={merchantRef}
             className="input"
             value={merchant}
             onChange={(e) => { setMerchant(e.target.value); setCategoryAutoSet(false); }}
             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder="e.g. Kaufland"
+            placeholder={t('manualForm.merchantPlaceholderShort')}
             autoComplete="off"
           />
           {showSuggestions && suggestions.length > 0 && (
@@ -173,22 +182,22 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
                   className="w-full px-3 py-2 text-left hover:bg-cream-100 dark:hover:bg-dark-border flex items-center justify-between text-sm transition-colors"
                 >
                   <span className="font-medium">{s.merchant}</span>
-                  <span className="text-xs text-cream-500">{s.count}x · {s.category}</span>
+                  <span className="text-xs text-cream-500">{s.count}x · {t(`categories.${s.category}`)}</span>
                 </button>
               ))}
             </div>
           )}
           {categoryAutoSet && !initial.id && (
-            <p className="text-[10px] text-success mt-0.5">Auto-categorized as {category}</p>
+            <p className="text-[10px] text-success mt-0.5">{t('manualForm.autoCategorized').replace('{category}', t(`categories.${category}`))}</p>
           )}
         </div>
 
         <div>
-          <label className="label">Amount</label>
+          <label className="label">{t('manualForm.amount')}</label>
           <input type="number" step="0.01" min="0" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" required />
         </div>
         <div>
-          <label className="label">Currency</label>
+          <label className="label">{t('manualForm.currency')}</label>
           <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </select>
@@ -196,7 +205,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
 
         <div>
           <CategoryPicker
-            label="Category"
+            label={t('manualForm.category')}
             value={category}
             subcategoryValue={subcategory}
             onChange={handleCategoryChange}
@@ -204,13 +213,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
           />
         </div>
         <div>
-          <label className="label">Date</label>
+          <label className="label">{t('manualForm.date')}</label>
           <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
 
         <div className="col-span-2">
-          <label className="label">Description / Note</label>
-          <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional note" />
+          <label className="label">{t('manualForm.descriptionNote')}</label>
+          <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('manualForm.optionalNote')} />
         </div>
 
         <div className="col-span-2">
@@ -218,7 +227,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
         </div>
       </div>
 
-      <button type="submit" className="btn-primary w-full">{submitLabel}</button>
+      <button type="submit" className="btn-primary w-full">{submitLabel || t('manualForm.addTransaction')}</button>
     </form>
   );
 }

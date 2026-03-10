@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { challenges as challengeApi, transactions as txApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { generateId, formatCurrency, getCategoryById, formatDateISO } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import CategoryPicker from '../components/CategoryPicker';
@@ -10,16 +11,16 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { Trophy, Plus, Flame, Target, Ban, PiggyBank, Check, X, Calendar, TrendingDown } from 'lucide-react';
 
-const CHALLENGE_PRESETS = [
-  { type: 'no_spend', title: 'No-Spend Weekend', icon: '🚫', description: 'Don\'t spend anything this weekend', durationDays: 2, category: null },
-  { type: 'no_spend', title: 'No-Spend Week', icon: '💪', description: '7 days with zero spending', durationDays: 7, category: null },
-  { type: 'budget_cap', title: 'Groceries Under 500', icon: '🛒', description: 'Keep groceries under 500 this month', target: 500, durationDays: 30, category: 'groceries' },
-  { type: 'budget_cap', title: 'Dining Under 200', icon: '🍽', description: 'Eat out less — keep dining under 200', target: 200, durationDays: 30, category: 'dining' },
-  { type: 'savings', title: '30-Day Savings Sprint', icon: '🏦', description: 'Save more than you spend for 30 days', durationDays: 30, category: null },
-  { type: 'no_spend', title: 'No Coffee Shop Month', icon: '☕', description: 'Make coffee at home for a month', durationDays: 30, category: 'dining' },
+const getChallengePresets = (t) => [
+  { type: 'no_spend', title: t('challenges.presetNoSpendWeekend'), icon: '🚫', description: t('challenges.presetNoSpendWeekendDesc'), durationDays: 2, category: null },
+  { type: 'no_spend', title: t('challenges.presetNoSpendWeek'), icon: '💪', description: t('challenges.presetNoSpendWeekDesc'), durationDays: 7, category: null },
+  { type: 'budget_cap', title: t('challenges.presetGroceries'), icon: '🛒', description: t('challenges.presetGroceriesDesc'), target: 500, durationDays: 30, category: 'groceries' },
+  { type: 'budget_cap', title: t('challenges.presetDining'), icon: '🍽', description: t('challenges.presetDiningDesc'), target: 200, durationDays: 30, category: 'dining' },
+  { type: 'savings', title: t('challenges.presetSavingsSprint'), icon: '🏦', description: t('challenges.presetSavingsSprintDesc'), durationDays: 30, category: null },
+  { type: 'no_spend', title: t('challenges.presetNoCoffee'), icon: '☕', description: t('challenges.presetNoCoffeeDesc'), durationDays: 30, category: 'dining' },
 ];
 
-function getProgress(challenge, transactions) {
+function getProgress(challenge, transactions, t) {
   const start = new Date(challenge.startDate);
   const end = new Date(challenge.endDate);
   const now = new Date();
@@ -42,37 +43,39 @@ function getProgress(challenge, transactions) {
     percent = totalDays > 0 ? Math.round((daysPassed / totalDays) * 100) : 0;
     if (totalSpent > 0) {
       status = 'failed';
-      statusLabel = `Spent ${Math.round(totalSpent)} — challenge broken`;
+      statusLabel = t ? t('challenges.spentChallengeBroken', { amount: Math.round(totalSpent) }) : `Spent ${Math.round(totalSpent)} — challenge broken`;
     } else if (now > end) {
       status = 'completed';
-      statusLabel = 'Zero spending — you did it!';
+      statusLabel = t ? t('challenges.zeroSpendingSuccess') : 'Zero spending — you did it!';
     } else {
-      statusLabel = `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to go — keep it up!`;
+      statusLabel = t ? t('challenges.daysToGo', { count: daysRemaining }) : `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to go — keep it up!`;
     }
   } else if (challenge.type === 'budget_cap') {
     percent = challenge.target > 0 ? Math.round((totalSpent / challenge.target) * 100) : 0;
     if (totalSpent > challenge.target) {
       status = 'failed';
-      statusLabel = `Over budget by ${Math.round(totalSpent - challenge.target)}`;
+      statusLabel = t ? t('challenges.overBudgetBy', { amount: Math.round(totalSpent - challenge.target) }) : `Over budget by ${Math.round(totalSpent - challenge.target)}`;
     } else if (now > end) {
       status = 'completed';
-      statusLabel = `Spent ${Math.round(totalSpent)} of ${challenge.target} — success!`;
+      statusLabel = t ? t('challenges.spentOfTargetSuccess', { spent: Math.round(totalSpent), target: challenge.target }) : `Spent ${Math.round(totalSpent)} of ${challenge.target} — success!`;
     } else {
       const remaining = challenge.target - totalSpent;
-      statusLabel = `${Math.round(remaining)} remaining for ${daysRemaining} days`;
+      statusLabel = t ? t('challenges.remainingForDays', { amount: Math.round(remaining), days: daysRemaining }) : `${Math.round(remaining)} remaining for ${daysRemaining} days`;
     }
   } else if (challenge.type === 'savings') {
-    const income = transactions.filter(t => {
-      const d = new Date(t.date);
-      return d >= start && d <= end && t.type === 'income';
-    }).reduce((s, t) => s + t.amount, 0);
+    const income = transactions.filter(tx => {
+      const d = new Date(tx.date);
+      return d >= start && d <= end && tx.type === 'income';
+    }).reduce((s, tx) => s + tx.amount, 0);
     const saved = income - totalSpent;
     percent = income > 0 ? Math.round((saved / income) * 100) : 0;
     if (now > end) {
       status = saved > 0 ? 'completed' : 'failed';
-      statusLabel = saved > 0 ? `Saved ${Math.round(saved)} — well done!` : `Spent more than earned`;
+      statusLabel = saved > 0
+        ? (t ? t('challenges.savedWellDone', { amount: Math.round(saved) }) : `Saved ${Math.round(saved)} — well done!`)
+        : (t ? t('challenges.spentMoreThanEarned') : 'Spent more than earned');
     } else {
-      statusLabel = `Saved ${Math.round(Math.max(0, saved))} so far`;
+      statusLabel = t ? t('challenges.savedSoFar', { amount: Math.round(Math.max(0, saved)) }) : `Saved ${Math.round(Math.max(0, saved))} so far`;
     }
   }
 
@@ -82,6 +85,7 @@ function getProgress(challenge, transactions) {
 export default function Challenges() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [allTx, setAllTx] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,28 +112,28 @@ export default function Challenges() {
       ]);
       setItems(ch);
       setAllTx(tx);
-    } catch { toast.error('Failed to load'); }
+    } catch { toast.error(t('challenges.failedLoad')); }
     finally { setLoading(false); }
   };
 
   const active = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx);
+    const p = getProgress(c, allTx, t);
     return p.status === 'active';
   }), [items, allTx]);
 
   const completed = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx);
+    const p = getProgress(c, allTx, t);
     return p.status === 'completed';
   }), [items, allTx]);
 
   const failed = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx);
+    const p = getProgress(c, allTx, t);
     return p.status === 'failed';
   }), [items, allTx]);
 
   const handleCreate = async (preset = null) => {
     const data = preset || form;
-    if (!data.title) { toast.error('Title required'); return; }
+    if (!data.title) { toast.error(t('challenges.titleRequired')); return; }
 
     const now = new Date();
     const end = new Date(now);
@@ -149,7 +153,7 @@ export default function Challenges() {
     };
 
     await challengeApi.create(challenge);
-    toast.success(`Challenge "${challenge.title}" started!`);
+    toast.success(t('challenges.started', { title: challenge.title }));
     setShowForm(false);
     setShowPresets(false);
     setForm({ type: 'budget_cap', title: '', target: '', category: '', durationDays: '30' });
@@ -158,7 +162,7 @@ export default function Challenges() {
 
   const handleDelete = async (id) => {
     await challengeApi.remove(id);
-    toast.success('Challenge removed');
+    toast.success(t('challenges.deleted'));
     loadData();
   };
 
@@ -188,13 +192,13 @@ export default function Challenges() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">Challenges</h1>
+        <h1 className="page-title mb-0">{t('challenges.title')}</h1>
         <div className="flex gap-2">
           <button onClick={() => setShowPresets(true)} className="btn-secondary text-xs flex items-center gap-1">
-            <Flame size={14} /> Presets
+            <Flame size={14} /> {t('challenges.presets')}
           </button>
           <button onClick={() => setShowForm(true)} className="btn-primary text-xs flex items-center gap-1">
-            <Plus size={14} /> Custom
+            <Plus size={14} /> {t('challenges.custom')}
           </button>
         </div>
       </div>
@@ -205,8 +209,8 @@ export default function Challenges() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-accent-100 dark:bg-accent-900/40 flex items-center justify-center text-2xl">🔥</div>
             <div>
-              <p className="text-2xl font-heading font-bold">{streakDays} day streak</p>
-              <p className="text-xs text-cream-500">No spending for {streakDays} consecutive day{streakDays > 1 ? 's' : ''}</p>
+              <p className="text-2xl font-heading font-bold">{t('challenges.dayStreak', { count: streakDays })}</p>
+              <p className="text-xs text-cream-500">{t('challenges.noSpendingStreak', { count: streakDays })}</p>
             </div>
           </div>
         </div>
@@ -215,17 +219,17 @@ export default function Challenges() {
       {/* Active challenges */}
       {active.length > 0 && (
         <div>
-          <h2 className="section-title flex items-center gap-1.5"><Target size={12} /> Active challenges</h2>
+          <h2 className="section-title flex items-center gap-1.5"><Target size={12} /> {t('challenges.activeChallenges')}</h2>
           <div className="space-y-3">
             {active.map(c => {
-              const p = getProgress(c, allTx);
+              const p = getProgress(c, allTx, t);
               const cat = c.category ? getCategoryById(c.category) : null;
               return (
                 <div key={c.id} className="card">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <h3 className="text-sm font-bold">{c.title}</h3>
-                      <p className="text-xs text-cream-500">{cat ? `${cat.icon} ${cat.name}` : 'All categories'} · {p.daysRemaining}d left</p>
+                      <p className="text-xs text-cream-500">{cat ? `${cat.icon} ${t(`categories.${c.category}`)}` : t('challenges.allCategories')} · {p.daysRemaining}{t('challenges.dLeft')}</p>
                     </div>
                     <button onClick={() => handleDelete(c.id)} className="p-1 text-cream-400 hover:text-danger"><X size={14} /></button>
                   </div>
@@ -255,10 +259,10 @@ export default function Challenges() {
       {/* Completed */}
       {completed.length > 0 && (
         <div>
-          <h2 className="section-title flex items-center gap-1.5"><Check size={12} className="text-success" /> Completed</h2>
+          <h2 className="section-title flex items-center gap-1.5"><Check size={12} className="text-success" /> {t('challenges.completedSection')}</h2>
           <div className="space-y-2">
             {completed.map(c => {
-              const p = getProgress(c, allTx);
+              const p = getProgress(c, allTx, t);
               return (
                 <div key={c.id} className="card bg-success/5 border-success/20">
                   <div className="flex items-center justify-between">
@@ -281,10 +285,10 @@ export default function Challenges() {
       {/* Failed */}
       {failed.length > 0 && (
         <div>
-          <h2 className="section-title flex items-center gap-1.5"><Ban size={12} className="text-danger" /> Not completed</h2>
+          <h2 className="section-title flex items-center gap-1.5"><Ban size={12} className="text-danger" /> {t('challenges.notCompleted')}</h2>
           <div className="space-y-2">
             {failed.map(c => {
-              const p = getProgress(c, allTx);
+              const p = getProgress(c, allTx, t);
               return (
                 <div key={c.id} className="card opacity-60">
                   <div className="flex items-center justify-between">
@@ -304,17 +308,17 @@ export default function Challenges() {
       {items.length === 0 && (
         <EmptyState
           icon={Trophy}
-          title="No challenges yet"
-          description="Set spending challenges and track streaks to build better habits"
-          action="Start a challenge"
+          title={t('challenges.noChallenges')}
+          description={t('challenges.noChallengesDesc')}
+          action={t('challenges.createFirst')}
           onAction={() => setShowPresets(true)}
         />
       )}
 
       {/* Presets Modal */}
-      <Modal open={showPresets} onClose={() => setShowPresets(false)} title="Quick challenges">
+      <Modal open={showPresets} onClose={() => setShowPresets(false)} title={t('challenges.quickChallenges')}>
         <div className="space-y-2">
-          {CHALLENGE_PRESETS.map((preset, i) => (
+          {getChallengePresets(t).map((preset, i) => (
             <button
               key={i}
               onClick={() => handleCreate(preset)}
@@ -331,39 +335,39 @@ export default function Challenges() {
       </Modal>
 
       {/* Custom Form Modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Custom challenge">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t('challenges.customChallenge')}>
         <div className="space-y-4">
           <div>
-            <label className="label">Challenge type</label>
+            <label className="label">{t('challenges.type')}</label>
             <select className="input" value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}>
-              <option value="budget_cap">Budget Cap</option>
-              <option value="no_spend">No-Spend</option>
-              <option value="savings">Savings Goal</option>
+              <option value="budget_cap">{t('challenges.budgetChallenge')}</option>
+              <option value="no_spend">{t('challenges.noSpend')}</option>
+              <option value="savings">{t('challenges.savingsChallenge')}</option>
             </select>
           </div>
           <div>
-            <label className="label">Title</label>
-            <input className="input" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. No eating out" />
+            <label className="label">{t('challenges.name')}</label>
+            <input className="input" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder={t('challenges.namePlaceholder')} />
           </div>
           {form.type === 'budget_cap' && (
             <div>
-              <label className="label">Target amount ({currency})</label>
+              <label className="label">{t('challenges.targetAmount')} ({currency})</label>
               <input type="number" className="input" value={form.target} onChange={(e) => setForm(f => ({ ...f, target: e.target.value }))} placeholder="500" />
             </div>
           )}
           <div>
             <CategoryPicker
-              label="Category (optional — leave for all)"
+              label={t('challenges.category')}
               value={form.category}
               onChange={(catId) => setForm(f => ({ ...f, category: catId }))}
               exclude={['income', 'transfer']}
             />
           </div>
           <div>
-            <label className="label">Duration (days)</label>
+            <label className="label">{t('challenges.duration')}</label>
             <input type="number" className="input" value={form.durationDays} onChange={(e) => setForm(f => ({ ...f, durationDays: e.target.value }))} placeholder="30" min="1" max="365" />
           </div>
-          <button onClick={() => handleCreate()} className="btn-primary w-full">Start challenge</button>
+          <button onClick={() => handleCreate()} className="btn-primary w-full">{t('challenges.createFirst')}</button>
         </div>
       </Modal>
     </div>

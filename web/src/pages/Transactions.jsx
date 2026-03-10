@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { sortByDate, formatCurrency, sumBy } from '../lib/helpers';
 import TransactionRow from '../components/TransactionRow';
 import SearchFilter from '../components/SearchFilter';
@@ -20,6 +21,7 @@ export default function Transactions() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
+  const { t } = useTranslation();
   const currency = user?.defaultCurrency || 'RON';
   const [allTx, setAllTx] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function Transactions() {
       const data = await txApi.getAll({ userId: effectiveUserId });
       setAllTx(data);
     } catch (err) {
-      toast.error('Failed to load transactions');
+      toast.error(t('transactions.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -138,7 +140,7 @@ export default function Transactions() {
     setDeleteTx(null);
 
     // Show undo toast — only permanently delete after timeout
-    toast.undo(`Deleted "${txToDelete.merchant || 'transaction'}"`, {
+    toast.undo(t('transactions.deleted', { name: txToDelete.merchant || t('common.transaction') }), {
       onUndo: () => {
         // Restore the transaction in UI and re-save to DB
         setAllTx((prev) => [...prev, txToDelete]);
@@ -158,28 +160,28 @@ export default function Transactions() {
       const dupes = await checkDuplicate(updated);
       const realDupes = dupes.filter(d => d.transaction.id !== updated.id && d.confidence >= 0.7);
       if (realDupes.length > 0) {
-        const proceed = confirm(`This looks like a duplicate of "${realDupes[0].transaction.merchant}" on ${realDupes[0].transaction.date}. Save anyway?`);
+        const proceed = confirm(t('transactions.duplicateWarning', { merchant: realDupes[0].transaction.merchant, date: realDupes[0].transaction.date }));
         if (!proceed) return;
       }
       await txApi.update(updated.id, updated);
       setAllTx((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setEditTx(null);
-      toast.success('Transaction updated');
+      toast.success(t('transactions.updated'));
     } catch (err) {
-      toast.error('Failed to update');
+      toast.error(t('transactions.failedUpdate'));
     }
   };
 
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} transaction${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    if (!confirm(t('transactions.bulkDeleteConfirm', { count: selected.size }))) return;
     try {
       await Promise.all([...selected].map(id => txApi.remove(id)));
       setAllTx((prev) => prev.filter((t) => !selected.has(t.id)));
       setSelected(new Set());
-      toast.success(`${selected.size} transactions deleted`);
+      toast.success(t('transactions.bulkDeleted', { count: selected.size }));
     } catch (err) {
-      toast.error('Failed to delete');
+      toast.error(t('transactions.failedDelete'));
     }
   };
 
@@ -202,11 +204,11 @@ export default function Transactions() {
       });
       await Promise.all(updates);
       setAllTx((prev) => prev.map((t) => selected.has(t.id) ? { ...t, category: newCategory } : t));
-      toast.success(`${selected.size} transaction${selected.size > 1 ? 's' : ''} re-categorized`);
+      toast.success(t('transactions.recategorized', { count: selected.size }));
       setSelected(new Set());
       setShowBatchCategory(false);
     } catch (err) {
-      toast.error('Failed to update categories');
+      toast.error(t('transactions.failedCategorize'));
     }
   };
 
@@ -223,19 +225,19 @@ export default function Transactions() {
     a.download = `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('CSV exported');
+    toast.success(t('transactions.csvExported'));
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">Transactions</h1>
+        <h1 className="page-title mb-0">{t('transactions.title')}</h1>
         <div className="flex gap-2">
           {selected.size > 0 && (
             <>
               <div className="relative">
                 <button onClick={() => setShowBatchCategory(!showBatchCategory)} className="btn-secondary text-xs flex items-center gap-1">
-                  <Tag size={14} /> Categorize ({selected.size})
+                  <Tag size={14} /> {t('transactions.categorize', { count: selected.size })}
                 </button>
                 {showBatchCategory && (
                   <div className="absolute right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden z-50" style={{ minWidth: '200px', maxHeight: '320px' }}>
@@ -247,7 +249,7 @@ export default function Transactions() {
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
                         >
                           <span>{cat.icon}</span>
-                          <span>{cat.name}</span>
+                          <span>{t(`categories.${cat.id}`)}</span>
                         </button>
                       ))}
                     </div>
@@ -255,19 +257,19 @@ export default function Transactions() {
                 )}
               </div>
               <button onClick={handleBulkDelete} className="btn-danger text-xs flex items-center gap-1">
-                <Trash2 size={14} /> Delete ({selected.size})
+                <Trash2 size={14} /> {t('transactions.bulkDelete', { count: selected.size })}
               </button>
             </>
           )}
           <button onClick={exportCSV} className="btn-ghost text-xs flex items-center gap-1">
-            <Download size={14} /> CSV
+            <Download size={14} /> {t('transactions.exportCsv')}
           </button>
         </div>
       </div>
 
       {/* Summary */}
       <div className="flex gap-4 text-sm">
-        <span className="text-cream-500">{filtered.length} transactions</span>
+        <span className="text-cream-500">{filtered.length} {t('common.transactions')}</span>
         <span className="text-danger money">-{formatCurrency(totalExpenses, currency)}</span>
         <span className="text-income money">+{formatCurrency(totalIncome, currency)}</span>
       </div>
@@ -280,11 +282,11 @@ export default function Transactions() {
 
       {/* Amount range filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-cream-500">Amount:</span>
+        <span className="text-xs text-cream-500">{t('transactions.amount')}</span>
         <input
           type="number"
           className="input w-24 text-xs py-1.5"
-          placeholder="Min"
+          placeholder={t('transactions.min')}
           value={amountMin}
           onChange={(e) => setAmountMin(e.target.value)}
           inputMode="decimal"
@@ -294,7 +296,7 @@ export default function Transactions() {
         <input
           type="number"
           className="input w-24 text-xs py-1.5"
-          placeholder="Max"
+          placeholder={t('transactions.max')}
           value={amountMax}
           onChange={(e) => setAmountMax(e.target.value)}
           inputMode="decimal"
@@ -304,7 +306,7 @@ export default function Transactions() {
           <button
             onClick={() => { setAmountMin(''); setAmountMax(''); }}
             className="p-1 rounded-full text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border transition-colors"
-            title="Clear amount filter"
+            title={t('transactions.clearAmountFilter')}
           >
             <X size={12} />
           </button>
@@ -312,11 +314,11 @@ export default function Transactions() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-cream-500">Period:</span>
+        <span className="text-xs text-cream-500">{t('transactions.period')}</span>
         <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
           {[
-            { id: 'all', label: 'All' },
-            { id: 'thisMonth', label: 'This month' },
+            { id: 'all', label: t('common.all') },
+            { id: 'thisMonth', label: t('transactions.thisMonth') },
             { id: '7d', label: '7d' },
             { id: '30d', label: '30d' },
             { id: '90d', label: '90d' },
@@ -363,7 +365,7 @@ export default function Transactions() {
             ))}
             {availableTags.length > 12 && (
               <button onClick={() => setShowAllTags(!showAllTags)} className="text-xs text-accent-500 hover:text-accent-600">
-                {showAllTags ? 'Show less' : `+${availableTags.length - 12} more`}
+                {showAllTags ? t('common.showLess') : t('transactions.moreCount', { count: availableTags.length - 12 })}
               </button>
             )}
             {tagFilter.length > 0 && (
@@ -371,7 +373,7 @@ export default function Transactions() {
                 type="button"
                 onClick={() => setTagFilter([])}
                 className="p-1 rounded-full text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border transition-colors"
-                title="Clear tag filter"
+                title={t('transactions.clearTagFilter')}
               >
                 <X size={12} />
               </button>
@@ -400,35 +402,35 @@ export default function Transactions() {
             </div>
             {hasMore && (
               <button onClick={() => setPage((p) => p + 1)} className="w-full py-3 text-sm text-cream-500 hover:text-cream-700 border-t border-cream-100 dark:border-dark-border">
-                Load more ({filtered.length - paginated.length} remaining)
+                {t('common.loadMore', { count: filtered.length - paginated.length })}
               </button>
             )}
           </>
         ) : (
           <EmptyState
             icon={Receipt}
-            title="No transactions found"
-            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
-            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax ? 'Add transaction' : undefined}
+            title={t('transactions.noFound')}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax ? t('transactions.adjustFilters') : t('transactions.addFirst')}
+            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax ? t('transactions.addTransaction') : undefined}
             onAction={() => navigate('/add')}
           />
         )}
       </div>
 
       {/* Edit modal */}
-      <Modal open={!!editTx} onClose={() => setEditTx(null)} title="Edit transaction">
-        {editTx && <ManualForm initial={editTx} onSubmit={handleEdit} submitLabel="Save changes" />}
+      <Modal open={!!editTx} onClose={() => setEditTx(null)} title={t('transactions.editTransaction')}>
+        {editTx && <ManualForm initial={editTx} onSubmit={handleEdit} submitLabel={t('transactions.saveChanges')} />}
       </Modal>
 
       {/* Delete confirmation */}
-      <Modal open={!!deleteTx} onClose={() => setDeleteTx(null)} title="Delete transaction">
+      <Modal open={!!deleteTx} onClose={() => setDeleteTx(null)} title={t('transactions.deleteTransaction')}>
         <p className="text-sm mb-4">
-          Are you sure you want to delete the {deleteTx?.merchant || 'this'} transaction for{' '}
+          {t('transactions.deleteConfirm', { merchant: deleteTx?.merchant || 'this' })}{' '}
           <strong className="money">{deleteTx && formatCurrency(deleteTx.amount, deleteTx.currency)}</strong>?
         </p>
         <div className="flex gap-2 justify-end">
-          <button onClick={() => setDeleteTx(null)} className="btn-secondary">Cancel</button>
-          <button onClick={handleDelete} className="btn-danger">Delete</button>
+          <button onClick={() => setDeleteTx(null)} className="btn-secondary">{t('common.cancel')}</button>
+          <button onClick={handleDelete} className="btn-danger">{t('common.delete')}</button>
         </div>
       </Modal>
     </div>

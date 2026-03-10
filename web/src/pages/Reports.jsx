@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById } from '../lib/helpers';
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
 import { getTagStats } from '../lib/tagHelpers';
@@ -9,17 +10,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { FileText, Download, Printer, Filter, Calendar } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 
-const REPORT_TYPES = [
-  { id: 'spending', label: 'Spending Summary', description: 'Category breakdown with totals' },
-  { id: 'tax', label: 'Tax Report', description: 'Filter by tags like business, medical, charity' },
-  { id: 'trends', label: 'Monthly Trends', description: 'Compare spending over months' },
-];
-
 const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#6366f1'];
 
 export default function Reports() {
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [allTx, setAllTx] = useState([]);
   const [budgetsList, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +24,12 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [taxTags, setTaxTags] = useState(['business']);
   const currency = user?.defaultCurrency || 'RON';
+
+  const REPORT_TYPES = [
+    { id: 'spending', label: t('reports.spendingSummary'), description: t('reports.spendingSummaryDesc') },
+    { id: 'tax', label: t('reports.taxReport'), description: t('reports.taxReportDesc') },
+    { id: 'trends', label: t('reports.monthlyTrends'), description: t('reports.monthlyTrendsDesc') },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -60,10 +62,10 @@ export default function Reports() {
     return Object.entries(byCategory)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
-        return { id: catId, name: cat.name, icon: cat.icon, total: sumBy(txs, 'amount'), count: txs.length };
+        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, total: sumBy(txs, 'amount'), count: txs.length };
       })
       .sort((a, b) => b.total - a.total);
-  }, [expenses]);
+  }, [expenses, t]);
 
   // Tax-filtered transactions
   const taxFiltered = useMemo(() => {
@@ -96,7 +98,7 @@ export default function Reports() {
     const data = reportType === 'tax' ? taxFiltered : filtered;
     const blob = generateCSV(data);
     downloadBlob(blob, `report_${reportType}_${dateFrom}_to_${dateTo}.csv`);
-    toast.success('CSV exported');
+    toast.success(t('transactions.csvExported'));
   };
 
   const handlePrint = () => {
@@ -106,7 +108,7 @@ export default function Reports() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h1 className="page-title">Reports</h1>
+        <h1 className="page-title">{t('reports.title')}</h1>
         <div className="card animate-pulse"><div className="h-48 bg-cream-200 dark:bg-dark-border rounded-lg" /></div>
       </div>
     );
@@ -116,13 +118,13 @@ export default function Reports() {
     <div className="space-y-6 print:space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <h1 className="page-title mb-0">Reports</h1>
+        <h1 className="page-title mb-0">{t('reports.title')}</h1>
         <div className="flex gap-2">
           <button onClick={handleExportCSV} className="btn-ghost text-xs flex items-center gap-1">
-            <Download size={14} /> CSV
+            <Download size={14} /> {t('reports.csv')}
           </button>
           <button onClick={handlePrint} className="btn-ghost text-xs flex items-center gap-1">
-            <Printer size={14} /> Print
+            <Printer size={14} /> {t('reports.print')}
           </button>
         </div>
       </div>
@@ -147,7 +149,7 @@ export default function Reports() {
         <div className="flex items-center gap-2 ml-auto">
           <Calendar size={14} className="text-cream-400" />
           <input type="date" className="input w-auto text-xs" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <span className="text-cream-400 text-xs">to</span>
+          <span className="text-cream-400 text-xs">{t('reports.to')}</span>
           <input type="date" className="input w-auto text-xs" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
       </div>
@@ -155,7 +157,7 @@ export default function Reports() {
       {/* Print header */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">BudgetPilot — {REPORT_TYPES.find((r) => r.id === reportType)?.label}</h1>
-        <p className="text-sm text-gray-500">{dateFrom} to {dateTo}</p>
+        <p className="text-sm text-gray-500">{dateFrom} {t('reports.to')} {dateTo}</p>
       </div>
 
       {/* SPENDING SUMMARY */}
@@ -164,15 +166,15 @@ export default function Reports() {
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="card">
-              <p className="text-xs text-cream-500">Total spent</p>
+              <p className="text-xs text-cream-500">{t('reports.totalSpent')}</p>
               <p className="font-heading font-bold text-lg money text-danger">{formatCurrency(totalExpenses, currency)}</p>
             </div>
             <div className="card">
-              <p className="text-xs text-cream-500">Total income</p>
+              <p className="text-xs text-cream-500">{t('reports.totalIncome')}</p>
               <p className="font-heading font-bold text-lg money text-income">{formatCurrency(totalIncome, currency)}</p>
             </div>
             <div className="card">
-              <p className="text-xs text-cream-500">Net</p>
+              <p className="text-xs text-cream-500">{t('reports.net')}</p>
               <p className={`font-heading font-bold text-lg money ${totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatCurrency(totalIncome - totalExpenses, currency)}
               </p>
@@ -181,7 +183,7 @@ export default function Reports() {
 
           {/* Category pie chart */}
           <div className="card">
-            <h3 className="section-title">Category breakdown</h3>
+            <h3 className="section-title">{t('reports.categoryBreakdown')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {categoryData.length > 0 && (
                 <ResponsiveContainer width="100%" height={250}>
@@ -226,7 +228,7 @@ export default function Reports() {
       {reportType === 'tax' && (
         <>
           <div className="card">
-            <h3 className="section-title">Tax-relevant tags</h3>
+            <h3 className="section-title">{t('reports.taxRelevantTags')}</h3>
             <div className="flex flex-wrap gap-2 mb-4">
               {['business', 'medical', 'charity', 'education', 'work'].map((tag) => (
                 <button
@@ -243,7 +245,7 @@ export default function Reports() {
               ))}
             </div>
             <p className="text-sm text-cream-500">
-              {taxFiltered.length} transactions tagged for tax purposes, totaling{' '}
+              {t('reports.taxTransactions', { count: taxFiltered.length })}{' '}
               <strong className="money">{formatCurrency(sumBy(taxFiltered, 'amount'), currency)}</strong>
             </p>
           </div>
@@ -253,21 +255,21 @@ export default function Reports() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-cream-200 dark:border-dark-border">
-                    <th className="text-left px-4 py-2 text-xs text-cream-500">Date</th>
-                    <th className="text-left px-4 py-2 text-xs text-cream-500">Merchant</th>
-                    <th className="text-left px-4 py-2 text-xs text-cream-500">Category</th>
-                    <th className="text-left px-4 py-2 text-xs text-cream-500">Tags</th>
-                    <th className="text-right px-4 py-2 text-xs text-cream-500">Amount</th>
+                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.dateHeader')}</th>
+                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.merchantHeader')}</th>
+                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.categoryHeader')}</th>
+                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.tagsHeader')}</th>
+                    <th className="text-right px-4 py-2 text-xs text-cream-500">{t('reports.amountHeader')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {taxFiltered.map((t) => (
-                    <tr key={t.id} className="border-b border-cream-100 dark:border-dark-border">
-                      <td className="px-4 py-2">{t.date}</td>
-                      <td className="px-4 py-2 font-medium">{t.merchant}</td>
-                      <td className="px-4 py-2">{t.category}</td>
-                      <td className="px-4 py-2">{(t.tags || []).map((tag) => `#${tag}`).join(' ')}</td>
-                      <td className="px-4 py-2 text-right money">{formatCurrency(t.amount, t.currency)}</td>
+                  {taxFiltered.map((tx) => (
+                    <tr key={tx.id} className="border-b border-cream-100 dark:border-dark-border">
+                      <td className="px-4 py-2">{tx.date}</td>
+                      <td className="px-4 py-2 font-medium">{tx.merchant}</td>
+                      <td className="px-4 py-2">{tx.category}</td>
+                      <td className="px-4 py-2">{(tx.tags || []).map((tag) => `#${tag}`).join(' ')}</td>
+                      <td className="px-4 py-2 text-right money">{formatCurrency(tx.amount, tx.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -280,15 +282,15 @@ export default function Reports() {
       {/* MONTHLY TRENDS */}
       {reportType === 'trends' && (
         <div className="card">
-          <h3 className="section-title">Monthly comparison (last 6 months)</h3>
+          <h3 className="section-title">{t('reports.monthlyComparison')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-              <Bar dataKey="expenses" fill="#e11d48" name="Expenses" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="income" fill="#059669" name="Income" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expenses" fill="#e11d48" name={t('reports.expenses')} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="income" fill="#059669" name={t('reports.income')} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

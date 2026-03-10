@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
 import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getDaysRemaining, formatDate, getCategoryById, sortByDate } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, effectiveUserId } = useAuth();
   const { hideAmounts, updateHideAmounts, shouldHide } = useHideAmounts();
+  const { t } = useTranslation();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
   const [prevTransactions, setPrevTransactions] = useState([]);
@@ -177,9 +179,9 @@ export default function Dashboard() {
     // Budget alerts
     budgetProgress.forEach((b) => {
       if (b.pct >= 100) {
-        alerts.push({ type: 'danger', icon: AlertTriangle, text: `${getCategoryById(b.category).name} budget exceeded (${b.pct}%)`, link: '/budgets' });
+        alerts.push({ type: 'danger', icon: AlertTriangle, text: t('dashboard.budgetExceeded', { name: t(`categories.${b.category}`), pct: b.pct }), link: '/budgets' });
       } else if (b.pct >= 80) {
-        alerts.push({ type: 'warning', icon: AlertTriangle, text: `${getCategoryById(b.category).name} budget at ${b.pct}%`, link: '/budgets' });
+        alerts.push({ type: 'warning', icon: AlertTriangle, text: t('dashboard.budgetAt', { name: t(`categories.${b.category}`), pct: b.pct }), link: '/budgets' });
       }
     });
 
@@ -189,29 +191,29 @@ export default function Dashboard() {
       const billingDay = r.billingDay || 1;
       const daysUntil = billingDay >= today ? billingDay - today : 30 - today + billingDay;
       if (daysUntil <= 2 && daysUntil >= 0) {
-        const label = daysUntil === 0 ? 'today' : daysUntil === 1 ? 'tomorrow' : 'in 2 days';
-        alerts.push({ type: 'info', icon: Bell, text: `${r.name} is due ${label}`, link: '/recurring' });
+        const text = daysUntil === 0 ? t('dashboard.dueToday', { name: r.name }) : daysUntil === 1 ? t('dashboard.dueTomorrow', { name: r.name }) : t('dashboard.dueIn2Days', { name: r.name });
+        alerts.push({ type: 'info', icon: Bell, text, link: '/recurring' });
       }
     });
 
     // Month-over-month spending comparison (at same point in month)
     if (stats.totalSpent > 0 && prevTransactions.length > 0) {
-      const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
+      const prevExpenses = prevTransactions.filter((tx) => tx.type === 'expense');
       const dayOfMonth = new Date().getDate();
       const prevAtThisPoint = sumBy(
-        prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
+        prevExpenses.filter((tx) => new Date(tx.date).getDate() <= dayOfMonth),
         'amount'
       );
       if (prevAtThisPoint > 0) {
         const diff = ((stats.totalSpent - prevAtThisPoint) / prevAtThisPoint) * 100;
         if (diff > 30) {
-          alerts.push({ type: 'warning', icon: TrendingUp, text: `Spending ${Math.round(diff)}% higher than last month at this point` });
+          alerts.push({ type: 'warning', icon: TrendingUp, text: t('dashboard.spendingHigher', { pct: Math.round(diff) }) });
         }
       }
     }
 
     return alerts.slice(0, 3);
-  }, [budgetProgress, recurringList, stats, prevTransactions]);
+  }, [budgetProgress, recurringList, stats, prevTransactions, t]);
 
   // No-spend days count
   const noSpendDays = useMemo(() => {
@@ -264,10 +266,10 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title mb-0">
-            {user?.name ? `Hey, ${user.name.split(' ')[0]}` : 'Dashboard'}
+            {user?.name ? t('dashboard.hey', { name: user.name.split(' ')[0] }) : t('dashboard.title')}
           </h1>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-cream-600 dark:text-cream-500">Here's your financial overview</p>
+            <p className="text-sm text-cream-600 dark:text-cream-500">{t('dashboard.financialOverview')}</p>
             <span className="md:hidden"><SyncIndicator mobile /></span>
           </div>
         </div>
@@ -275,7 +277,7 @@ export default function Dashboard() {
           <button
             onClick={() => setHidden(!hidden)}
             className="p-2 rounded-xl hover:bg-cream-100 dark:hover:bg-cream-800 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-all"
-            title={hidden ? 'Show all amounts' : 'Hide all amounts'}
+            title={hidden ? t('dashboard.showAmounts') : t('dashboard.hideAmounts')}
           >
             {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -307,27 +309,27 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
         <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-colors shrink-0">
-          <Zap size={16} /> Quick Add
+          <Zap size={16} /> {t('dashboard.quickAdd')}
         </Link>
         <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
-          <Camera size={16} /> Scan Receipt
+          <Camera size={16} /> {t('dashboard.scanReceipt')}
         </Link>
         <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
-          <RotateCcw size={16} /> Recurring
+          <RotateCcw size={16} /> {t('dashboard.recurring')}
         </Link>
         <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
-          <TrendingUp size={16} /> Analytics
+          <TrendingUp size={16} /> {t('dashboard.analytics')}
         </Link>
       </div>
 
       {/* Stat cards — horizontal scroll on mobile, grid on desktop */}
       <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
-        <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-        <StatCard label="Total Income" value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-        <StatCard label="Net" value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-        <StatCard label="Budget Left" value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-        <StatCard label="Daily Avg" value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
-        <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.totalSpent')} value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.totalIncome')} value={formatCurrency(stats.totalIncome, currency)} icon={TrendingUp} accent="#059669" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.net')} value={formatCurrency(stats.net, currency)} icon={DollarSign} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.budgetLeft')} value={formatCurrency(Math.max(0, stats.budgetRemaining), currency)} icon={PiggyBank} accent="#d97706" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.dailyAvg')} value={formatCurrency(stats.dailyAvg, currency)} icon={CalendarDays} accent="#0ea5e9" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
+        <StatCard label={t('dashboard.netWorth')} value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
       </div>
 
       {/* Spending velocity indicator */}
@@ -338,7 +340,7 @@ export default function Dashboard() {
             : 'bg-success/10 text-success border border-success/20'
         }`}>
           {velocity.faster ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          Spending {Math.abs(velocity.change)}% {velocity.faster ? 'faster' : 'slower'} than last month
+          {t('dashboard.spendingVelocity', { pct: Math.abs(velocity.change), direction: velocity.faster ? t('dashboard.faster') : t('dashboard.slower') })}
         </div>
       )}
 
@@ -347,8 +349,8 @@ export default function Dashboard() {
         <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
         <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">In My Pocket</p>
-            <p className="text-xs md:text-sm text-cream-500 dark:text-cream-400 mt-0.5">Safe to spend after bills</p>
+            <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">{t('dashboard.inMyPocket')}</p>
+            <p className="text-xs md:text-sm text-cream-500 dark:text-cream-400 mt-0.5">{t('dashboard.safeToSpend')}</p>
           </div>
           <p className="text-2xl md:text-3xl font-heading font-bold text-success money">
             {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
@@ -359,12 +361,12 @@ export default function Dashboard() {
           {monthComparison && (
             <span className={`flex items-center gap-1 text-[11px] font-medium ${monthComparison.isGood ? 'text-success' : 'text-warning'}`}>
               {monthComparison.isGood ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
-              {monthComparison.pct}% {monthComparison.direction} than last month
+              {t(monthComparison.isGood ? 'dashboard.lessLastMonth' : 'dashboard.moreLastMonth', { pct: monthComparison.pct })}
             </span>
           )}
           {noSpendDays > 0 && (
             <span className="flex items-center gap-1 text-[11px] font-medium text-accent-600 dark:text-accent-400">
-              <Flame size={12} /> {noSpendDays} no-spend day{noSpendDays !== 1 ? 's' : ''}
+              <Flame size={12} /> {t(noSpendDays !== 1 ? 'dashboard.noSpendDaysPlural' : 'dashboard.noSpendDays', { count: noSpendDays })}
             </span>
           )}
         </div>
@@ -373,7 +375,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Spending trend chart — shorter on mobile */}
         <div className="card !p-3 md:!p-5">
-          <h3 className="section-title">Spending trend</h3>
+          <h3 className="section-title">{t('dashboard.spendingTrend')}</h3>
           {spendingChartData.length > 0 ? (
             <div className="h-[140px] md:h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -395,13 +397,13 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-6">No spending data this month</p>
+            <p className="text-sm text-cream-500 text-center py-6">{t('dashboard.noSpendingData')}</p>
           )}
         </div>
 
         {/* Category breakdown — compact pie on mobile */}
         <div className="card !p-3 md:!p-5">
-          <h3 className="section-title">By category</h3>
+          <h3 className="section-title">{t('dashboard.byCategory')}</h3>
           {categoryData.length > 0 ? (
             <div className="flex items-center gap-3 md:gap-4">
               <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] shrink-0">
@@ -426,7 +428,7 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-6">No data yet</p>
+            <p className="text-sm text-cream-500 text-center py-6">{t('common.noData')}</p>
           )}
         </div>
       </div>
@@ -435,9 +437,9 @@ export default function Dashboard() {
       {budgetProgress.length > 0 && (
         <div className="card !p-3 md:!p-5">
           <div className="flex items-center justify-between mb-3 md:mb-4">
-            <h3 className="section-title mb-0">Budget progress</h3>
+            <h3 className="section-title mb-0">{t('dashboard.budgetProgress')}</h3>
             <Link to="/budgets" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
-              View all <ArrowRight size={12} />
+              {t('common.viewAll')} <ArrowRight size={12} />
             </Link>
           </div>
           <div className="space-y-2.5 md:space-y-3">
@@ -455,9 +457,9 @@ export default function Dashboard() {
         {/* Goals preview — hidden on mobile if empty */}
         <div className={`card !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-3 md:mb-4">
-            <h3 className="section-title mb-0">Savings goals</h3>
+            <h3 className="section-title mb-0">{t('dashboard.savingsGoals')}</h3>
             <Link to="/goals" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
-              View all <ArrowRight size={12} />
+              {t('common.viewAll')} <ArrowRight size={12} />
             </Link>
           </div>
           {goalsList.length > 0 ? (
@@ -478,16 +480,16 @@ export default function Dashboard() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-6">No goals yet</p>
+            <p className="text-sm text-cream-500 text-center py-6">{t('dashboard.noGoals')}</p>
           )}
         </div>
 
         {/* Upcoming bills — hidden on mobile if empty */}
         <div className={`card !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-3 md:mb-4">
-            <h3 className="section-title mb-0">Upcoming bills</h3>
+            <h3 className="section-title mb-0">{t('dashboard.upcomingBills')}</h3>
             <Link to="/recurring" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
-              View all <ArrowRight size={12} />
+              {t('common.viewAll')} <ArrowRight size={12} />
             </Link>
           </div>
           {upcomingBills.length > 0 ? (
@@ -499,7 +501,7 @@ export default function Dashboard() {
                     <span className="flex items-center gap-2">
                       <span>{cat.icon}</span>
                       <span>{r.name}</span>
-                      <span className="text-xs text-cream-400">Day {r.billingDay}</span>
+                      <span className="text-xs text-cream-400">{t('dashboard.billDay', { day: r.billingDay })}</span>
                     </span>
                     <span className="font-heading font-bold money">{hidden ? '••••••' : formatCurrency(r.amount, r.currency || currency)}</span>
                   </div>
@@ -507,7 +509,7 @@ export default function Dashboard() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-cream-500 text-center py-6">No upcoming bills</p>
+            <p className="text-sm text-cream-500 text-center py-6">{t('dashboard.noBills')}</p>
           )}
         </div>
       </div>
@@ -515,9 +517,9 @@ export default function Dashboard() {
       {/* Recent transactions — 3 on mobile, 6 on desktop */}
       <div className="card !p-3 md:!p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="section-title mb-0">Recent transactions</h3>
+          <h3 className="section-title mb-0">{t('dashboard.recentTransactions')}</h3>
           <Link to="/transactions" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">
-            View all <ArrowRight size={12} />
+            {t('common.viewAll')} <ArrowRight size={12} />
           </Link>
         </div>
         {recentTx.length > 0 ? (
@@ -534,9 +536,9 @@ export default function Dashboard() {
         ) : (
           <EmptyState
             icon={PlusCircle}
-            title="No transactions yet"
-            description="Add your first transaction to start tracking"
-            action="Add transaction"
+            title={t('dashboard.noTransactions')}
+            description={t('dashboard.addFirst')}
+            action={t('dashboard.addTransaction')}
             onAction={() => navigate('/add')}
           />
         )}

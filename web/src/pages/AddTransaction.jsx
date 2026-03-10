@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
@@ -20,6 +21,7 @@ import {
 export default function AddTransaction() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('quick');
   const [showManual, setShowManual] = useState(false);
   const [pendingResults, setPendingResults] = useState(null);
@@ -104,7 +106,7 @@ export default function AddTransaction() {
         await txApi.create(clean);
         if (clean.merchant) learnCategory(clean.merchant, clean.category, clean.subcategory || null);
       }
-      toast.success(`${toSave.length} transaction${toSave.length > 1 ? 's' : ''} added!`);
+      toast.success(t('addTransaction.transactionsAdded').replace('{count}', toSave.length));
       await showBudgetAlerts();
       setPendingResults(null);
       setReceiptMeta(null);
@@ -127,7 +129,7 @@ export default function AddTransaction() {
   const saveTransaction = async (tx) => {
     try {
       await txApi.create(tx);
-      toast.success('Transaction added!');
+      toast.success(t('addTransaction.transactionAdded'));
       await showBudgetAlerts();
       navigate('/transactions');
     } catch (err) {
@@ -140,7 +142,7 @@ export default function AddTransaction() {
       try {
         await saveTransaction(pendingSave);
       } catch (err) {
-        toast.error(err.message || 'Failed to save');
+        toast.error(err.message || t('addTransaction.failedToSave'));
       }
       setDuplicateWarning(null);
       setPendingSave(null);
@@ -170,11 +172,11 @@ export default function AddTransaction() {
   const handleSaveForLater = async () => {
     if (!pendingResults) return;
     try {
-      const merchant = pendingResults[0]?.merchant || 'Receipt';
+      const merchant = pendingResults[0]?.merchant || t('addTransaction.receipt');
       const date = pendingResults[0]?.date || todayLocal();
       const totalAmount = pendingResults
-        .filter(t => !t._dismissed)
-        .reduce((s, t) => s + (t.amount || 0), 0);
+        .filter(tx => !tx._dismissed)
+        .reduce((s, tx) => s + (tx.amount || 0), 0);
       const currency = pendingResults[0]?.currency || 'RON';
 
       const draft = {
@@ -185,18 +187,18 @@ export default function AddTransaction() {
         date,
         totalAmount,
         currency,
-        transactionCount: pendingResults.filter(t => !t._dismissed).length,
+        transactionCount: pendingResults.filter(tx => !tx._dismissed).length,
         transactions: pendingResults,
         receiptMeta: receiptMeta || null,
       };
 
       await saveDraft(draft);
-      toast.success('Saved as draft — come back anytime to review');
+      toast.success(t('addTransaction.savedAsDraft'));
       setPendingResults(null);
       setReceiptMeta(null);
       await loadDrafts();
     } catch (err) {
-      toast.error('Failed to save draft: ' + err.message);
+      toast.error(t('addTransaction.failedSaveDraft').replace('{error}', err.message));
     }
   };
 
@@ -207,13 +209,13 @@ export default function AddTransaction() {
     await deleteDraft(draft.id);
     await loadDrafts();
     setShowDrafts(false);
-    toast.info('Draft loaded — edit and save when ready');
+    toast.info(t('addTransaction.draftLoaded'));
   };
 
   const handleDeleteDraft = async (id, e) => {
     e.stopPropagation();
     await deleteDraft(id);
-    toast.success('Draft removed');
+    toast.success(t('addTransaction.draftRemoved'));
     await loadDrafts();
   };
 
@@ -366,15 +368,15 @@ export default function AddTransaction() {
 
   // ─── CONFIDENCE HELPERS ────────────────────────────────
   const getConfidenceDot = (conf) => {
-    if (conf >= 0.80) return { color: 'bg-success', label: 'High confidence' };
-    if (conf >= 0.60) return { color: 'bg-warning', label: 'Uncertain' };
-    return { color: 'bg-danger', label: 'Low confidence' };
+    if (conf >= 0.80) return { color: 'bg-success', label: t('addTransaction.highConfidence') };
+    if (conf >= 0.60) return { color: 'bg-warning', label: t('addTransaction.uncertain') };
+    return { color: 'bg-danger', label: t('addTransaction.lowConfidence') };
   };
 
   const tabs = [
-    { id: 'quick', label: 'Quick Add', icon: Zap },
-    { id: 'receipt', label: 'Receipt', icon: Camera },
-    { id: 'bank', label: 'Statement', icon: Building2 },
+    { id: 'quick', label: t('addTransaction.quickAdd'), icon: Zap },
+    { id: 'receipt', label: t('addTransaction.receipt'), icon: Camera },
+    { id: 'bank', label: t('addTransaction.statement'), icon: Building2 },
   ];
 
   const reviewItemsCount = pendingResults
@@ -384,13 +386,13 @@ export default function AddTransaction() {
   const formatDraftAge = (isoDate) => {
     const diff = Date.now() - new Date(isoDate).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return t('addTransaction.justNow');
+    if (mins < 60) return t('addTransaction.minsAgo').replace('{count}', mins);
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t('addTransaction.hoursAgo').replace('{count}', hours);
     const days = Math.floor(hours / 24);
-    if (days === 1) return 'yesterday';
-    return `${days}d ago`;
+    if (days === 1) return t('common.yesterday').toLowerCase();
+    return t('addTransaction.daysAgo').replace('{count}', days);
   };
 
   // ─── QTY +/- HELPERS ─────────────────────────────────────
@@ -423,7 +425,7 @@ export default function AddTransaction() {
       <span
         onClick={() => startEdit(txIdx, field, value, itemIdx)}
         className={`cursor-pointer group/edit inline-flex items-center gap-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 rounded-lg px-1.5 py-0.5 transition-all ${className}`}
-        title="Tap to edit"
+        title={t('addTransaction.tapToEdit')}
       >
         {value || '—'}
         <Pencil size={10} className="text-cream-300 dark:text-cream-600 group-hover/edit:text-indigo-400 shrink-0 transition-colors" />
@@ -433,7 +435,7 @@ export default function AddTransaction() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Add Transaction</h1>
+      <h1 className="page-title">{t('addTransaction.title')}</h1>
 
       {/* Tab selector */}
       <div className="flex gap-2">
@@ -462,7 +464,7 @@ export default function AddTransaction() {
           >
             <span className="flex items-center gap-2 text-sm font-semibold text-info">
               <FileText size={16} />
-              Saved drafts
+              {t('addTransaction.savedDrafts')}
               <span className="text-[10px] font-medium bg-info/15 text-info px-1.5 py-0.5 rounded-full">
                 {drafts.length}
               </span>
@@ -482,17 +484,17 @@ export default function AddTransaction() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{draft.label}</p>
                     <p className="text-[11px] text-cream-500">
-                      {draft.transactionCount} transaction{draft.transactionCount !== 1 ? 's' : ''}
+                      {t('addTransaction.transactionsCount').replace('{count}', draft.transactionCount)}
                       {' · '}
                       {formatCurrency(draft.totalAmount, draft.currency)}
-                      {' · saved '}
+                      {' · '}{t('addTransaction.saved')}{' '}
                       {formatDraftAge(draft.savedAt)}
                     </p>
                   </div>
                   <button
                     onClick={(e) => handleDeleteDraft(draft.id, e)}
                     className="p-1.5 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-400 hover:text-danger transition-all shrink-0"
-                    title="Delete draft"
+                    title={t('addTransaction.deleteDraft')}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -507,7 +509,7 @@ export default function AddTransaction() {
       {/* Quick Add */}
       {activeTab === 'quick' && (
         <div className="card">
-          <h3 className="text-sm font-semibold mb-3">Natural language input</h3>
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.naturalLanguageInput')}</h3>
           <QuickAdd onResult={handleAIResult} onError={handleError} />
         </div>
       )}
@@ -515,7 +517,7 @@ export default function AddTransaction() {
       {/* Receipt Scanner */}
       {activeTab === 'receipt' && (
         <div className="card">
-          <h3 className="text-sm font-semibold mb-3">Scan receipt</h3>
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.scanReceipt')}</h3>
           <ReceiptScanner onResult={handleAIResult} onError={handleError} />
         </div>
       )}
@@ -523,7 +525,7 @@ export default function AddTransaction() {
       {/* Bank Statement Upload */}
       {activeTab === 'bank' && (
         <div className="card">
-          <h3 className="text-sm font-semibold mb-3">Import bank statement</h3>
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.importStatement')}</h3>
           <BankStatementUpload onResult={handleAIResult} onError={handleError} />
         </div>
       )}
@@ -539,7 +541,7 @@ export default function AddTransaction() {
                   <p className="font-medium text-sm">{receiptMeta.receipt.store}</p>
                   <p className="text-xs text-cream-500">
                     {receiptMeta.receipt.date}
-                    {receiptMeta.receipt.time && ` at ${receiptMeta.receipt.time}`}
+                    {receiptMeta.receipt.time && ` ${t('addTransaction.atTime').replace('{time}', receiptMeta.receipt.time)}`}
                     {receiptMeta.receipt.paymentMethod && receiptMeta.receipt.paymentMethod !== 'unknown' && ` · ${receiptMeta.receipt.paymentMethod}`}
                   </p>
                 </div>
@@ -574,7 +576,7 @@ export default function AddTransaction() {
             <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/5 border border-warning/20">
               <Eye size={14} className="text-warning" />
               <p className="text-xs font-medium text-warning">
-                {reviewItemsCount} item{reviewItemsCount > 1 ? 's' : ''} need your review — expand items below to check
+                {t('addTransaction.itemsNeedReview').replace('{count}', reviewItemsCount)}
               </p>
             </div>
           )}
@@ -585,36 +587,36 @@ export default function AddTransaction() {
       {deletedItem && (
         <div className="flex items-center justify-between p-3 rounded-xl bg-cream-100 dark:bg-dark-border border border-cream-200 dark:border-dark-border animate-fadeUp">
           <span className="text-sm text-cream-600 dark:text-cream-400">
-            Removed "{deletedItem.item.name}"
+            {t('addTransaction.removed').replace('{name}', deletedItem.item.name)}
           </span>
           <button
             onClick={undoDelete}
             className="flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
           >
-            <Undo2 size={14} /> Undo
+            <Undo2 size={14} /> {t('addTransaction.undo')}
           </button>
         </div>
       )}
 
-      {/* ═══════ AI REVIEW WITH ENHANCED RECEIPT ═══════ */}
+      {/* AI REVIEW WITH ENHANCED RECEIPT */}
       {pendingResults && pendingResults.length > 0 && (
         <div className="card border-success/30 bg-success-light/30">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold">Review & confirm</h3>
+            <h3 className="text-sm font-semibold">{t('addTransaction.reviewConfirm')}</h3>
             <div className="flex gap-2">
               <button onClick={() => { setPendingResults(null); setReceiptMeta(null); }} className="btn-ghost text-xs flex items-center gap-1">
-                <X size={14} /> Discard
+                <X size={14} /> {t('addTransaction.discard')}
               </button>
               <button onClick={handleSaveForLater} className="btn-ghost text-xs flex items-center gap-1 text-info border-info/30 hover:bg-info/10">
-                <Clock size={14} /> Later
+                <Clock size={14} /> {t('addTransaction.later')}
               </button>
               <button onClick={handleSaveResults} className="btn-primary text-xs flex items-center gap-1">
-                <Check size={14} /> Save {pendingResults.filter(t => !t._dismissed).length > 1 ? `all (${pendingResults.filter(t => !t._dismissed).length})` : ''}
+                <Check size={14} /> {pendingResults.filter(tx => !tx._dismissed).length > 1 ? t('addTransaction.saveAll').replace('{count}', pendingResults.filter(tx => !tx._dismissed).length) : t('addTransaction.save')}
               </button>
             </div>
           </div>
           <p className="text-[10px] text-cream-400 dark:text-cream-600 mb-3 flex items-center gap-1">
-            <Pencil size={10} /> Tap any value to edit — merchant, date, amount, item names, prices, quantities
+            <Pencil size={10} /> {t('addTransaction.tapToEditHint')}
           </p>
 
           <div className="space-y-3">
@@ -639,7 +641,7 @@ export default function AddTransaction() {
                       <span className="text-lg shrink-0">{cat.icon}</span>
                       <div className="min-w-0">
                         <div className="text-sm font-medium">
-                          {renderEditableText(idx, 'merchant', tx.merchant || 'Unknown')}
+                          {renderEditableText(idx, 'merchant', tx.merchant || t('addTransaction.unknown'))}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-cream-500">
                           {renderEditableText(idx, 'date', tx.date, 'text-xs')}
@@ -675,19 +677,19 @@ export default function AddTransaction() {
                     <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/8 border border-warning/20">
                       <AlertTriangle size={12} className="text-warning shrink-0" />
                       <span className="text-[11px] text-warning flex-1">
-                        Possible duplicate: {tx._duplicate.reason}
+                        {t('addTransaction.possibleDuplicate')}: {tx._duplicate.reason}
                       </span>
                       <button
                         onClick={() => updatePending(idx, { _dismissed: true })}
                         className="text-[10px] font-medium text-danger hover:underline"
                       >
-                        Skip
+                        {t('addTransaction.skip')}
                       </button>
                       <button
                         onClick={() => updatePending(idx, { _duplicate: null })}
                         className="text-[10px] font-medium text-cream-500 hover:underline"
                       >
-                        Keep
+                        {t('addTransaction.keep')}
                       </button>
                     </div>
                   )}
@@ -697,7 +699,7 @@ export default function AddTransaction() {
                     <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-warning/10 w-fit">
                       <AlertCircle size={12} className="text-warning" />
                       <span className="text-[10px] font-medium text-warning">
-                        {needsReviewItems.length} item{needsReviewItems.length !== 1 ? 's' : ''} flagged for review
+                        {t('addTransaction.itemsFlagged').replace('{count}', needsReviewItems.length)}
                       </span>
                     </div>
                   )}
@@ -710,9 +712,9 @@ export default function AddTransaction() {
                         className="flex items-center gap-1 text-xs text-info hover:underline"
                       >
                         <ShoppingBag size={12} />
-                        {tx.items.length} items
+                        {t('addTransaction.items').replace('{count}', tx.items.length)}
                         {needsReviewItems.length > 0 && (
-                          <span className="text-warning ml-1">({needsReviewItems.length} to review)</span>
+                          <span className="text-warning ml-1">{t('addTransaction.toReview').replace('{count}', needsReviewItems.length)}</span>
                         )}
                         {expandedItems[idx] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       </button>
@@ -735,14 +737,14 @@ export default function AddTransaction() {
                                   <button
                                     onClick={() => adjustQty(idx, itemIdx, -1)}
                                     className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
-                                    title="Decrease quantity"
+                                    title={t('addTransaction.decreaseQty')}
                                   >
                                     <Minus size={10} />
                                   </button>
                                   <span
                                     onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)}
                                     className="w-7 text-center text-xs font-medium text-cream-600 dark:text-cream-400 cursor-pointer hover:text-indigo-500 transition-colors"
-                                    title="Tap to type quantity"
+                                    title={t('addTransaction.tapToTypeQty')}
                                   >
                                     {isEditing(idx, 'qty', itemIdx) ? (
                                       <input
@@ -762,7 +764,7 @@ export default function AddTransaction() {
                                   <button
                                     onClick={() => adjustQty(idx, itemIdx, 1)}
                                     className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
-                                    title="Increase quantity"
+                                    title={t('addTransaction.increaseQty')}
                                   >
                                     <Plus size={10} />
                                   </button>
@@ -794,7 +796,7 @@ export default function AddTransaction() {
                                 <button
                                   onClick={() => deleteItem(idx, itemIdx)}
                                   className="p-1.5 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0"
-                                  title="Remove item"
+                                  title={t('addTransaction.removeItem')}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -808,7 +810,7 @@ export default function AddTransaction() {
                               <input
                                 value={newItem.name}
                                 onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))}
-                                placeholder="Item name"
+                                placeholder={t('addTransaction.itemName')}
                                 className="flex-1 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
                                 autoFocus
                                 onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); if (e.key === 'Escape') setAddingItem(null); }}
@@ -817,7 +819,7 @@ export default function AddTransaction() {
                                 type="number"
                                 value={newItem.price}
                                 onChange={(e) => setNewItem(n => ({ ...n, price: e.target.value }))}
-                                placeholder="Price"
+                                placeholder={t('addTransaction.price')}
                                 className="w-16 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
                                 step="0.01"
                                 inputMode="decimal"
@@ -835,13 +837,13 @@ export default function AddTransaction() {
                               onClick={() => setAddingItem(idx)}
                               className="flex items-center gap-1 text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 mt-1 px-2 py-1"
                             >
-                              <Plus size={12} /> Add missed item
+                              <Plus size={12} /> {t('addTransaction.addMissedItem')}
                             </button>
                           )}
 
                           {/* Running total */}
                           <div className="border-t border-cream-200 dark:border-dark-border mt-2 pt-2 flex items-center justify-between text-xs">
-                            <span className="text-cream-500">Items total</span>
+                            <span className="text-cream-500">{t('addTransaction.itemsTotal')}</span>
                             <span className="font-medium money">
                               {formatCurrency(itemsTotal, tx.currency)}
                             </span>
@@ -849,7 +851,7 @@ export default function AddTransaction() {
                           {mismatch && (
                             <div className="flex items-center gap-1 text-[10px] text-warning mt-1">
                               <AlertTriangle size={10} />
-                              Items total doesn't match receipt total ({formatCurrency(receiptTotal, receiptMeta?.receipt?.currency || 'RON')})
+                              {t('addTransaction.totalMismatch').replace('{total}', formatCurrency(receiptTotal, receiptMeta?.receipt?.currency || 'RON'))}
                             </div>
                           )}
                         </div>
@@ -859,7 +861,7 @@ export default function AddTransaction() {
 
                   {/* Transaction category - CategoryPicker */}
                   <div className="mt-3 flex items-center gap-2">
-                    <label className="text-[10px] text-cream-400 shrink-0">Category:</label>
+                    <label className="text-[10px] text-cream-400 shrink-0">{t('addTransaction.categoryLabel')}</label>
                     <CategoryPicker
                       value={tx.category}
                       subcategoryValue={tx.subcategory || null}
@@ -879,14 +881,14 @@ export default function AddTransaction() {
         <div className="card border-warning/30 bg-warning-light/30">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={16} className="text-warning" />
-            <h3 className="text-sm font-semibold text-warning">Possible duplicate</h3>
+            <h3 className="text-sm font-semibold text-warning">{t('addTransaction.possibleDuplicate')}</h3>
           </div>
           <p className="text-xs text-cream-600 dark:text-cream-400 mb-2">
-            {duplicateWarning.reason}: <strong>{duplicateWarning.transaction.merchant}</strong> — {formatCurrency(duplicateWarning.transaction.amount, duplicateWarning.transaction.currency)} on {duplicateWarning.transaction.date}
+            {duplicateWarning.reason}: <strong>{duplicateWarning.transaction.merchant}</strong> — {formatCurrency(duplicateWarning.transaction.amount, duplicateWarning.transaction.currency)} {t('addTransaction.onDate')} {duplicateWarning.transaction.date}
           </p>
           <div className="flex gap-2">
-            <button onClick={cancelDuplicate} className="btn-ghost text-xs">Cancel</button>
-            <button onClick={confirmSaveDespiteDuplicate} className="btn-primary text-xs">Save anyway</button>
+            <button onClick={cancelDuplicate} className="btn-ghost text-xs">{t('common.cancel')}</button>
+            <button onClick={confirmSaveDespiteDuplicate} className="btn-primary text-xs">{t('addTransaction.saveAnyway')}</button>
           </div>
         </div>
       )}
@@ -898,7 +900,7 @@ export default function AddTransaction() {
           className="flex items-center justify-between w-full text-sm font-semibold"
         >
           <span className="flex items-center gap-2">
-            <PenLine size={16} /> Manual entry
+            <PenLine size={16} /> {t('addTransaction.manualEntry')}
           </span>
           {showManual ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>

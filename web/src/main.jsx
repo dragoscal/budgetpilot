@@ -8,6 +8,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { SyncProvider } from './contexts/SyncContext';
 import { FamilyProvider } from './contexts/FamilyContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import './index.css';
 
 // Register service worker for PWA
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider>
+        <LanguageProvider>
         <ToastProvider>
           <AuthProvider>
             <SettingsProvider>
@@ -32,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             </SettingsProvider>
           </AuthProvider>
         </ToastProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>

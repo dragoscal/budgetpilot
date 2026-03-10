@@ -1,9 +1,11 @@
 import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
 import { TRANSACTION_SOURCES } from '../lib/constants';
 import { useHideAmounts } from '../contexts/SettingsContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { Trash2, Edit3, Split } from 'lucide-react';
 
 export default function TransactionRow({ transaction, onEdit, onDelete, onSplit, selected, onSelect, hide: hideProp, isSplit }) {
+  const { t } = useTranslation();
   const { shouldHide } = useHideAmounts();
   const cat = getCategoryById(transaction.category);
   const subcat = transaction.subcategory ? getSubcategoryById(transaction.subcategory) : null;
@@ -11,6 +13,9 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
   const hide = hideProp !== undefined ? hideProp : shouldHide(transaction.type);
+
+  const catLabel = t(`categories.${cat.id}`) || cat.name;
+  const subcatLabel = subcat ? (t(`subcategories.${subcat.id}`) || subcat.name) : null;
 
   return (
     <div className="flex items-center gap-3 py-3 px-4 hover:bg-cream-50 dark:hover:bg-dark-border/50 rounded-xl transition-colors group">
@@ -31,7 +36,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
           <span className="text-xs" title={source.label}>{source.icon}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-cream-500">
-          <span>{subcat ? `${cat.name} > ${subcat.name}` : cat.name}</span>
+          <span>{subcatLabel ? `${catLabel} > ${subcatLabel}` : catLabel}</span>
           <span>·</span>
           <span>{formatDate(transaction.date, 'dd MMM')}</span>
           {transaction.tags?.length > 0 && (
@@ -52,13 +57,13 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
         </p>
         {isSplit && (
           <span className="text-[10px] text-accent font-medium flex items-center justify-end gap-0.5">
-            <Split size={8} /> Split
+            <Split size={8} /> {t('split.split')}
           </span>
         )}
       </div>
       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         {onSplit && !isSplit && (
-          <button onClick={() => onSplit(transaction)} className="p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title="Split with family">
+          <button onClick={() => onSplit(transaction)} className="p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')}>
             <Split size={14} />
           </button>
         )}

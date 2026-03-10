@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, getCategoryById, sumBy, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
@@ -10,6 +11,7 @@ import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday } from 'date-fns';
 
 export default function CalendarPage() {
+  const { t } = useTranslation();
   const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
@@ -65,13 +67,13 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">Calendar</h1>
+        <h1 className="page-title mb-0">{t('calendar.title')}</h1>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 
       {/* Day names */}
       <div className="grid grid-cols-7 gap-1">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+        {[t('calendar.mon'), t('calendar.tue'), t('calendar.wed'), t('calendar.thu'), t('calendar.fri'), t('calendar.sat'), t('calendar.sun')].map((d) => (
           <div key={d} className="text-center text-xs font-medium text-cream-500 py-1">{d}</div>
         ))}
 
@@ -121,7 +123,7 @@ export default function CalendarPage() {
           <div className="space-y-4">
             {selectedDayData.bills.length > 0 && (
               <div>
-                <h4 className="section-title">Bills due</h4>
+                <h4 className="section-title">{t('calendar.billsDue')}</h4>
                 {selectedDayData.bills.map((b) => {
                   const cat = getCategoryById(b.category);
                   return (
@@ -135,13 +137,13 @@ export default function CalendarPage() {
             )}
             {selectedDayData.transactions.length > 0 ? (
               <div>
-                <h4 className="section-title">Transactions</h4>
+                <h4 className="section-title">{t('calendar.transactionsTitle')}</h4>
                 <div className="divide-y divide-cream-100 dark:divide-dark-border">
                   {sortByDate(selectedDayData.transactions).map((tx) => <TransactionRow key={tx.id} transaction={tx} />)}
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-cream-500 text-center py-6">No transactions on this day</p>
+              <p className="text-sm text-cream-500 text-center py-6">{t('calendar.noTransactions')}</p>
             )}
           </div>
         )}

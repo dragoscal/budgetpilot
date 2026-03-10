@@ -1,10 +1,12 @@
 import { formatCurrency, percentOf } from '../lib/helpers';
 import { useHideAmounts } from '../contexts/SettingsContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { differenceInMonths, parseISO } from 'date-fns';
 import { Target, CreditCard, Edit3, Trash2 } from 'lucide-react';
 
 export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hideProp }) {
   const { shouldHide } = useHideAmounts();
+  const { t } = useTranslation();
   const hide = hideProp !== undefined ? hideProp : shouldHide('expense');
   const pct = percentOf(goal.currentAmount || 0, goal.targetAmount);
   const isSaveUp = goal.type === 'save_up';
@@ -46,7 +48,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
           </div>
           <div>
             <p className="font-medium text-sm">{goal.name}</p>
-            <p className="text-xs text-cream-500">{isSaveUp ? 'Save Up' : 'Pay Down'}</p>
+            <p className="text-xs text-cream-500">{isSaveUp ? t('goals.saveUp') : t('goals.payDown')}</p>
           </div>
         </div>
         <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -65,7 +67,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
 
       <div className="flex items-end justify-between mb-2">
         <span className="text-xl font-heading font-bold money">{formatCurrency(goal.currentAmount || 0, goal.currency, { hide })}</span>
-        <span className="text-sm text-cream-500">of {formatCurrency(goal.targetAmount, goal.currency, { hide })}</span>
+        <span className="text-sm text-cream-500">{t('budgets.of')} {formatCurrency(goal.targetAmount, goal.currency, { hide })}</span>
       </div>
 
       <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
@@ -77,14 +79,14 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
 
       <div className="flex items-center justify-between text-xs">
         <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
-          {status === 'on-track' ? 'On track' : status === 'behind' ? 'Behind' : 'Ahead'}
+          {status === 'on-track' ? t('goals.onTrack') : status === 'behind' ? t('goals.behind') : t('goals.ahead')}
         </span>
-        <span className="text-cream-500">{pct}% complete</span>
+        <span className="text-cream-500">{t('goals.pctComplete', { pct })}</span>
       </div>
 
       {monthlyNeeded > 0 && (
         <p className="text-xs text-cream-500 mt-2">
-          {formatCurrency(monthlyNeeded, goal.currency, { hide })}/month needed
+          {t('goals.monthNeeded', { amount: formatCurrency(monthlyNeeded, goal.currency, { hide }) })}
         </p>
       )}
 
@@ -93,7 +95,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
           onClick={() => onAddFunds(goal)}
           className="btn-secondary w-full mt-3 text-xs"
         >
-          {isSaveUp ? 'Add funds' : 'Record payment'}
+          {isSaveUp ? t('goals.addFunds') : t('goals.recordPayment')}
         </button>
       )}
     </div>

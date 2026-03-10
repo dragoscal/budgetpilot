@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { people as peopleApi, debts as debtsApi, debtPayments as paymentsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { generateId, formatCurrency, sumBy, formatDate, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -15,6 +16,7 @@ import { SkeletonPage } from '../components/LoadingSkeleton';
 export default function People() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [peopleList, setPeople] = useState([]);
   const [debtsList, setDebts] = useState([]);
   const [paymentsList, setPayments] = useState([]);
@@ -49,7 +51,7 @@ export default function People() {
       setPeople(people);
       setDebts(debts);
       setPayments(payments);
-    } catch (err) { toast.error('Failed to load'); }
+    } catch (err) { toast.error(t('people.failedLoad')); }
     finally { setLoading(false); }
   };
 
@@ -96,22 +98,22 @@ export default function People() {
   }, [peopleList, balances, activeFilter]);
 
   const handleAddPerson = async () => {
-    if (!personForm.name.trim()) { toast.error('Name required'); return; }
+    if (!personForm.name.trim()) { toast.error(t('people.nameRequired')); return; }
     try {
       await peopleApi.create({
         id: generateId(), ...personForm, userId: effectiveUserId, createdAt: new Date().toISOString(),
       });
-      toast.success('Person added');
+      toast.success(t('people.saved'));
       setShowPersonForm(false);
       setPersonForm({ name: '', emoji: '👤', phone: '', notes: '' });
       loadData();
     } catch (err) {
-      toast.error(err.message || 'Failed to add person');
+      toast.error(err.message || t('people.failedAdd'));
     }
   };
 
   const handleAddDebt = async () => {
-    if (!debtForm.personId || !debtForm.amount) { toast.error('Select person and amount'); return; }
+    if (!debtForm.personId || !debtForm.amount) { toast.error(t('people.selectPersonAndAmount')); return; }
     const person = peopleList.find(p => p.id === debtForm.personId);
     const personName = person?.name || 'Unknown';
     const amount = Number(debtForm.amount);
@@ -133,7 +135,7 @@ export default function People() {
       currency,
       category: debtForm.type === 'lent' ? 'transfer' : 'transfer',
       date: debtDate,
-      description: `${debtForm.type === 'lent' ? 'Lent to' : 'Borrowed from'} ${personName}${debtForm.reason ? ` — ${debtForm.reason}` : ''}`,
+      description: `${debtForm.type === 'lent' ? t('people.lentTo') : t('people.borrowedFrom')} ${personName}${debtForm.reason ? ` — ${debtForm.reason}` : ''}`,
       source: 'manual',
       notes: `Debt #${debtId.slice(0, 8)}`,
       tags: ['debt'],
@@ -141,7 +143,7 @@ export default function People() {
       createdAt: new Date().toISOString(),
     });
 
-    toast.success('Debt recorded + transaction created');
+    toast.success(t('people.debtSaved'));
     setShowDebtForm(false);
     setDebtForm({
       personId: '', type: 'lent', amount: '', reason: '', dueDate: '',
@@ -179,15 +181,15 @@ export default function People() {
       currency,
       category: 'transfer',
       date: today,
-      description: `${settleDebt.type === 'lent' ? 'Received from' : 'Paid to'} ${personName}${settleDebt.reason ? ` — ${settleDebt.reason}` : ''}`,
+      description: `${settleDebt.type === 'lent' ? t('people.receivedFrom') : t('people.paidTo')} ${personName}${settleDebt.reason ? ` — ${settleDebt.reason}` : ''}`,
       source: 'manual',
-      notes: `Settlement for debt #${settleDebt.id.slice(0, 8)}`,
+      notes: `${t('people.settlementForDebt')} #${settleDebt.id.slice(0, 8)}`,
       tags: ['debt-settlement'],
       userId: effectiveUserId,
       createdAt: new Date().toISOString(),
     });
 
-    toast.success(remaining <= 0 ? 'Debt settled!' : 'Partial payment recorded');
+    toast.success(remaining <= 0 ? t('people.debtSettled') : t('people.partialPaymentRecorded'));
     setSettleDebt(null);
     setSettleAmount('');
     setSelectedPerson(null);
@@ -197,11 +199,11 @@ export default function People() {
   const handleDeletePerson = async (person) => {
     const personDebtsActive = debtsList.filter(d => d.personId === person.id && d.status !== 'settled');
     if (personDebtsActive.length > 0) {
-      toast.error('Settle all debts first');
+      toast.error(t('people.settleAllDebtsFirst'));
       return;
     }
     await peopleApi.remove(person.id);
-    toast.success('Removed');
+    toast.success(t('people.deleted'));
     if (selectedPerson === person.id) setSelectedPerson(null);
     loadData();
   };
@@ -230,21 +232,21 @@ export default function People() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="page-title mb-0">People & Debts</h1>
-          <p className="text-xs text-cream-500 mt-1">Track money lent and borrowed</p>
+          <h1 className="page-title mb-0">{t('people.title')}</h1>
+          <p className="text-xs text-cream-500 mt-1">{t('people.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowPersonForm(true)}
             className="btn-secondary text-xs flex items-center gap-1.5 h-9"
           >
-            <UserPlus size={14} /> Person
+            <UserPlus size={14} /> {t('people.person')}
           </button>
           <button
             onClick={() => setShowDebtForm(true)}
             className="btn-primary text-xs flex items-center gap-1.5 h-9"
           >
-            <HandCoins size={14} /> Lend / Borrow
+            <HandCoins size={14} /> {t('people.lendBorrow')}
           </button>
         </div>
       </div>
@@ -257,7 +259,7 @@ export default function People() {
               <TrendingUp size={16} className="text-success" />
             </div>
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">Owed to you</p>
+          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">{t('people.owedToYou')}</p>
           <p className="text-xl font-heading font-bold text-success money mt-0.5">
             +{formatCurrency(totalOwedToYou, currency)}
           </p>
@@ -269,7 +271,7 @@ export default function People() {
               <TrendingDown size={16} className="text-danger" />
             </div>
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">You owe</p>
+          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">{t('people.youOwe')}</p>
           <p className="text-xl font-heading font-bold text-danger money mt-0.5">
             -{formatCurrency(totalYouOwe, currency)}
           </p>
@@ -281,7 +283,7 @@ export default function People() {
               <Wallet size={16} className="text-info" />
             </div>
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">Net balance</p>
+          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">{t('people.netBalance')}</p>
           <p className={`text-xl font-heading font-bold money mt-0.5 ${netBalance >= 0 ? 'text-success' : 'text-danger'}`}>
             {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance, currency)}
           </p>
@@ -293,7 +295,7 @@ export default function People() {
               <Clock size={16} className="text-warning" />
             </div>
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">Active debts</p>
+          <p className="text-[10px] uppercase tracking-wider text-cream-500 font-medium">{t('people.activeDebts')}</p>
           <p className="text-xl font-heading font-bold text-cream-800 dark:text-cream-200 mt-0.5">
             {activeDebtsCount}
           </p>
@@ -303,10 +305,10 @@ export default function People() {
       {/* Filters */}
       <div className="flex gap-2">
         {[
-          { id: 'all', label: 'All' },
-          { id: 'owed', label: 'Owed to me' },
-          { id: 'owing', label: 'I owe' },
-          { id: 'settled', label: 'Settled' },
+          { id: 'all', label: t('common.all') },
+          { id: 'owed', label: t('people.owedToMe') },
+          { id: 'owing', label: t('people.iOwe') },
+          { id: 'settled', label: t('people.settled') },
         ].map((f) => (
           <button
             key={f.id}
@@ -358,14 +360,14 @@ export default function People() {
                         <p className="font-medium text-sm truncate">{person.name}</p>
                         {bal.activeCount > 0 && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-600 dark:text-cream-400">
-                            {bal.activeCount} active
+                            {bal.activeCount} {t('common.active').toLowerCase()}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-cream-500 mt-0.5">
-                        {bal.net > 0 ? 'Owes you' :
-                         bal.net < 0 ? 'You owe' :
-                         bal.activeCount === 0 ? 'All settled' : 'Even'}
+                        {bal.net > 0 ? t('people.owesYou') :
+                         bal.net < 0 ? t('people.youOwe') :
+                         bal.activeCount === 0 ? t('people.allSettled') : t('people.even')}
                       </p>
                     </div>
 
@@ -386,9 +388,9 @@ export default function People() {
           ) : (
             <EmptyState
               icon={Users}
-              title={activeFilter === 'all' ? 'No people yet' : 'No matches'}
-              description={activeFilter === 'all' ? 'Add people to track money lent and borrowed' : 'Try a different filter'}
-              action={activeFilter === 'all' ? 'Add person' : undefined}
+              title={activeFilter === 'all' ? t('people.noPeople') : t('people.noMatches')}
+              description={activeFilter === 'all' ? t('people.noPeopleDesc') : t('people.tryDifferentFilter')}
+              action={activeFilter === 'all' ? t('people.createFirst') : undefined}
               onAction={activeFilter === 'all' ? () => setShowPersonForm(true) : undefined}
             />
           )}
@@ -423,7 +425,7 @@ export default function People() {
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeletePerson(selectedPersonData); }}
                   className="p-2 rounded-xl hover:bg-danger/10 text-cream-400 hover:text-danger transition-colors"
-                  title="Remove person"
+                  title={t('people.deletePerson')}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -432,19 +434,19 @@ export default function People() {
               {/* Mini stats */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-success/5 rounded-xl p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">Lent</p>
+                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">{t('people.lent')}</p>
                   <p className="font-heading font-bold text-success money text-sm">
                     {formatCurrency(selectedPersonBal.lent, currency)}
                   </p>
                 </div>
                 <div className="bg-danger/5 rounded-xl p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">Borrowed</p>
+                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">{t('people.borrowed')}</p>
                   <p className="font-heading font-bold text-danger money text-sm">
                     {formatCurrency(selectedPersonBal.borrowed, currency)}
                   </p>
                 </div>
                 <div className={`${selectedPersonBal.net >= 0 ? 'bg-success/5' : 'bg-danger/5'} rounded-xl p-3 text-center`}>
-                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">Net</p>
+                  <p className="text-[10px] uppercase tracking-wider text-cream-500 mb-0.5">{t('people.net')}</p>
                   <p className={`font-heading font-bold money text-sm ${selectedPersonBal.net >= 0 ? 'text-success' : 'text-danger'}`}>
                     {selectedPersonBal.net >= 0 ? '+' : ''}{formatCurrency(selectedPersonBal.net, currency)}
                   </p>
@@ -458,13 +460,13 @@ export default function People() {
                 onClick={() => { setDebtForm(f => ({ ...f, personId: selectedPerson, type: 'lent' })); setShowDebtForm(true); }}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-success/10 text-success text-xs font-medium hover:bg-success/20 transition-colors"
               >
-                <ArrowUpRight size={14} /> I lent them
+                <ArrowUpRight size={14} /> {t('people.iLentThem')}
               </button>
               <button
                 onClick={() => { setDebtForm(f => ({ ...f, personId: selectedPerson, type: 'borrowed' })); setShowDebtForm(true); }}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-danger/10 text-danger text-xs font-medium hover:bg-danger/20 transition-colors"
               >
-                <ArrowDownLeft size={14} /> I borrowed
+                <ArrowDownLeft size={14} /> {t('people.iBorrowed')}
               </button>
               {selectedPersonBal.lent > 0 && (
                 <button
@@ -474,7 +476,7 @@ export default function People() {
                   }}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-info/10 text-info text-xs font-medium hover:bg-info/20 transition-colors"
                 >
-                  <Banknote size={14} /> Receive payment
+                  <Banknote size={14} /> {t('people.receivePayment')}
                 </button>
               )}
               {selectedPersonBal.borrowed > 0 && (
@@ -485,7 +487,7 @@ export default function People() {
                   }}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-warning/10 text-warning text-xs font-medium hover:bg-warning/20 transition-colors"
                 >
-                  <Wallet size={14} /> Pay back
+                  <Wallet size={14} /> {t('people.payBack')}
                 </button>
               )}
             </div>
@@ -496,8 +498,8 @@ export default function People() {
                 <div>
                   <p className="text-xs font-medium">
                     {selectedPersonBal.net > 0
-                      ? `${selectedPersonData.name} owes you`
-                      : `You owe ${selectedPersonData.name}`}
+                      ? `${selectedPersonData.name} ${t('people.owesYouVerb')}`
+                      : `${t('people.youOweVerb')} ${selectedPersonData.name}`}
                   </p>
                   <p className={`font-heading font-bold money text-lg ${selectedPersonBal.net > 0 ? 'text-success' : 'text-danger'}`}>
                     {formatCurrency(Math.abs(selectedPersonBal.net), currency)}
@@ -518,14 +520,14 @@ export default function People() {
                   }}
                   className="btn-primary text-xs px-4 py-2"
                 >
-                  {selectedPersonBal.net > 0 ? 'Receive' : 'Pay'} now
+                  {selectedPersonBal.net > 0 ? t('people.receiveNow') : t('people.payNow')}
                 </button>
               </div>
             )}
 
             {/* Debt history */}
             <div className="card">
-              <h3 className="text-sm font-semibold mb-3">Debt history</h3>
+              <h3 className="text-sm font-semibold mb-3">{t('people.debtHistory')}</h3>
               <div className="space-y-3">
                 {getPersonDebts(selectedPerson).length > 0 ? (
                   getPersonDebts(selectedPerson).map((debt) => {
@@ -558,21 +560,21 @@ export default function People() {
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-sm font-medium">
-                                  {isLent ? 'Lent' : 'Borrowed'}
+                                  {isLent ? t('people.lent') : t('people.borrowed')}
                                 </span>
                                 {isSettled && (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/10 text-success font-medium">
-                                    Settled
+                                    {t('people.settled')}
                                   </span>
                                 )}
                                 {debt.status === 'partial' && (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-medium">
-                                    Partial
+                                    {t('people.partial')}
                                   </span>
                                 )}
                                 {isOverdue && (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger/10 text-danger font-medium flex items-center gap-0.5">
-                                    <AlertTriangle size={8} /> Overdue
+                                    <AlertTriangle size={8} /> {t('people.overdue')}
                                   </span>
                                 )}
                               </div>
@@ -584,7 +586,7 @@ export default function People() {
                                   <>
                                     <span>·</span>
                                     <span className="flex items-center gap-0.5">
-                                      <CalendarClock size={10} /> Due {debt.dueDate}
+                                      <CalendarClock size={10} /> {t('people.due')} {debt.dueDate}
                                     </span>
                                   </>
                                 )}
@@ -597,7 +599,7 @@ export default function People() {
                             </p>
                             {!isSettled && remaining !== debt.amount && (
                               <p className="text-[10px] text-cream-500">
-                                {formatCurrency(remaining, currency)} left
+                                {formatCurrency(remaining, currency)} {t('people.left')}
                               </p>
                             )}
                           </div>
@@ -612,7 +614,7 @@ export default function People() {
                                 style={{ width: `${paidPct}%` }}
                               />
                             </div>
-                            <p className="text-[10px] text-cream-500 mt-0.5">{paidPct}% paid</p>
+                            <p className="text-[10px] text-cream-500 mt-0.5">{paidPct}% {t('people.paid')}</p>
                           </div>
                         )}
 
@@ -622,7 +624,7 @@ export default function People() {
                             {debtPays.map((pay) => (
                               <div key={pay.id} className="flex items-center justify-between text-xs text-cream-500">
                                 <span className="flex items-center gap-1">
-                                  <Check size={10} className="text-success" /> Payment on {pay.date}
+                                  <Check size={10} className="text-success" /> {t('people.paymentOn')} {pay.date}
                                 </span>
                                 <span className="money font-medium">{formatCurrency(pay.amount, currency)}</span>
                               </div>
@@ -646,7 +648,7 @@ export default function People() {
                               }`}
                             >
                               <Banknote size={12} />
-                              {isLent ? 'Receive' : 'Pay back'} {formatCurrency(remaining, currency)}
+                              {isLent ? t('people.receive') : t('people.payBack')} {formatCurrency(remaining, currency)}
                             </button>
                           </div>
                         )}
@@ -654,7 +656,7 @@ export default function People() {
                     );
                   })
                 ) : (
-                  <p className="text-xs text-cream-500 text-center py-4">No debts with this person yet</p>
+                  <p className="text-xs text-cream-500 text-center py-4">{t('people.noDebtsWithPerson')}</p>
                 )}
               </div>
             </div>
@@ -663,11 +665,11 @@ export default function People() {
       </div>
 
       {/* Add person modal */}
-      <Modal open={showPersonForm} onClose={() => setShowPersonForm(false)} title="Add person">
+      <Modal open={showPersonForm} onClose={() => setShowPersonForm(false)} title={t('people.addPerson')}>
         <div className="space-y-4">
           {/* Emoji picker */}
           <div>
-            <label className="label">Avatar</label>
+            <label className="label">{t('people.avatar')}</label>
             <div className="flex flex-wrap gap-2">
               {EMOJI_OPTIONS.map((em) => (
                 <button
@@ -685,17 +687,17 @@ export default function People() {
             </div>
           </div>
           <div>
-            <label className="label">Name</label>
+            <label className="label">{t('people.name')}</label>
             <input
               className="input"
               value={personForm.name}
               onChange={(e) => setPersonForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Alex, Mom, John"
+              placeholder={t('people.namePlaceholder')}
               autoFocus
             />
           </div>
           <div>
-            <label className="label">Phone (optional)</label>
+            <label className="label">{t('people.phone')}</label>
             <input
               className="input"
               value={personForm.phone}
@@ -704,20 +706,20 @@ export default function People() {
             />
           </div>
           <div>
-            <label className="label">Notes (optional)</label>
+            <label className="label">{t('people.notes')}</label>
             <input
               className="input"
               value={personForm.notes}
               onChange={(e) => setPersonForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="e.g. Colleague, Roommate"
+              placeholder={t('people.notesPlaceholder')}
             />
           </div>
-          <button onClick={handleAddPerson} className="btn-primary w-full">Add person</button>
+          <button onClick={handleAddPerson} className="btn-primary w-full">{t('people.addPerson')}</button>
         </div>
       </Modal>
 
       {/* Add debt modal */}
-      <Modal open={showDebtForm} onClose={() => setShowDebtForm(false)} title="Record debt">
+      <Modal open={showDebtForm} onClose={() => setShowDebtForm(false)} title={t('people.recordDebt')}>
         <div className="space-y-4">
           {/* Type toggle */}
           <div className="grid grid-cols-2 gap-2">
@@ -731,7 +733,7 @@ export default function People() {
             >
               <ArrowUpRight size={18} className={`mx-auto mb-1 ${debtForm.type === 'lent' ? 'text-success' : 'text-cream-400'}`} />
               <span className={`text-xs font-medium ${debtForm.type === 'lent' ? 'text-success' : 'text-cream-600'}`}>
-                I lent money
+                {t('people.iLentMoney')}
               </span>
             </button>
             <button
@@ -744,19 +746,19 @@ export default function People() {
             >
               <ArrowDownLeft size={18} className={`mx-auto mb-1 ${debtForm.type === 'borrowed' ? 'text-danger' : 'text-cream-400'}`} />
               <span className={`text-xs font-medium ${debtForm.type === 'borrowed' ? 'text-danger' : 'text-cream-600'}`}>
-                I borrowed money
+                {t('people.iBorrowedMoney')}
               </span>
             </button>
           </div>
 
           <div>
-            <label className="label">Person</label>
+            <label className="label">{t('people.person')}</label>
             <select
               className="input"
               value={debtForm.personId}
               onChange={(e) => setDebtForm((f) => ({ ...f, personId: e.target.value }))}
             >
-              <option value="">Select person</option>
+              <option value="">{t('people.selectPerson')}</option>
               {peopleList.map((p) => (
                 <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
               ))}
@@ -764,7 +766,7 @@ export default function People() {
           </div>
 
           <div>
-            <label className="label">Amount ({currency})</label>
+            <label className="label">{t('people.debtAmount')} ({currency})</label>
             <div className="relative">
               <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-cream-400" />
               <input
@@ -779,18 +781,18 @@ export default function People() {
           </div>
 
           <div>
-            <label className="label">Reason</label>
+            <label className="label">{t('people.debtReason')}</label>
             <input
               className="input"
               value={debtForm.reason}
               onChange={(e) => setDebtForm((f) => ({ ...f, reason: e.target.value }))}
-              placeholder="e.g. Dinner, Rent, Gas money"
+              placeholder={t('people.debtReasonPlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Date</label>
+              <label className="label">{t('people.debtDate')}</label>
               <input
                 type="date"
                 className="input"
@@ -799,7 +801,7 @@ export default function People() {
               />
             </div>
             <div>
-              <label className="label">Due date (optional)</label>
+              <label className="label">{t('people.dueDate')}</label>
               <input
                 type="date"
                 className="input"
@@ -810,11 +812,11 @@ export default function People() {
           </div>
 
           <p className="text-[10px] text-cream-500 flex items-center gap-1">
-            <Info size={10} /> A transfer transaction will be auto-created
+            <Info size={10} /> {t('people.autoTransactionNote')}
           </p>
 
           <button onClick={handleAddDebt} className="btn-primary w-full">
-            Record {debtForm.type === 'lent' ? 'loan' : 'debt'}
+            {t('people.recordDebtType', { type: debtForm.type === 'lent' ? t('people.loan') : t('people.debt') })}
           </button>
         </div>
       </Modal>
@@ -823,7 +825,7 @@ export default function People() {
       <Modal
         open={!!settleDebt}
         onClose={() => setSettleDebt(null)}
-        title={settleDebt?.type === 'lent' ? 'Receive payment' : 'Make payment'}
+        title={settleDebt?.type === 'lent' ? t('people.receivePayment') : t('people.makePayment')}
       >
         {settleDebt && (() => {
           const debtPerson = peopleList.find(p => p.id === settleDebt.personId);
@@ -840,24 +842,24 @@ export default function People() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-cream-600 dark:text-cream-400">
-                    {isLentDebt ? 'They owe you' : 'You owe them'}
+                    {isLentDebt ? t('people.theyOweYou') : t('people.youOweThem')}
                   </span>
                   <span className={`font-heading font-bold money ${isLentDebt ? 'text-success' : 'text-danger'}`}>
                     {formatCurrency(fullAmt, currency)}
                   </span>
                 </div>
                 {settleDebt.reason && (
-                  <p className="text-xs text-cream-500 mt-1">For: {settleDebt.reason}</p>
+                  <p className="text-xs text-cream-500 mt-1">{t('people.for')}: {settleDebt.reason}</p>
                 )}
                 {settleDebt.date && (
-                  <p className="text-xs text-cream-500">Since: {settleDebt.date}</p>
+                  <p className="text-xs text-cream-500">{t('people.since')}: {settleDebt.date}</p>
                 )}
               </div>
 
               {/* Amount input */}
               <div>
                 <label className="label">
-                  {isLentDebt ? 'Amount received' : 'Amount to pay'}
+                  {isLentDebt ? t('people.amountReceived') : t('people.amountToPay')}
                 </label>
                 <div className="relative">
                   <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-cream-400" />
@@ -883,7 +885,7 @@ export default function People() {
                             : 'bg-cream-200 dark:bg-dark-border hover:bg-cream-300 dark:hover:bg-dark-border/70'
                         }`}
                       >
-                        {frac === 1 ? 'Full amount' : `${frac * 100}%`}
+                        {frac === 1 ? t('people.fullAmount') : `${frac * 100}%`}
                       </button>
                     );
                   })}
@@ -894,8 +896,8 @@ export default function People() {
               <div className="text-[10px] text-cream-500 flex items-center gap-1">
                 <Info size={10} />
                 {isLentDebt
-                  ? 'An income transaction will be recorded for this payment'
-                  : 'An expense transaction will be recorded for this payment'}
+                  ? t('people.incomeTransactionNote')
+                  : t('people.expenseTransactionNote')}
               </div>
 
               <button
@@ -908,8 +910,8 @@ export default function People() {
               >
                 {isLentDebt ? <Banknote size={14} /> : <Wallet size={14} />}
                 {Number(settleAmount) >= fullAmt
-                  ? (isLentDebt ? 'Received — settle fully' : 'Paid — settle fully')
-                  : (isLentDebt ? `Receive ${formatCurrency(Number(settleAmount) || 0, currency)}` : `Pay ${formatCurrency(Number(settleAmount) || 0, currency)}`)}
+                  ? (isLentDebt ? t('people.receivedSettleFully') : t('people.paidSettleFully'))
+                  : (isLentDebt ? `${t('people.receive')} ${formatCurrency(Number(settleAmount) || 0, currency)}` : `${t('people.pay')} ${formatCurrency(Number(settleAmount) || 0, currency)}`)}
               </button>
             </div>
           );

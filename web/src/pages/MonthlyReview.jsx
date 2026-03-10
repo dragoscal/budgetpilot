@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndicator, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
@@ -11,6 +12,7 @@ import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 export default function MonthlyReview() {
   const { user, effectiveUserId } = useAuth();
+  const { t } = useTranslation();
   const [month, setMonth] = useState(new Date());
   const [currentTx, setCurrentTx] = useState([]);
   const [prevTx, setPrevTx] = useState([]);
@@ -36,8 +38,8 @@ export default function MonthlyReview() {
         const prevStart = startOfMonth(subMonths(month, 1));
         const prevEnd = endOfMonth(subMonths(month, 1));
 
-        setCurrentTx(allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; }));
-        setPrevTx(allTx.filter((t) => { const d = new Date(t.date); return d >= prevStart && d <= prevEnd; }));
+        setCurrentTx(allTx.filter((tx) => { const d = new Date(tx.date); return d >= start && d <= end; }));
+        setPrevTx(allTx.filter((tx) => { const d = new Date(tx.date); return d >= prevStart && d <= prevEnd; }));
         setBudgets(budgets);
         setGoals(goals);
         setRecurring(rec.filter((r) => r.active !== false));
@@ -47,32 +49,32 @@ export default function MonthlyReview() {
     })();
   }, [month, effectiveUserId]);
 
-  const income = sumAmountsMultiCurrency(currentTx.filter((t) => t.type === 'income'), currency, rates);
-  const expenses = sumAmountsMultiCurrency(currentTx.filter((t) => t.type === 'expense'), currency, rates);
+  const income = sumAmountsMultiCurrency(currentTx.filter((tx) => tx.type === 'income'), currency, rates);
+  const expenses = sumAmountsMultiCurrency(currentTx.filter((tx) => tx.type === 'expense'), currency, rates);
   const netSavings = income - expenses;
   const savingsRate = income > 0 ? percentOf(netSavings, income) : 0;
-  const prevExpenses = sumAmountsMultiCurrency(prevTx.filter((t) => t.type === 'expense'), currency, rates);
+  const prevExpenses = sumAmountsMultiCurrency(prevTx.filter((tx) => tx.type === 'expense'), currency, rates);
   const trend = trendIndicator(expenses, prevExpenses);
   const recurringTotal = sumAmountsMultiCurrency(recurringItems, currency, rates);
 
   // Category breakdown (multi-currency aware)
   const categoryBreakdown = useMemo(() => {
-    const exp = currentTx.filter((t) => t.type === 'expense');
+    const exp = currentTx.filter((tx) => tx.type === 'expense');
     const grouped = groupBy(exp, 'category');
     return Object.entries(grouped)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
         const spent = sumAmountsMultiCurrency(txs, currency, rates);
         const budget = budgetsList.find((b) => b.category === catId);
-        return { name: cat.name, icon: cat.icon, spent, budget: budget?.amount || 0, pct: budget ? percentOf(spent, budget.amount) : 0 };
+        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, spent, budget: budget?.amount || 0, pct: budget ? percentOf(spent, budget.amount) : 0 };
       })
       .sort((a, b) => b.spent - a.spent);
-  }, [currentTx, budgetsList, currency, rates]);
+  }, [currentTx, budgetsList, currency, rates, t]);
 
   // Top merchants (multi-currency aware)
   const topMerchants = useMemo(() => {
-    const exp = currentTx.filter((t) => t.type === 'expense');
-    const grouped = groupBy(exp, (t) => t.merchant || 'Unknown');
+    const exp = currentTx.filter((tx) => tx.type === 'expense');
+    const grouped = groupBy(exp, (tx) => tx.merchant || 'Unknown');
     return Object.entries(grouped)
       .map(([merchant, txs]) => ({ merchant, total: sumAmountsMultiCurrency(txs, currency, rates) }))
       .sort((a, b) => b.total - a.total)
@@ -84,35 +86,35 @@ export default function MonthlyReview() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">Monthly Review</h1>
+        <h1 className="page-title mb-0">{t('review.title')}</h1>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Income</p><p className="text-lg font-heading font-bold text-income money">{formatCurrency(income, currency)}</p></div>
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Expenses</p><p className="text-lg font-heading font-bold text-danger money">{formatCurrency(expenses, currency)}</p></div>
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Net Savings</p><p className={`text-lg font-heading font-bold money ${netSavings >= 0 ? 'text-success' : 'text-danger'}`}>{formatCurrency(netSavings, currency)}</p></div>
-        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">Savings Rate</p><p className={`text-lg font-heading font-bold ${savingsRate >= 0 ? 'text-success' : 'text-danger'}`}>{savingsRate}%</p></div>
+        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">{t('review.income')}</p><p className="text-lg font-heading font-bold text-income money">{formatCurrency(income, currency)}</p></div>
+        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">{t('review.expenses')}</p><p className="text-lg font-heading font-bold text-danger money">{formatCurrency(expenses, currency)}</p></div>
+        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">{t('review.netSavings')}</p><p className={`text-lg font-heading font-bold money ${netSavings >= 0 ? 'text-success' : 'text-danger'}`}>{formatCurrency(netSavings, currency)}</p></div>
+        <div className="card text-center"><p className="text-xs text-cream-500 mb-1">{t('review.savingsRate')}</p><p className={`text-lg font-heading font-bold ${savingsRate >= 0 ? 'text-success' : 'text-danger'}`}>{savingsRate}%</p></div>
       </div>
 
       {/* Comparison */}
       <div className="card">
-        <h3 className="section-title">vs Previous month</h3>
+        <h3 className="section-title">{t('review.vsPreviousMonth')}</h3>
         <p className="text-sm">
-          Spending {trend.direction === 'up' ? 'increased' : trend.direction === 'down' ? 'decreased' : 'stayed the same'}
-          {trend.percent > 0 && <span className={`font-medium ${trend.direction === 'up' ? 'text-danger' : 'text-success'}`}> by {trend.percent}%</span>}
-          {' '}compared to last month ({formatCurrency(prevExpenses, currency)}).
+          {trend.direction === 'up' ? t('review.spendingIncreased') : trend.direction === 'down' ? t('review.spendingDecreased') : t('review.spendingSame')}
+          {trend.percent > 0 && <span className={`font-medium ${trend.direction === 'up' ? 'text-danger' : 'text-success'}`}> {t('review.by')} {trend.percent}%</span>}
+          {' '}{t('review.comparedToLastMonth')} ({formatCurrency(prevExpenses, currency)}).
         </p>
       </div>
 
       {/* Budget performance */}
       <div className="card">
-        <h3 className="section-title">Budget performance</h3>
+        <h3 className="section-title">{t('review.budgetPerformance')}</h3>
         {categoryBreakdown.length > 0 ? (
           <div className="space-y-2">
             {categoryBreakdown.map((cat) => (
-              <div key={cat.name} className="flex items-center justify-between text-sm">
+              <div key={cat.id} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   <span>{cat.icon}</span>
                   <span className="font-medium">{cat.name}</span>
@@ -128,12 +130,12 @@ export default function MonthlyReview() {
               </div>
             ))}
           </div>
-        ) : <p className="text-sm text-cream-500">No data</p>}
+        ) : <p className="text-sm text-cream-500">{t('common.noData')}</p>}
       </div>
 
       {/* Top merchants */}
       <div className="card">
-        <h3 className="section-title">Top merchants</h3>
+        <h3 className="section-title">{t('review.topMerchants')}</h3>
         {topMerchants.map((m, i) => (
           <div key={m.merchant} className="flex justify-between text-sm py-1">
             <span>{i + 1}. {m.merchant}</span>
@@ -145,7 +147,7 @@ export default function MonthlyReview() {
       {/* Goals update */}
       {goalsList.length > 0 && (
         <div className="card">
-          <h3 className="section-title">Goal progress</h3>
+          <h3 className="section-title">{t('review.goalProgress')}</h3>
           {goalsList.map((g) => (
             <div key={g.id} className="flex justify-between text-sm py-1">
               <span>{g.icon || '🎯'} {g.name}</span>
@@ -157,12 +159,12 @@ export default function MonthlyReview() {
 
       {/* Recurring total */}
       <div className="card">
-        <h3 className="section-title">Recurring expenses</h3>
-        <p className="text-sm">{recurringItems.length} active subscriptions/bills totaling <span className="font-heading font-bold money">{formatCurrency(recurringTotal, currency)}</span>/month.</p>
+        <h3 className="section-title">{t('review.recurringExpenses')}</h3>
+        <p className="text-sm">{t('review.recurringDesc', { count: recurringItems.length })} <span className="font-heading font-bold money">{formatCurrency(recurringTotal, currency)}</span>{t('review.perMonth')}</p>
       </div>
 
       <div className="card text-center py-6">
-        <p className="text-xs text-cream-500">{currentTx.length} transactions this month</p>
+        <p className="text-xs text-cream-500">{t('review.transactionsThisMonth', { count: currentTx.length })}</p>
       </div>
     </div>
   );

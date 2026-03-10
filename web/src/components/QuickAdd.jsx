@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { ArrowRight, Loader2, Calendar } from 'lucide-react';
 import { processNaturalLanguage } from '../lib/ai';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { todayLocal } from '../lib/helpers';
 
 const EXAMPLES = [
@@ -15,6 +16,7 @@ const EXAMPLES = [
 
 export default function QuickAdd({ onResult, onError }) {
   const { effectiveUserId } = useAuth();
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [customDate, setCustomDate] = useState('');
@@ -28,11 +30,11 @@ export default function QuickAdd({ onResult, onError }) {
     try {
       const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
       const dateOverride = customDate || todayLocal();
-      onResult?.(results.map((t) => ({ ...t, date: dateOverride, source: 'nlp' })));
+      onResult?.(results.map((r) => ({ ...r, date: dateOverride, source: 'nlp' })));
       setText('');
       setCustomDate('');
     } catch (err) {
-      onError?.(err.message || 'Failed to parse input');
+      onError?.(err.message || t('quickAdd.failedParse'));
     } finally {
       setLoading(false);
     }
@@ -45,7 +47,7 @@ export default function QuickAdd({ onResult, onError }) {
           <input
             type="text"
             className="input pr-12"
-            placeholder="Type an expense... e.g. '45 lei Bolt taxi'"
+            placeholder={t('quickAdd.inputPlaceholder')}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
@@ -63,7 +65,7 @@ export default function QuickAdd({ onResult, onError }) {
           type="button"
           onClick={() => dateRef.current?.showPicker?.() || dateRef.current?.focus()}
           className={`shrink-0 p-2.5 rounded-xl border transition-colors ${customDate ? 'border-accent bg-accent/10 text-accent' : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-200 dark:hover:bg-dark-border'}`}
-          title={customDate || 'Pick a date (default: today)'}
+          title={customDate || t('quickAdd.pickDate')}
         >
           <Calendar size={18} />
         </button>
@@ -80,8 +82,8 @@ export default function QuickAdd({ onResult, onError }) {
       {customDate && (
         <div className="flex items-center gap-2 text-xs text-accent">
           <Calendar size={12} />
-          <span>Date: {new Date(customDate + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-          <button onClick={() => setCustomDate('')} className="text-cream-500 hover:text-cream-700 underline">clear</button>
+          <span>{t('quickAdd.dateLabel').replace('{date}', new Date(customDate + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))}</span>
+          <button onClick={() => setCustomDate('')} className="text-cream-500 hover:text-cream-700 underline">{t('quickAdd.clear')}</button>
         </div>
       )}
       <div className="flex flex-wrap gap-1.5">

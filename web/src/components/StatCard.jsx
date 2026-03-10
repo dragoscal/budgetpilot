@@ -1,6 +1,8 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export default function StatCard({ label, value, trend, icon: Icon, className = '', hide, accent, compact }) {
+  const { t } = useTranslation();
   return (
     <div className={`card relative overflow-hidden ${compact ? '!p-3 md:!p-5' : ''} ${className}`}>
       {accent && (
@@ -33,7 +35,7 @@ export default function StatCard({ label, value, trend, icon: Icon, className = 
              <Minus size={11} />}
             {trend.percent}%
           </div>
-          <span className="text-[10px] md:text-[11px] text-cream-400 hidden sm:inline">vs last month</span>
+          <span className="text-[10px] md:text-[11px] text-cream-400 hidden sm:inline">{t('common.vsLastMonth')}</span>
         </div>
       )}
     </div>

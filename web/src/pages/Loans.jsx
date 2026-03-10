@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { loans as loansApi, loanPayments as lpApi } from '../lib/api';
 import { formatCurrency, generateId, formatDate, formatDateISO } from '../lib/helpers';
 import { LOAN_TYPES, LOAN_STATUSES, CURRENCIES } from '../lib/constants';
@@ -22,6 +23,7 @@ const EMPTY_PAYMENT = { amount: '', principalPortion: '', interestPortion: '', d
 export default function Loans() {
   const { toast } = useToast();
   const { effectiveUserId } = useAuth();
+  const { t } = useTranslation();
   const [loansList, setLoansList] = useState([]);
   const [payments, setPayments] = useState({});
   const [loading, setLoading] = useState(true);
@@ -54,7 +56,7 @@ export default function Loans() {
       });
       setPayments(grouped);
     } catch (err) {
-      toast.error('Failed to load loans: ' + err.message);
+      toast.error(t('loans.failedLoad') + ': ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -65,8 +67,8 @@ export default function Loans() {
   // ─── LOAN CRUD ─────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error('Please enter a loan name');
-    if (!form.principalAmount || Number(form.principalAmount) <= 0) return toast.error('Enter the loan amount');
+    if (!form.name.trim()) return toast.error(t('loans.nameRequired'));
+    if (!form.principalAmount || Number(form.principalAmount) <= 0) return toast.error(t('loans.amountRequired'));
 
     setSaving(true);
     try {
@@ -95,10 +97,10 @@ export default function Loans() {
 
       if (editingId) {
         await loansApi.update(loan);
-        toast.success('Loan updated');
+        toast.success(t('loans.updated'));
       } else {
         await loansApi.create(loan);
-        toast.success('Loan added');
+        toast.success(t('loans.saved'));
       }
 
       setForm({ ...EMPTY_FORM });
@@ -133,7 +135,7 @@ export default function Loans() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this loan and all its payments?')) return;
+    if (!confirm(t('loans.deleteConfirm'))) return;
     try {
       // Delete associated payments
       const loanPmts = payments[id] || [];
@@ -141,7 +143,7 @@ export default function Loans() {
         await lpApi.remove(p.id);
       }
       await loansApi.remove(id);
-      toast.success('Loan deleted');
+      toast.success(t('loans.deleted'));
       await loadData();
     } catch (err) {
       toast.error(err.message);
@@ -151,7 +153,7 @@ export default function Loans() {
   const toggleStatus = async (loan, newStatus) => {
     try {
       await loansApi.update({ ...loan, status: newStatus, updatedAt: new Date().toISOString() });
-      toast.success(`Loan marked as ${LOAN_STATUSES.find(s => s.id === newStatus)?.name || newStatus}`);
+      toast.success(`${t('loans.markedAs')} ${t(`loanStatuses.${newStatus}`)}`);
       await loadData();
     } catch (err) {
       toast.error(err.message);
@@ -161,7 +163,7 @@ export default function Loans() {
   // ─── PAYMENT CRUD ──────────────────────────────────────
   const handlePaymentSubmit = async (e, loanId) => {
     e.preventDefault();
-    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) return toast.error('Enter payment amount');
+    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) return toast.error(t('loans.enterPaymentAmount'));
 
     const loan = loansList.find((l) => l.id === loanId);
     const amount = Number(paymentForm.amount);
@@ -202,7 +204,7 @@ export default function Loans() {
         });
       }
 
-      toast.success('Payment recorded');
+      toast.success(t('loans.paymentRecorded'));
       setPaymentForm({ ...EMPTY_PAYMENT });
       setShowPaymentForm(null);
       await loadData();
@@ -229,7 +231,7 @@ export default function Loans() {
         status: newStatus,
         updatedAt: new Date().toISOString(),
       });
-      toast.success('Payment removed');
+      toast.success(t('loans.paymentRemoved'));
       await loadData();
     } catch (err) {
       toast.error(err.message);
@@ -275,7 +277,7 @@ export default function Loans() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="page-title">Bank Loans</h1>
+        <h1 className="page-title">{t('loans.title')}</h1>
         <div className="flex items-center justify-center py-12">
           <Loader2 size={24} className="animate-spin text-cream-400" />
         </div>
@@ -286,12 +288,12 @@ export default function Loans() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title">Bank Loans</h1>
+        <h1 className="page-title">{t('loans.title')}</h1>
         <button
           onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ ...EMPTY_FORM }); }}
           className="btn-primary text-xs flex items-center gap-1.5"
         >
-          <Plus size={14} /> Add Loan
+          <Plus size={14} /> {t('loans.add')}
         </button>
       </div>
 
@@ -301,21 +303,21 @@ export default function Loans() {
           <div className="card p-3">
             <div className="flex items-center gap-2 mb-1">
               <CircleDollarSign size={14} className="text-cream-400" />
-              <span className="text-[10px] text-cream-500 uppercase tracking-wide">Total Borrowed</span>
+              <span className="text-[10px] text-cream-500 uppercase tracking-wide">{t('loans.totalBorrowed')}</span>
             </div>
             <p className="text-lg font-heading font-bold">{formatCurrency(totalPrincipal)}</p>
           </div>
           <div className="card p-3">
             <div className="flex items-center gap-2 mb-1">
               <TrendingDown size={14} className="text-danger" />
-              <span className="text-[10px] text-cream-500 uppercase tracking-wide">Still Owed</span>
+              <span className="text-[10px] text-cream-500 uppercase tracking-wide">{t('loans.stillOwed')}</span>
             </div>
             <p className="text-lg font-heading font-bold text-danger">{formatCurrency(totalRemaining)}</p>
           </div>
           <div className="card p-3">
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle size={14} className="text-success" />
-              <span className="text-[10px] text-cream-500 uppercase tracking-wide">Paid Off</span>
+              <span className="text-[10px] text-cream-500 uppercase tracking-wide">{t('loans.paidOff')}</span>
             </div>
             <p className="text-lg font-heading font-bold text-success">{formatCurrency(totalPaid)}</p>
             {totalPrincipal > 0 && (
@@ -323,17 +325,17 @@ export default function Loans() {
                 <div className="h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
                   <div className="h-full bg-success rounded-full transition-all" style={{ width: `${overallProgress}%` }} />
                 </div>
-                <p className="text-[10px] text-cream-400 mt-0.5">{overallProgress.toFixed(1)}% complete</p>
+                <p className="text-[10px] text-cream-400 mt-0.5">{overallProgress.toFixed(1)}% {t('loans.complete')}</p>
               </div>
             )}
           </div>
           <div className="card p-3">
             <div className="flex items-center gap-2 mb-1">
               <Calendar size={14} className="text-info" />
-              <span className="text-[10px] text-cream-500 uppercase tracking-wide">Monthly Total</span>
+              <span className="text-[10px] text-cream-500 uppercase tracking-wide">{t('loans.monthlyTotal')}</span>
             </div>
             <p className="text-lg font-heading font-bold">{formatCurrency(totalMonthly)}</p>
-            <p className="text-[10px] text-cream-400">{formatCurrency(totalMonthly * 12)}/year</p>
+            <p className="text-[10px] text-cream-400">{formatCurrency(totalMonthly * 12)}/{t('common.year').toLowerCase()}</p>
           </div>
         </div>
       )}
@@ -341,25 +343,25 @@ export default function Loans() {
       {/* Add/Edit Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="card space-y-4 border-2 border-accent-200 dark:border-accent-800">
-          <h3 className="text-sm font-semibold">{editingId ? 'Edit Loan' : 'Add New Loan'}</h3>
+          <h3 className="text-sm font-semibold">{editingId ? t('loans.editLoan') : t('loans.addNewLoan')}</h3>
 
           {/* Loan type */}
           <div>
-            <label className="text-xs font-medium text-cream-500 mb-2 block">Loan Type</label>
+            <label className="text-xs font-medium text-cream-500 mb-2 block">{t('loans.type')}</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {LOAN_TYPES.map((t) => (
+              {LOAN_TYPES.map((lt) => (
                 <button
-                  key={t.id}
+                  key={lt.id}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: t.id }))}
+                  onClick={() => setForm((f) => ({ ...f, type: lt.id }))}
                   className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all text-center ${
-                    form.type === t.id
+                    form.type === lt.id
                       ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20'
                       : 'border-cream-200 dark:border-dark-border hover:border-cream-300'
                   }`}
                 >
-                  <span className="text-lg">{t.icon}</span>
-                  <span className="text-[10px] font-medium leading-tight">{t.name}</span>
+                  <span className="text-lg">{lt.icon}</span>
+                  <span className="text-[10px] font-medium leading-tight">{t(`loanTypes.${lt.id}`)}</span>
                 </button>
               ))}
             </div>
@@ -369,24 +371,24 @@ export default function Loans() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">
-                Loan Name <span className="text-danger">*</span>
+                {t('loans.name')} <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Home Mortgage"
+                placeholder={t('loans.namePlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Lender / Bank</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.lenderBank')}</label>
               <input
                 type="text"
                 value={form.lender}
                 onChange={(e) => setForm((f) => ({ ...f, lender: e.target.value }))}
-                placeholder="e.g. Banca Transilvania"
+                placeholder={t('loans.lenderPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
               />
             </div>
@@ -396,7 +398,7 @@ export default function Loans() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">
-                Principal Amount <span className="text-danger">*</span>
+                {t('loans.principalAmount')} <span className="text-danger">*</span>
               </label>
               <input
                 type="number"
@@ -408,18 +410,18 @@ export default function Loans() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Remaining Balance</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.remainingBalance')}</label>
               <input
                 type="number"
                 value={form.remainingBalance}
                 onChange={(e) => setForm((f) => ({ ...f, remainingBalance: e.target.value }))}
-                placeholder="Same as principal if new"
+                placeholder={t('loans.remainingPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
                 min="0" step="0.01" inputMode="decimal"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Currency</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('common.currency')}</label>
               <select
                 value={form.currency}
                 onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
@@ -435,7 +437,7 @@ export default function Loans() {
           {/* Interest & Monthly */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Interest Rate (%)</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.interestRate')}</label>
               <input
                 type="number"
                 value={form.interestRate}
@@ -446,23 +448,23 @@ export default function Loans() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Interest Type</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.interestType')}</label>
               <select
                 value={form.interestType}
                 onChange={(e) => setForm((f) => ({ ...f, interestType: e.target.value }))}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
               >
-                <option value="fixed">Fixed</option>
-                <option value="variable">Variable</option>
+                <option value="fixed">{t('loans.fixed')}</option>
+                <option value="variable">{t('loans.variable')}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Monthly Payment</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.monthlyPayment')}</label>
               <input
                 type="number"
                 value={form.monthlyPayment}
                 onChange={(e) => setForm((f) => ({ ...f, monthlyPayment: e.target.value }))}
-                placeholder="Monthly rate/installment"
+                placeholder={t('loans.monthlyPaymentPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
                 min="0" step="0.01" inputMode="decimal"
               />
@@ -472,7 +474,7 @@ export default function Loans() {
           {/* Dates & Payment Day */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Start Date</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.startDate')}</label>
               <input
                 type="date"
                 value={form.startDate}
@@ -481,7 +483,7 @@ export default function Loans() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">End Date (Maturity)</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.endDateMaturity')}</label>
               <input
                 type="date"
                 value={form.endDate}
@@ -490,7 +492,7 @@ export default function Loans() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-cream-500 mb-1 block">Payment Day</label>
+              <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.paymentDay')}</label>
               <select
                 value={form.paymentDay}
                 onChange={(e) => setForm((f) => ({ ...f, paymentDay: e.target.value }))}
@@ -505,11 +507,11 @@ export default function Loans() {
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-medium text-cream-500 mb-1 block">Notes</label>
+            <label className="text-xs font-medium text-cream-500 mb-1 block">{t('common.notes')}</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="Additional details..."
+              placeholder={t('loans.notesPlaceholder')}
               rows={2}
               className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm resize-none"
             />
@@ -518,11 +520,11 @@ export default function Loans() {
           {/* Buttons */}
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="btn-ghost text-xs flex items-center gap-1">
-              <X size={14} /> Cancel
+              <X size={14} /> {t('common.cancel')}
             </button>
             <button type="submit" disabled={saving} className="btn-primary text-xs flex items-center gap-1">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              {editingId ? 'Update Loan' : 'Add Loan'}
+              {editingId ? t('loans.updateLoan') : t('loans.add')}
             </button>
           </div>
         </form>
@@ -532,9 +534,9 @@ export default function Loans() {
       {loansList.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {[
-            { id: 'active', label: 'Active', count: loansList.filter(l => l.status === 'active').length },
-            { id: 'paid_off', label: 'Paid Off', count: loansList.filter(l => l.status === 'paid_off').length },
-            { id: 'all', label: 'All', count: loansList.length },
+            { id: 'active', label: t('loanStatuses.active'), count: loansList.filter(l => l.status === 'active').length },
+            { id: 'paid_off', label: t('loanStatuses.paid_off'), count: loansList.filter(l => l.status === 'paid_off').length },
+            { id: 'all', label: t('common.all'), count: loansList.length },
           ].map((f) => (
             <button
               key={f.id}
@@ -556,10 +558,10 @@ export default function Loans() {
         <div className="card text-center py-12">
           <Building2 size={48} className="mx-auto mb-3 text-cream-300 dark:text-cream-600" />
           <h3 className="text-sm font-semibold mb-1">
-            {loansList.length === 0 ? 'No loans yet' : 'No loans match this filter'}
+            {loansList.length === 0 ? t('loans.noLoans') : t('loans.noLoansFilter')}
           </h3>
           <p className="text-xs text-cream-500">
-            {loansList.length === 0 ? 'Add your bank loans to track payments and progress' : 'Try a different filter'}
+            {loansList.length === 0 ? t('loans.noLoansDesc') : t('loans.tryDifferentFilter')}
           </p>
         </div>
       )}
@@ -587,7 +589,7 @@ export default function Loans() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold truncate">{loan.name}</h3>
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${status.bg} ${status.color}`}>
-                      {status.name}
+                      {t(`loanStatuses.${loan.status}`)}
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
@@ -620,10 +622,10 @@ export default function Loans() {
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[10px] text-cream-500">
-                        {formatCurrency(loan.principalAmount - loan.remainingBalance, loan.currency)} paid
+                        {formatCurrency(loan.principalAmount - loan.remainingBalance, loan.currency)} {t('loans.paid')}
                       </span>
                       <span className="text-[10px] text-cream-500">
-                        {formatCurrency(loan.remainingBalance, loan.currency)} remaining
+                        {formatCurrency(loan.remainingBalance, loan.currency)} {t('loans.remaining')}
                       </span>
                     </div>
                   </div>
@@ -643,32 +645,32 @@ export default function Loans() {
                   {/* Loan details grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-2 rounded-lg bg-cream-50 dark:bg-dark-bg">
-                      <p className="text-[10px] text-cream-400">Principal</p>
+                      <p className="text-[10px] text-cream-400">{t('loans.principal')}</p>
                       <p className="text-sm font-semibold">{formatCurrency(loan.principalAmount, loan.currency)}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-cream-50 dark:bg-dark-bg">
-                      <p className="text-[10px] text-cream-400">Total Paid</p>
+                      <p className="text-[10px] text-cream-400">{t('loans.totalPaid')}</p>
                       <p className="text-sm font-semibold text-success">{formatCurrency(totalPaidLoan, loan.currency)}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-cream-50 dark:bg-dark-bg">
-                      <p className="text-[10px] text-cream-400">Interest Paid</p>
+                      <p className="text-[10px] text-cream-400">{t('loans.interestPaid')}</p>
                       <p className="text-sm font-semibold text-warning">{formatCurrency(totalInterest, loan.currency)}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-cream-50 dark:bg-dark-bg">
                       <p className="text-[10px] text-cream-400">
-                        {remainingMonths ? 'Est. Months Left' : 'Progress'}
+                        {remainingMonths ? t('loans.estMonthsLeft') : t('loans.progress')}
                       </p>
                       <p className="text-sm font-semibold">
-                        {remainingMonths ? `~${remainingMonths} months` : `${progress.toFixed(1)}%`}
+                        {remainingMonths ? `~${remainingMonths} ${t('loans.months')}` : `${progress.toFixed(1)}%`}
                       </p>
                     </div>
                   </div>
 
                   {/* Extra info */}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-cream-500">
-                    <span>Started: {formatDate(loan.startDate, 'dd MMM yyyy')}</span>
-                    {loan.endDate && <span>Maturity: {formatDate(loan.endDate, 'dd MMM yyyy')}</span>}
-                    <span>Payment day: {loan.paymentDay}</span>
+                    <span>{t('loans.started')}: {formatDate(loan.startDate, 'dd MMM yyyy')}</span>
+                    {loan.endDate && <span>{t('loans.maturity')}: {formatDate(loan.endDate, 'dd MMM yyyy')}</span>}
+                    <span>{t('loans.paymentDay')}: {loan.paymentDay}</span>
                     {loan.notes && <span className="block w-full text-cream-400 italic">"{loan.notes}"</span>}
                   </div>
 
@@ -679,18 +681,18 @@ export default function Loans() {
                         onClick={() => { setShowPaymentForm(loan.id); setPaymentForm({ ...EMPTY_PAYMENT, amount: loan.monthlyPayment ? String(loan.monthlyPayment) : '' }); }}
                         className="btn-primary text-xs flex items-center gap-1"
                       >
-                        <DollarSign size={14} /> Record Payment
+                        <DollarSign size={14} /> {t('loans.recordPayment')}
                       </button>
                     )}
                     <button onClick={() => handleEdit(loan)} className="btn-ghost text-xs flex items-center gap-1">
-                      <Edit3 size={14} /> Edit
+                      <Edit3 size={14} /> {t('common.edit')}
                     </button>
                     {loan.status === 'active' && (
                       <button
                         onClick={() => toggleStatus(loan, 'paid_off')}
                         className="btn-ghost text-xs flex items-center gap-1 text-success border-success/30 hover:bg-success/10"
                       >
-                        <CheckCircle size={14} /> Mark Paid Off
+                        <CheckCircle size={14} /> {t('loans.markPaidOff')}
                       </button>
                     )}
                     {loan.status === 'paid_off' && (
@@ -698,14 +700,14 @@ export default function Loans() {
                         onClick={() => toggleStatus(loan, 'active')}
                         className="btn-ghost text-xs flex items-center gap-1"
                       >
-                        <Clock size={14} /> Reactivate
+                        <Clock size={14} /> {t('loans.reactivate')}
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(loan.id)}
                       className="btn-ghost text-xs flex items-center gap-1 text-danger border-danger/30 hover:bg-danger/10"
                     >
-                      <Trash2 size={14} /> Delete
+                      <Trash2 size={14} /> {t('common.delete')}
                     </button>
                   </div>
 
@@ -715,10 +717,10 @@ export default function Loans() {
                       onSubmit={(e) => handlePaymentSubmit(e, loan.id)}
                       className="p-3 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border space-y-3"
                     >
-                      <h4 className="text-xs font-semibold">Record Payment</h4>
+                      <h4 className="text-xs font-semibold">{t('loans.recordPayment')}</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                         <div>
-                          <label className="text-[10px] text-cream-400 block mb-0.5">Total Amount *</label>
+                          <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.totalAmount')} *</label>
                           <input
                             type="number"
                             value={paymentForm.amount}
@@ -729,7 +731,7 @@ export default function Loans() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-cream-400 block mb-0.5">Principal Part</label>
+                          <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.principalPart')}</label>
                           <input
                             type="number"
                             value={paymentForm.principalPortion}
@@ -740,7 +742,7 @@ export default function Loans() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-cream-400 block mb-0.5">Interest Part</label>
+                          <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.interestPart')}</label>
                           <input
                             type="number"
                             value={paymentForm.interestPortion}
@@ -751,7 +753,7 @@ export default function Loans() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-cream-400 block mb-0.5">Date</label>
+                          <label className="text-[10px] text-cream-400 block mb-0.5">{t('common.date')}</label>
                           <input
                             type="date"
                             value={paymentForm.date}
@@ -761,42 +763,42 @@ export default function Loans() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] text-cream-400 block mb-0.5">Note</label>
+                        <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.note')}</label>
                         <input
                           type="text"
                           value={paymentForm.note}
                           onChange={(e) => setPaymentForm((f) => ({ ...f, note: e.target.value }))}
-                          placeholder="Optional note"
+                          placeholder={t('loans.optionalNote')}
                           className="w-full px-2 py-1.5 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-xs"
                         />
                       </div>
                       {/* Quick amount buttons */}
                       {loan.monthlyPayment > 0 && (
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-cream-400">Quick:</span>
+                          <span className="text-[10px] text-cream-400">{t('loans.quick')}:</span>
                           <button
                             type="button"
                             onClick={() => setPaymentForm((f) => ({ ...f, amount: String(loan.monthlyPayment) }))}
                             className="text-[10px] px-2 py-0.5 rounded bg-info/10 text-info hover:bg-info/20"
                           >
-                            Monthly ({formatCurrency(loan.monthlyPayment, loan.currency)})
+                            {t('common.monthly')} ({formatCurrency(loan.monthlyPayment, loan.currency)})
                           </button>
                           <button
                             type="button"
                             onClick={() => setPaymentForm((f) => ({ ...f, amount: String(loan.remainingBalance) }))}
                             className="text-[10px] px-2 py-0.5 rounded bg-success/10 text-success hover:bg-success/20"
                           >
-                            Pay off ({formatCurrency(loan.remainingBalance, loan.currency)})
+                            {t('loans.payOff')} ({formatCurrency(loan.remainingBalance, loan.currency)})
                           </button>
                         </div>
                       )}
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setShowPaymentForm(null)} className="btn-ghost text-xs">
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button type="submit" disabled={savingPayment} className="btn-primary text-xs flex items-center gap-1">
                           {savingPayment ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                          Record Payment
+                          {t('loans.recordPayment')}
                         </button>
                       </div>
                     </form>
@@ -807,7 +809,7 @@ export default function Loans() {
                     <div>
                       <h4 className="text-xs font-semibold mb-2 flex items-center gap-1">
                         <BarChart3 size={12} />
-                        Payment History ({loanPaymentsList.length})
+                        {t('loans.paymentHistory')} ({loanPaymentsList.length})
                       </h4>
                       <div className="space-y-1.5">
                         {loanPaymentsList.map((p) => (

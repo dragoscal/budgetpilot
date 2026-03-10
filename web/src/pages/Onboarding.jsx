@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { CURRENCIES, CATEGORIES, ACCOUNT_TYPES } from '../lib/constants';
 import { accounts as accountsApi, budgets as budgetsApi, settings as settingsApi } from '../lib/api';
 import { generateId, formatDateISO } from '../lib/helpers';
 import { Wallet, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 
-const STEPS = ['Welcome', 'Account', 'Budgets', 'AI Setup'];
-
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
   const { toast } = useToast();
+  const { t, language, setLanguage, languages } = useTranslation();
+
+  const STEPS = [t('onboarding.stepWelcome'), t('onboarding.stepAccount'), t('onboarding.stepBudgets'), t('onboarding.stepAi')];
   const [step, setStep] = useState(0);
 
   // Step 1 — Welcome
@@ -36,6 +38,7 @@ export default function Onboarding() {
       // Save settings (syncs to server if connected)
       await settingsApi.set('defaultCurrency', currency);
       await settingsApi.set('userName', displayName);
+      await settingsApi.set('language', language);
       await updateProfile({ name: displayName, defaultCurrency: currency, onboardingComplete: true });
 
       // Create account if filled
@@ -77,7 +80,7 @@ export default function Onboarding() {
         await settingsApi.set('anthropicApiKey', apiKey.trim());
       }
 
-      toast.success('Setup complete! Welcome to BudgetPilot.');
+      toast.success(t('onboarding.setupComplete'));
       navigate('/', { replace: true });
     } catch (err) {
       toast.error(err.message);
@@ -120,24 +123,45 @@ export default function Onboarding() {
                 <div className="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-2xl mb-3">
                   <Wallet className="w-7 h-7 text-success" />
                 </div>
-                <h2 className="text-2xl font-heading font-bold">Welcome to BudgetPilot</h2>
-                <p className="text-cream-700 dark:text-cream-500 mt-1">Let's set up your account in a few quick steps.</p>
+                <h2 className="text-2xl font-heading font-bold">{t('onboarding.welcome')}</h2>
+                <p className="text-cream-700 dark:text-cream-500 mt-1">{t('onboarding.letsSetup')}</p>
+              </div>
+              {/* Language selector */}
+              <div>
+                <label className="label">{t('onboarding.language')}</label>
+                <div className="flex gap-2">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => setLanguage(lang.code)}
+                      className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-medium transition-colors ${
+                        language === lang.code
+                          ? 'border-cream-900 bg-cream-900/5 dark:border-cream-100 dark:bg-cream-100/5'
+                          : 'border-cream-300 hover:border-cream-400 dark:border-dark-border'
+                      }`}
+                    >
+                      <span className="text-xl">{lang.flag}</span>
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
-                <label className="label">What should we call you?</label>
+                <label className="label">{t('onboarding.whatName')}</label>
                 <input
                   className="input"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t('onboarding.namePlaceholder')}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="label">Primary currency</label>
+                <label className="label">{t('onboarding.primaryCurrency')}</label>
                 <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                   {CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                    <option key={c.code} value={c.code}>{c.code} — {t(`currencies.${c.code}`)}</option>
                   ))}
                 </select>
               </div>
@@ -148,35 +172,35 @@ export default function Onboarding() {
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-heading font-bold">Add your first account</h2>
-                <p className="text-cream-700 dark:text-cream-500 mt-1">Track your money across accounts.</p>
+                <h2 className="text-2xl font-heading font-bold">{t('onboarding.addFirstAccount')}</h2>
+                <p className="text-cream-700 dark:text-cream-500 mt-1">{t('onboarding.trackMoney')}</p>
               </div>
               <div>
-                <label className="label">Account name</label>
-                <input className="input" value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="e.g. BT Checking" />
+                <label className="label">{t('onboarding.accountName')}</label>
+                <input className="input" value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder={t('onboarding.accountNamePlaceholder')} />
               </div>
               <div>
-                <label className="label">Account type</label>
+                <label className="label">{t('onboarding.accountType')}</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {ACCOUNT_TYPES.slice(0, 4).map((t) => (
+                  {ACCOUNT_TYPES.slice(0, 4).map((at) => (
                     <button
-                      key={t.id}
+                      key={at.id}
                       type="button"
-                      onClick={() => setAccountType(t.id)}
+                      onClick={() => setAccountType(at.id)}
                       className={`p-3 rounded-xl border text-left text-sm transition-colors ${
-                        accountType === t.id
+                        accountType === at.id
                           ? 'border-cream-900 bg-cream-900/5 dark:border-cream-100 dark:bg-cream-100/5'
                           : 'border-cream-300 hover:border-cream-400 dark:border-dark-border'
                       }`}
                     >
-                      <span className="text-lg mr-2">{t.icon}</span>
-                      {t.name}
+                      <span className="text-lg mr-2">{at.icon}</span>
+                      {t(`accountTypes.${at.id}`)}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="label">Current balance</label>
+                <label className="label">{t('onboarding.currentBalance')}</label>
                 <input
                   type="number"
                   className="input"
@@ -193,8 +217,8 @@ export default function Onboarding() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-heading font-bold">Set monthly budgets</h2>
-                <p className="text-cream-700 dark:text-cream-500 mt-1">Optional — you can always change these later.</p>
+                <h2 className="text-2xl font-heading font-bold">{t('onboarding.setMonthlyBudgets')}</h2>
+                <p className="text-cream-700 dark:text-cream-500 mt-1">{t('onboarding.budgetsOptional')}</p>
               </div>
               <div className="space-y-3">
                 {budgetCategories.map((catId) => {
@@ -202,7 +226,7 @@ export default function Onboarding() {
                   return (
                     <div key={catId} className="flex items-center gap-3">
                       <span className="text-xl w-8 text-center">{cat.icon}</span>
-                      <span className="text-sm font-medium flex-1">{cat.name}</span>
+                      <span className="text-sm font-medium flex-1">{t(`categories.${catId}`)}</span>
                       <input
                         type="number"
                         className="input w-32"
@@ -226,13 +250,13 @@ export default function Onboarding() {
                 <div className="inline-flex items-center justify-center w-14 h-14 bg-info/10 rounded-2xl mb-3">
                   <Sparkles className="w-7 h-7 text-info" />
                 </div>
-                <h2 className="text-2xl font-heading font-bold">AI-powered features</h2>
+                <h2 className="text-2xl font-heading font-bold">{t('onboarding.aiPowered')}</h2>
                 <p className="text-cream-700 dark:text-cream-500 mt-1">
-                  Optionally scan receipts and add expenses with natural language.
+                  {t('onboarding.aiDesc')}
                 </p>
               </div>
               <div>
-                <label className="label">Anthropic API Key (optional)</label>
+                <label className="label">{t('onboarding.anthropicKey')}</label>
                 <input
                   type="password"
                   className="input"
@@ -241,8 +265,7 @@ export default function Onboarding() {
                   placeholder="sk-ant-..."
                 />
                 <p className="text-xs text-cream-500 mt-1.5">
-                  Stored locally — never sent anywhere except directly to Anthropic's API.
-                  You can add this later in Settings.
+                  {t('onboarding.keyStoredLocally')}
                 </p>
               </div>
             </div>
@@ -252,7 +275,7 @@ export default function Onboarding() {
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-cream-200 dark:border-dark-border">
             {step > 0 ? (
               <button onClick={() => setStep(step - 1)} className="btn-ghost flex items-center gap-1">
-                <ArrowLeft size={16} /> Back
+                <ArrowLeft size={16} /> {t('common.back')}
               </button>
             ) : <div />}
 
@@ -262,11 +285,11 @@ export default function Onboarding() {
                 disabled={!canNext()}
                 className="btn-primary flex items-center gap-1 disabled:opacity-50"
               >
-                Next <ArrowRight size={16} />
+                {t('common.next')} <ArrowRight size={16} />
               </button>
             ) : (
               <button onClick={handleFinish} className="btn-primary flex items-center gap-1">
-                <Check size={16} /> Finish setup
+                <Check size={16} /> {t('onboarding.finishSetup')}
               </button>
             )}
           </div>
@@ -276,7 +299,7 @@ export default function Onboarding() {
             onClick={handleFinish}
             className="w-full text-center text-xs text-cream-500 hover:text-cream-700 mt-4"
           >
-            {step < STEPS.length - 1 ? 'Skip setup and start using BudgetPilot' : 'Skip this step'}
+            {step < STEPS.length - 1 ? t('onboarding.skipSetup') : t('onboarding.skipStep')}
           </button>
         </div>
       </div>

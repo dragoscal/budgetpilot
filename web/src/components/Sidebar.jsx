@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import SyncIndicator from './SyncIndicator';
 import { useSync } from '../contexts/SyncContext';
 import {
@@ -12,47 +13,6 @@ import {
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
 
-const NAV_SECTIONS = [
-  {
-    label: 'Main',
-    items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/add', icon: PlusCircle, label: 'Add Transaction' },
-      { to: '/transactions', icon: Receipt, label: 'Transactions' },
-    ],
-  },
-  {
-    label: 'Planning',
-    items: [
-      { to: '/budgets', icon: PiggyBank, label: 'Budgets' },
-      { to: '/goals', icon: Target, label: 'Goals' },
-      { to: '/recurring', icon: RotateCcw, label: 'Recurring' },
-      { to: '/loans', icon: Building2, label: 'Loans' },
-    ],
-  },
-  {
-    label: 'Insights',
-    items: [
-      { to: '/calendar', icon: Calendar, label: 'Calendar' },
-      { to: '/cashflow', icon: TrendingUp, label: 'Cash Flow' },
-      { to: '/networth', icon: Landmark, label: 'Net Worth' },
-      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-      { to: '/reports', icon: ClipboardList, label: 'Reports' },
-    ],
-  },
-  {
-    label: 'More',
-    items: [
-      { to: '/family', icon: Heart, label: 'Family' },
-      { to: '/people', icon: Users, label: 'People & Debts' },
-      { to: '/wishlist', icon: Star, label: 'Wishlist' },
-      { to: '/challenges', icon: Trophy, label: 'Challenges' },
-      { to: '/receipts', icon: Camera, label: 'Receipts' },
-      { to: '/review', icon: FileText, label: 'Monthly Review' },
-    ],
-  },
-];
-
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bp_sidebarCollapsed') === 'true');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,6 +21,48 @@ export default function Sidebar() {
   const { pendingChanges, syncing, error: syncError, hasBackend } = useSync();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const NAV_SECTIONS = useMemo(() => [
+    {
+      label: t('nav.main'),
+      items: [
+        { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
+        { to: '/add', icon: PlusCircle, label: t('nav.addTransaction') },
+        { to: '/transactions', icon: Receipt, label: t('nav.transactions') },
+      ],
+    },
+    {
+      label: t('nav.planning'),
+      items: [
+        { to: '/budgets', icon: PiggyBank, label: t('nav.budgets') },
+        { to: '/goals', icon: Target, label: t('nav.goals') },
+        { to: '/recurring', icon: RotateCcw, label: t('nav.recurring') },
+        { to: '/loans', icon: Building2, label: t('nav.loans') },
+      ],
+    },
+    {
+      label: t('nav.insights'),
+      items: [
+        { to: '/calendar', icon: Calendar, label: t('nav.calendar') },
+        { to: '/cashflow', icon: TrendingUp, label: t('nav.cashflow') },
+        { to: '/networth', icon: Landmark, label: t('nav.networth') },
+        { to: '/analytics', icon: BarChart3, label: t('nav.analytics') },
+        { to: '/reports', icon: ClipboardList, label: t('nav.reports') },
+      ],
+    },
+    {
+      label: t('nav.more'),
+      items: [
+        { to: '/family', icon: Heart, label: t('nav.family') },
+        { to: '/people', icon: Users, label: t('nav.people') },
+        { to: '/wishlist', icon: Star, label: t('nav.wishlist') },
+        { to: '/challenges', icon: Trophy, label: t('nav.challenges') },
+        { to: '/receipts', icon: Camera, label: t('nav.receipts') },
+        { to: '/review', icon: FileText, label: t('nav.review') },
+      ],
+    },
+  ], [t]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -160,10 +162,10 @@ export default function Sidebar() {
           <button
             onClick={toggleTheme}
             className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
-            title={dark ? 'Light mode' : 'Dark mode'}
+            title={dark ? t('nav.lightMode') : t('nav.darkMode')}
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
-            {!collapsed && <span>{dark ? 'Light' : 'Dark'}</span>}
+            {!collapsed && <span>{dark ? t('nav.light') : t('nav.dark')}</span>}
           </button>
 
           {user?.role === 'admin' && (
@@ -176,16 +178,16 @@ export default function Sidebar() {
                     : 'text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20'
                 } ${collapsed ? 'justify-center px-2' : ''}`
               }
-              title={collapsed ? 'Admin' : undefined}
+              title={collapsed ? t('nav.admin') : undefined}
             >
               <Shield size={16} className="shrink-0" />
-              {!collapsed && <span>Admin</span>}
+              {!collapsed && <span>{t('nav.admin')}</span>}
             </NavLink>
           )}
 
           <NavLink to="/settings" className={navLinkClass}>
             <Settings size={16} className="shrink-0" />
-            {!collapsed && <span>Settings</span>}
+            {!collapsed && <span>{t('nav.settings')}</span>}
           </NavLink>
 
           <button
@@ -193,7 +195,7 @@ export default function Sidebar() {
             className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-danger hover:bg-danger/8 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
           >
             <LogOut size={16} />
-            {!collapsed && <span>Sign out</span>}
+            {!collapsed && <span>{t('nav.signOut')}</span>}
           </button>
 
           <button
@@ -217,7 +219,7 @@ export default function Sidebar() {
             <div className="sticky top-0 bg-white dark:bg-dark-card z-10 pt-3 pb-2 px-4 border-b border-cream-100 dark:border-dark-border">
               <div className="w-8 h-1 bg-cream-300 dark:bg-cream-600 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between">
-                <span className="text-sm font-heading font-bold">Menu</span>
+                <span className="text-sm font-heading font-bold">{t('nav.menu')}</span>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-cream-800/50">
                   <X size={18} className="text-cream-500" />
                 </button>
@@ -258,7 +260,7 @@ export default function Sidebar() {
               {/* Extras */}
               <div>
                 <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
-                  Settings
+                  {t('nav.settings')}
                 </p>
                 <div className="space-y-px">
                   <NavLink
@@ -271,7 +273,7 @@ export default function Sidebar() {
                     }`}
                   >
                     <MessageSquare size={18} className="shrink-0" />
-                    <span>Report Bug / Suggest</span>
+                    <span>{t('nav.feedback')}</span>
                   </NavLink>
                   <NavLink
                     to="/settings"
@@ -283,7 +285,7 @@ export default function Sidebar() {
                     }`}
                   >
                     <Settings size={18} className="shrink-0" />
-                    <span>Settings</span>
+                    <span>{t('nav.settings')}</span>
                   </NavLink>
                   {user?.role === 'admin' && (
                     <NavLink
@@ -296,7 +298,7 @@ export default function Sidebar() {
                       }`}
                     >
                       <Shield size={18} className="shrink-0" />
-                      <span>Admin Panel</span>
+                      <span>{t('nav.adminPanel')}</span>
                     </NavLink>
                   )}
                   <button
@@ -304,14 +306,14 @@ export default function Sidebar() {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 w-full"
                   >
                     {dark ? <Sun size={18} /> : <Moon size={18} />}
-                    <span>{dark ? 'Light Mode' : 'Dark Mode'}</span>
+                    <span>{dark ? t('nav.lightMode') : t('nav.darkMode')}</span>
                   </button>
                   <button
                     onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-danger w-full"
                   >
                     <LogOut size={18} />
-                    <span>Sign Out</span>
+                    <span>{t('nav.signOut')}</span>
                   </button>
                 </div>
               </div>
@@ -324,10 +326,10 @@ export default function Sidebar() {
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-1 py-1 safe-bottom">
         {[
-          { to: '/', icon: LayoutDashboard, label: 'Home' },
-          { to: '/transactions', icon: Receipt, label: 'History' },
+          { to: '/', icon: LayoutDashboard, label: t('nav.home') },
+          { to: '/transactions', icon: Receipt, label: t('nav.history') },
           { to: '/add', icon: PlusCircle, label: 'Add', special: true },
-          { to: '/budgets', icon: PiggyBank, label: 'Budgets' },
+          { to: '/budgets', icon: PiggyBank, label: t('nav.budgets') },
         ].map((item) => (
           <NavLink
             key={item.to}
@@ -359,7 +361,7 @@ export default function Sidebar() {
           }`}
         >
           <Menu size={20} />
-          <span>More</span>
+          <span>{t('nav.more')}</span>
           {/* Sync indicator dot */}
           {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
             <span className={`absolute top-1 right-2 w-2 h-2 rounded-full ${
