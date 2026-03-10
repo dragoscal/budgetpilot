@@ -109,7 +109,7 @@ export default function FeedbackFAB() {
         <div className="fixed inset-0 z-50 flex items-end md:items-end justify-end pointer-events-none">
           {/* Backdrop for mobile */}
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm pointer-events-auto md:hidden"
+            className="fixed inset-0 bg-black/40 pointer-events-auto md:hidden"
             onClick={resetAndClose}
           />
           <div
