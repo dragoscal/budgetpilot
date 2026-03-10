@@ -55,8 +55,54 @@ function extractJSON(text) {
       if (depth === 0) return text.substring(start, i + 1);
     }
   }
+  // JSON was truncated — try to repair it
+  const partial = text.substring(start);
+  const repaired = repairTruncatedJSON(partial);
+  if (repaired) return repaired;
+  // Last resort: greedy regex
   const m = text.match(/\{[\s\S]*\}/);
   return m ? m[0] : null;
+}
+
+function repairTruncatedJSON(text) {
+  if (!text) return null;
+  try { JSON.parse(text); return text; } catch { /* needs repair */ }
+
+  let repaired = text;
+  let inStr = false, escaped = false, lastQuotePos = -1;
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\') { escaped = true; continue; }
+    if (ch === '"') { inStr = !inStr; lastQuotePos = i; }
+  }
+  if (inStr) {
+    repaired = repaired.substring(0, lastQuotePos);
+  }
+
+  repaired = repaired.replace(/,\s*$/, '');
+  repaired = repaired.replace(/,\s*"[^"]*$/, '');
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*$/, '');
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*"[^"]*$/, '');
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*[\d.]+$/, '');
+
+  const stack = [];
+  inStr = false; escaped = false;
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inStr) { escaped = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{') stack.push('}');
+    else if (ch === '[') stack.push(']');
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+
+  repaired = repaired.replace(/,\s*$/, '');
+  while (stack.length > 0) repaired += stack.pop();
+
+  try { JSON.parse(repaired); return repaired; } catch { return null; }
 }
 
 function inferCategory(merchant) {
@@ -202,6 +248,55 @@ End of output.`;
   assertEqual(parsed.receipt.store, 'Blue Acqua Iasi');
   assertEqual(parsed.receipt.total, 718.00);
   assertEqual(parsed.transactions[0].items.length, 2);
+});
+
+// ─── TEST 1b: extractJSON — Truncated JSON repair ────────
+console.log('\n📋 1b. extractJSON — Truncated JSON repair (bank statement max_tokens)');
+
+test('Truncated array mid-element — repairs and parses', () => {
+  const input = '{"bankName": "Revolut", "transactions": [{"date": "2026-03-01", "amount": 50}, {"date": "2026-03-02", "amo';
+  const result = extractJSON(input);
+  assertNotNull(result, 'Should repair truncated JSON');
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.bankName, 'Revolut');
+  // Repair saves the second element (strips truncated key), both survive
+  assertEqual(parsed.transactions.length >= 1, true, 'At least 1 transaction preserved');
+});
+
+test('Truncated after complete array element with trailing comma', () => {
+  const input = '{"bankName": "ING", "transactions": [{"amount": 100}, {"amount": 200},';
+  const result = extractJSON(input);
+  assertNotNull(result);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.transactions.length, 2);
+});
+
+test('Truncated inside string value — repairs', () => {
+  const input = '{"bankName": "Revolut", "summary": "Total of 31 transact';
+  const result = extractJSON(input);
+  assertNotNull(result);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.bankName, 'Revolut');
+});
+
+test('Truncated with nested objects — closes all levels', () => {
+  const input = '{"bankName": "BCR", "transactions": [{"merchant": "Lidl", "items": [{"name": "Bread"';
+  const result = extractJSON(input);
+  assertNotNull(result);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.bankName, 'BCR');
+});
+
+test('Large truncated bank statement — preserves complete transactions', () => {
+  const txns = Array.from({length: 25}, (_, i) => `{"date": "2026-03-${String(i+1).padStart(2, '0')}", "merchant": "Store${i}", "amount": ${(i+1)*10}}`);
+  const complete = txns.slice(0, 20).join(', ');
+  const partial = `{"bankName": "Revolut", "currency": "RON", "transactions": [${complete}, {"date": "2026-03-21", "merch`;
+  const result = extractJSON(partial);
+  assertNotNull(result);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.bankName, 'Revolut');
+  // At least 20 complete transactions preserved (repair may also save partial 21st)
+  assertEqual(parsed.transactions.length >= 20, true, 'At least 20 transactions preserved');
 });
 
 // ─── TEST 2: inferCategory ───────────────────────────────

@@ -163,9 +163,85 @@ function extractJSON(text) {
       if (depth === 0) return text.substring(start, i + 1);
     }
   }
-  // Fallback: greedy regex if balanced matching fails
+  // JSON was truncated (unbalanced braces) — try to repair it
+  const partial = text.substring(start);
+  const repaired = repairTruncatedJSON(partial);
+  if (repaired) return repaired;
+  // Last resort: greedy regex
   const m = text.match(/\{[\s\S]*\}/);
   return m ? m[0] : null;
+}
+
+/**
+ * Attempt to repair truncated JSON (e.g. from AI hitting max_tokens).
+ * Closes any open strings, arrays, and objects to make it parseable.
+ * Strips any trailing incomplete elements to avoid garbage data.
+ */
+function repairTruncatedJSON(text) {
+  if (!text) return null;
+  try {
+    // Already valid
+    JSON.parse(text);
+    return text;
+  } catch { /* needs repair */ }
+
+  let repaired = text;
+
+  // If we're in the middle of a string value, close it
+  // Count unescaped quotes
+  let inStr = false, escaped = false;
+  let lastQuotePos = -1;
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\') { escaped = true; continue; }
+    if (ch === '"') { inStr = !inStr; lastQuotePos = i; }
+  }
+  if (inStr) {
+    // We're inside an unclosed string — truncate to last complete value
+    // Find the last complete key:value or array element before the open string
+    repaired = repaired.substring(0, lastQuotePos);
+  }
+
+  // Remove any trailing comma or incomplete key-value
+  repaired = repaired.replace(/,\s*$/, '');
+  // Remove trailing partial key (e.g. `"merch` at end)
+  repaired = repaired.replace(/,\s*"[^"]*$/, '');
+  // Remove trailing colon after key with no value
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*$/, '');
+  // Remove trailing incomplete value after colon (e.g. `"key": "val` or `"key": 12`)
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*"[^"]*$/, '');
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*[\d.]+$/, '');
+
+  // Now close all open brackets and braces
+  const stack = [];
+  inStr = false;
+  escaped = false;
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inStr) { escaped = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{') stack.push('}');
+    else if (ch === '[') stack.push(']');
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+
+  // Close any trailing comma before closing brackets
+  repaired = repaired.replace(/,\s*$/, '');
+
+  // Append closing brackets/braces in reverse order
+  while (stack.length > 0) {
+    repaired += stack.pop();
+  }
+
+  try {
+    JSON.parse(repaired);
+    return repaired;
+  } catch {
+    return null;
+  }
 }
 
 // ─── API CALLER (multi-provider) ─────────────────────────
@@ -232,6 +308,10 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     }
     const data = await res.json();
     text = data.content?.[0]?.text || '';
+    // Detect if response was truncated due to max_tokens
+    if (data.stop_reason === 'max_tokens') {
+      console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+    }
   } else {
     // OpenAI-compatible API (OpenAI, OpenRouter)
     const baseUrl = provider === 'openrouter'
@@ -291,11 +371,15 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     }
     const data = await res.json();
     text = data.choices?.[0]?.message?.content || '';
+    // Detect if response was truncated due to max_tokens
+    if (data.choices?.[0]?.finish_reason === 'length') {
+      console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+    }
   }
 
-  // Extract JSON using balanced brace matching (not greedy regex)
+  // Extract JSON using balanced brace matching (with truncation repair)
   const jsonStr = extractJSON(text);
-  if (!jsonStr) throw new Error('Could not parse AI response');
+  if (!jsonStr) throw new Error('Could not parse AI response — no valid JSON found. The response may have been truncated.');
   return JSON.parse(jsonStr);
 }
 
@@ -432,7 +516,7 @@ export async function processBankStatement(pdfBase64, { userId = 'local' } = {})
         },
       ],
     },
-  ], BANK_STATEMENT_PROMPT, 8000);
+  ], BANK_STATEMENT_PROMPT, 16000);
 
   return normalizeBankStatementResult(result, userId);
 }
