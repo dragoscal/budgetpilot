@@ -7,7 +7,6 @@ import ToastContainer from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SkeletonPage } from './components/LoadingSkeleton';
 import InstallPrompt from './components/InstallPrompt';
-import KeyboardShortcuts from './components/KeyboardShortcuts';
 import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
 import FeedbackFAB from './components/FeedbackFAB';
@@ -97,7 +96,6 @@ export default function App() {
       <ScrollToTop />
       <ToastContainer />
       <InstallPrompt />
-      <KeyboardShortcuts />
       <CommandPalette />
       <Suspense fallback={<PageFallback />}>
         <Routes>
