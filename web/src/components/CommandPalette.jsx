@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { Search, ArrowRight, Home, PlusCircle, List, Wallet, Target, RotateCcw, Calendar, TrendingUp, BarChart3, PieChart, Settings, Users, Heart, Sparkles, Receipt, FileText, CreditCard, Users2, MessageSquare, Zap, Camera, Upload, Moon, Download } from 'lucide-react';
+import { Search, ArrowRight, Home, PlusCircle, List, Wallet, Target, RotateCcw, Calendar, TrendingUp, BarChart3, PieChart, Settings, Users, Heart, Sparkles, Receipt, FileText, CreditCard, Users2, MessageSquare, Zap, Camera, Upload, Moon, Download, HelpCircle } from 'lucide-react';
 
 const PAGES = [
   { path: '/', label: 'nav.dashboard', icon: Home, keywords: ['home', 'dashboard', 'panou'] },
@@ -25,6 +25,7 @@ const PAGES = [
   { path: '/family', label: 'nav.household', icon: Users2, keywords: ['family', 'shared', 'familie', 'household', 'comun', 'cheltuieli comune', 'gospodărie'] },
   { path: '/settings', label: 'nav.settings', icon: Settings, keywords: ['settings', 'setări', 'config'] },
   { path: '/feedback', label: 'nav.feedback', icon: MessageSquare, keywords: ['feedback', 'bug', 'suggest'] },
+  { path: '/guide', label: 'nav.guide', icon: HelpCircle, keywords: ['help', 'guide', 'ghid', 'ajutor', 'faq', 'tips', 'sfaturi', 'how', 'cum'] },
 ];
 
 export default function CommandPalette() {

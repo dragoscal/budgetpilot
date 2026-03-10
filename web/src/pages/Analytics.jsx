@@ -12,6 +12,7 @@ import { Lightbulb, Hash, User, Home } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
+import HelpButton from '../components/HelpButton';
 
 export default function Analytics() {
   const { t } = useTranslation();
@@ -116,7 +117,10 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('analytics.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('analytics.title')}</h1>
+          <HelpButton section="analytics" />
+        </div>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 

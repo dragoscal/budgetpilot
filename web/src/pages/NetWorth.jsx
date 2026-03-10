@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Landmark, Plus, Edit3, Trash2 } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
+import HelpButton from '../components/HelpButton';
 
 const LIABILITY_TYPES = ['credit_card', 'loan'];
 
@@ -121,7 +122,10 @@ export default function NetWorth() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('networth.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('networth.title')}</h1>
+          <HelpButton section="networth" />
+        </div>
         <button onClick={() => { setEditAccount(null); setForm({ name: '', type: 'checking', balance: '', currency, icon: '🏦', color: '#14b8a6' }); setShowForm(true); }} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> {t('networth.addAccount')}</button>
       </div>
 

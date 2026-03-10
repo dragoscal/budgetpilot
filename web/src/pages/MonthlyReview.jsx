@@ -8,6 +8,7 @@ import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import HelpButton from '../components/HelpButton';
 
 export default function MonthlyReview() {
   const { user, effectiveUserId } = useAuth();
@@ -85,7 +86,10 @@ export default function MonthlyReview() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('review.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('review.title')}</h1>
+          <HelpButton section="review" />
+        </div>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 

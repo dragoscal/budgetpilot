@@ -16,6 +16,7 @@ import { requestNotificationPermission, getNotificationPermission } from '../lib
 import { Settings as SettingsIcon, Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
 import { CATEGORIES } from '../lib/constants';
+import HelpButton from '../components/HelpButton';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -253,7 +254,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">{t('settings.title')}</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="page-title">{t('settings.title')}</h1>
+        <HelpButton section="settings" />
+      </div>
 
       {/* Display */}
       <div className="card">

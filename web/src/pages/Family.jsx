@@ -13,6 +13,7 @@ import {
   Users, Plus, Copy, Check, LogOut, Settings, UserPlus, Crown,
   LayoutDashboard, Receipt, ArrowRight, CheckCircle2, Eye, Home,
 } from 'lucide-react';
+import HelpButton from '../components/HelpButton';
 
 function CreateFamilyForm({ onCreated }) {
   const { createFamily, FAMILY_EMOJIS } = useFamily();
@@ -316,7 +317,10 @@ export default function Family() {
         <div className="flex items-center gap-3">
           <span className="text-3xl">{activeFamily?.emoji}</span>
           <div>
-            <h1 className="page-title mb-0">{activeFamily?.name || t('family.title')}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="page-title mb-0">{activeFamily?.name || t('family.title')}</h1>
+              <HelpButton section="family" />
+            </div>
             <p className="text-xs text-cream-500">{members.length !== 1 ? t('family.memberCountPlural', { count: members.length }) : t('family.memberCount', { count: members.length })}</p>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import HelpButton from '../components/HelpButton';
 import { sortByDate, formatCurrency, sumBy } from '../lib/helpers';
 import TransactionRow from '../components/TransactionRow';
 import TransactionEditModal from '../components/TransactionEditModal';
@@ -237,7 +238,10 @@ export default function Transactions() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('transactions.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('transactions.title')}</h1>
+          <HelpButton section="transactions" />
+        </div>
         <div className="flex gap-2">
           {selected.size > 0 && (
             <>

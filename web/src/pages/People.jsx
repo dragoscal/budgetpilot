@@ -13,6 +13,7 @@ import {
   Scale, ArrowRight,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
+import HelpButton from '../components/HelpButton';
 
 export default function People() {
   const { user, effectiveUserId } = useAuth();
@@ -303,7 +304,10 @@ export default function People() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="page-title mb-0">{t('people.title')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title mb-0">{t('people.title')}</h1>
+            <HelpButton section="people" />
+          </div>
           <p className="text-xs text-cream-500 mt-1">{t('people.subtitle')}</p>
         </div>
         <div className="flex gap-2">

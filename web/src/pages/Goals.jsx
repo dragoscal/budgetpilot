@@ -3,6 +3,7 @@ import { goals as goalsApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import HelpButton from '../components/HelpButton';
 import { GOAL_TYPES } from '../lib/constants';
 import { generateId, formatCurrency } from '../lib/helpers';
 import GoalCard from '../components/GoalCard';
@@ -110,7 +111,10 @@ export default function Goals() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('goals.savingsGoals')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('goals.savingsGoals')}</h1>
+          <HelpButton section="goals" />
+        </div>
         <button onClick={() => { resetForm(); setEditGoal(null); setShowForm(true); }} className="btn-primary text-xs flex items-center gap-1">
           <Plus size={14} /> {t('goals.newGoal')}
         </button>

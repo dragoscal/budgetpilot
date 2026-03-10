@@ -10,6 +10,7 @@ import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle } from 'lucide
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { forecastCashFlow } from '../lib/forecasting';
+import HelpButton from '../components/HelpButton';
 
 export default function CashFlow() {
   const { t } = useTranslation();
@@ -111,7 +112,10 @@ export default function CashFlow() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">{t('cashflow.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('cashflow.title')}</h1>
+          <HelpButton section="cashflow" />
+        </div>
         <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
           {[
             { id: 'overview', label: t('cashflow.overview') },

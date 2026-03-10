@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Star, Plus, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
+import HelpButton from '../components/HelpButton';
 
 const PRIORITIES_CONFIG = [
   { value: 1, key: 'wishlist.priorityLow', color: 'text-cream-400' },
@@ -87,7 +88,10 @@ export default function Wishlist() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('wishlist.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('wishlist.title')}</h1>
+          <HelpButton section="wishlist" />
+        </div>
         <button onClick={() => setShowForm(true)} className="btn-primary text-xs flex items-center gap-1"><Plus size={14} /> {t('wishlist.add')}</button>
       </div>
 

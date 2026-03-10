@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import TransactionRow from '../components/TransactionRow';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday } from 'date-fns';
+import HelpButton from '../components/HelpButton';
 
 export default function CalendarPage() {
   const { t } = useTranslation();
@@ -67,7 +68,10 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title mb-0">{t('calendar.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('calendar.title')}</h1>
+          <HelpButton section="calendar" />
+        </div>
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 

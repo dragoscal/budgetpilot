@@ -3,6 +3,7 @@ import { budgets as budgetsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import HelpButton from '../components/HelpButton';
 import { CATEGORIES, BUDGET_TEMPLATES } from '../lib/constants';
 import { generateId, formatCurrency, percentOf, sumBy, getDaysRemaining } from '../lib/helpers';
 import BudgetBar from '../components/BudgetBar';
@@ -286,7 +287,10 @@ export default function Budgets() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">{t('budgets.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('budgets.title')}</h1>
+          <HelpButton section="budgets" />
+        </div>
         <div className="flex items-center gap-2">
           {isFamilyMode && (
             <div className="flex rounded-lg border border-cream-300 dark:border-dark-border overflow-hidden text-xs shrink-0">

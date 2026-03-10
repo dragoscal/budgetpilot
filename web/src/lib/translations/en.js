@@ -119,6 +119,7 @@ const en = {
   'nav.openMenu': 'Open menu',
   'nav.expandSidebar': 'Expand sidebar',
   'nav.collapseSidebar': 'Collapse sidebar',
+  'nav.guide': 'Guide',
 
   // ─── Dashboard ───────────────────────────────────────
   'dashboard.hey': 'Hey, {name}',
@@ -1867,6 +1868,175 @@ const en = {
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Share Target',
   'pwa.sharedReceived': 'Shared text received',
+
+  // ─── Guide / Help ──────────────────────────────────────────
+  'guide.title': 'Guide',
+  'guide.subtitle': 'Everything you need to get started and master your finances',
+  'guide.gettingStarted': 'Getting Started',
+  'guide.features': 'Features',
+  'guide.tips': 'Tips & Tricks',
+  'guide.faq': 'FAQ',
+
+  // Getting Started steps
+  'guide.step1Title': 'Create your account',
+  'guide.step1Desc': 'Sign up with your email and set your preferred currency. Your data is securely stored and synced across devices.',
+  'guide.step2Title': 'Add an account',
+  'guide.step2Desc': 'Go to Settings and add your bank accounts, cash wallets, or cards. This helps track where your money is.',
+  'guide.step3Title': 'Record your first transaction',
+  'guide.step3Desc': 'Tap the + button to add an expense or income. You can also use Quick Add with natural language like "coffee 15 lei".',
+  'guide.step4Title': 'Set a budget',
+  'guide.step4Desc': 'Go to Budgets and create monthly limits for categories like Food, Transport, or Entertainment.',
+  'guide.step5Title': 'Create a savings goal',
+  'guide.step5Desc': 'Head to Goals and set a target amount for something you\'re saving for — a vacation, new phone, or emergency fund.',
+  'guide.step6Title': 'Explore analytics',
+  'guide.step6Desc': 'Check Dashboard, Analytics, and Cash Flow to see spending patterns, trends, and your financial health score.',
+  'guide.stepComplete': 'Step {n} of 6',
+
+  // Feature guides
+  'guide.dashboardTitle': 'Dashboard',
+  'guide.dashboardDesc': 'Your financial overview at a glance. See total balance, monthly spending, income vs expenses comparison, and recent transactions.',
+  'guide.transactionsTitle': 'Transactions',
+  'guide.transactionsDesc': 'View, search, filter, and manage all your income and expenses. Supports bulk editing, CSV export, and category filtering.',
+  'guide.budgetsTitle': 'Budgets',
+  'guide.budgetsDesc': 'Set monthly spending limits by category. Visual progress bars show how much you\'ve spent vs your limit with color-coded alerts.',
+  'guide.goalsTitle': 'Savings Goals',
+  'guide.goalsDesc': 'Track progress toward savings targets. Add contributions, see projected completion dates, and stay motivated with visual progress.',
+  'guide.recurringTitle': 'Recurring Payments',
+  'guide.recurringDesc': 'Manage subscriptions and regular bills. Get reminders before due dates and track upcoming payments in your calendar.',
+  'guide.loansTitle': 'Loans',
+  'guide.loansDesc': 'Track loans you\'ve given or received. Monitor balances, interest rates, payment schedules, and remaining amounts.',
+  'guide.calendarTitle': 'Calendar',
+  'guide.calendarDesc': 'See your transactions on a calendar view. Quickly spot spending patterns by day and plan around recurring payments.',
+  'guide.cashflowTitle': 'Cash Flow',
+  'guide.cashflowDesc': 'Visualize money coming in vs going out over time. Identify months where you spend more than you earn.',
+  'guide.networthTitle': 'Net Worth',
+  'guide.networthDesc': 'Track your total net worth over time including all accounts. See growth trends and asset breakdown.',
+  'guide.analyticsTitle': 'Analytics',
+  'guide.analyticsDesc': 'Deep dive into spending patterns with charts. Category breakdowns, merchant analysis, daily/weekly trends, and health score.',
+  'guide.reportsTitle': 'Reports',
+  'guide.reportsDesc': 'Generate detailed financial reports. Monthly summaries, category comparisons, and exportable data for your records.',
+  'guide.familyTitle': 'Family & Split',
+  'guide.familyDesc': 'Share expenses with family members or roommates. Split bills fairly and track who owes what.',
+
+  // Tips
+  'guide.tip1Title': 'Quick command palette',
+  'guide.tip1Desc': 'Press Ctrl+K (or ⌘K on Mac) anywhere to instantly search and jump to any page, transaction, or action.',
+  'guide.tip2Title': 'Natural language input',
+  'guide.tip2Desc': 'When adding transactions, type naturally like "coffee 15 lei" or "salary 5000". The app understands amount, category, and description.',
+  'guide.tip3Title': 'Scan receipts with AI',
+  'guide.tip3Desc': 'Take a photo of your receipt and the AI will automatically extract the amount, merchant, date, and category.',
+  'guide.tip4Title': 'Import from CSV',
+  'guide.tip4Desc': 'Export your bank statement as CSV and import it directly. The app maps columns and categorizes transactions automatically.',
+  'guide.tip5Title': 'Hide sensitive amounts',
+  'guide.tip5Desc': 'Click the eye icon on the Dashboard to hide all monetary amounts. Perfect for checking your app in public.',
+  'guide.tip6Title': 'Smart recurring detection',
+  'guide.tip6Desc': 'The app learns your spending patterns. If you pay the same amount to the same merchant monthly, it suggests creating a recurring payment.',
+  'guide.tip7Title': 'Budget alerts',
+  'guide.tip7Desc': 'You\'ll get automatic warnings when you reach 80% and 100% of any budget. Stay on track without checking manually.',
+  'guide.tip8Title': 'Dark mode',
+  'guide.tip8Desc': 'Switch between light and dark themes from the sidebar. The app also follows your system preference automatically.',
+
+  // FAQ
+  'faq.q1': 'How do I add a transaction?',
+  'faq.a1': 'Tap the + button in the navigation bar or go to the Add Transaction page. Enter the amount, select a category, and optionally add notes. You can also type naturally using Quick Add.',
+  'faq.q2': 'What is Quick Add?',
+  'faq.a2': 'Quick Add lets you type transactions in natural language. For example, "coffee 15 lei" will create an expense of 15 lei in the Food category. It understands amounts, currencies, and common categories.',
+  'faq.q3': 'How do budgets work?',
+  'faq.a3': 'Budgets let you set monthly spending limits per category. Go to the Budgets page, create a budget for a category (like Food or Transport), set the limit, and the app tracks your spending against it with visual progress bars.',
+  'faq.q4': 'Can I use multiple currencies?',
+  'faq.a4': 'Yes! You can set your primary currency in Settings and add transactions in any currency. The app converts amounts using current exchange rates for reporting.',
+  'faq.q5': 'Does the app sync across devices?',
+  'faq.a5': 'Yes. Your data syncs automatically when you\'re online. The app also works offline — transactions are saved locally and synced when you reconnect.',
+  'faq.q6': 'Is my financial data safe?',
+  'faq.a6': 'Your data is encrypted in transit and stored securely. The app works offline-first, meaning your data is primarily on your device. Cloud sync uses secure authentication.',
+  'faq.q7': 'How do I split expenses with others?',
+  'faq.a7': 'Go to the Family page to create or join a family group. When adding transactions, mark them as shared and choose how to split — equally, by percentage, or custom amounts.',
+  'faq.q8': 'How do recurring payments work?',
+  'faq.a8': 'Go to Recurring to add subscriptions and regular bills. Set the amount, frequency (monthly, weekly, etc.), and start date. The app reminds you before due dates and can auto-create transactions.',
+  'faq.q9': 'Can I scan receipts?',
+  'faq.a9': 'Yes! When adding a transaction, tap the camera icon to scan a receipt. AI extracts the total amount, merchant name, date, and suggests a category automatically.',
+  'faq.q10': 'How do I export my data?',
+  'faq.a10': 'Go to Settings > Export to download all your transactions as a CSV file. You can also export specific date ranges or categories from the Transactions page.',
+  'faq.q11': 'What is the financial health score?',
+  'faq.a11': 'The health score (0-100) rates your financial habits based on savings rate, budget adherence, spending consistency, and goal progress. Check it on the Dashboard or Analytics page.',
+  'faq.q12': 'Does the app have AI features?',
+  'faq.a12': 'Yes! AI powers receipt scanning, automatic categorization, spending insights, natural language input, and smart suggestions for recurring payments and budgets.',
+
+  // ─── Page-specific tips (popover) ──────────────────────────
+  'tips.title': 'Quick Tips',
+  'tips.seeFullGuide': 'See full guide',
+
+  'tips.dashboard.1': 'Click the eye icon to hide all amounts when in public.',
+  'tips.dashboard.2': 'Use the gear icon to customize which widgets are visible.',
+  'tips.dashboard.3': 'Switch between Personal and Family views with the tabs at the top.',
+
+  'tips.transactions.1': 'Select multiple transactions with checkboxes to categorize them in bulk.',
+  'tips.transactions.2': 'Use the search bar to filter by merchant, notes, or amount.',
+  'tips.transactions.3': 'Click any transaction to edit details, change category, or add tags.',
+
+  'tips.budgets.1': 'Set a budget per category to track spending limits each month.',
+  'tips.budgets.2': 'You\'ll get automatic alerts at 80% and 100% of your budget.',
+  'tips.budgets.3': 'Use the rollover feature to carry unspent budget to next month.',
+
+  'tips.goals.1': 'Create goals for things you\'re saving for — vacations, electronics, emergencies.',
+  'tips.goals.2': 'Add contributions regularly to see your progress bar fill up.',
+  'tips.goals.3': 'The projected date shows when you\'ll reach your target at current pace.',
+
+  'tips.recurring.1': 'Add all subscriptions and bills so you never miss a payment.',
+  'tips.recurring.2': 'The app auto-detects recurring patterns from your transactions.',
+  'tips.recurring.3': 'Set reminders to get notified before upcoming due dates.',
+
+  'tips.loans.1': 'Track both loans you gave and loans you received.',
+  'tips.loans.2': 'Record payments to see remaining balance update automatically.',
+  'tips.loans.3': 'Set interest rate and maturity date for a complete overview.',
+
+  'tips.calendar.1': 'Each day shows total spent — tap a day to see individual transactions.',
+  'tips.calendar.2': 'Color intensity reflects spending amount — darker means more.',
+  'tips.calendar.3': 'Recurring payments appear with a special icon on their due dates.',
+
+  'tips.cashflow.1': 'Green bars are income, red bars are expenses — aim for more green!',
+  'tips.cashflow.2': 'The trend line shows your net cash flow over time.',
+  'tips.cashflow.3': 'Compare months to spot seasonal spending patterns.',
+
+  'tips.networth.1': 'Add all your accounts (bank, cash, investments) for an accurate picture.',
+  'tips.networth.2': 'The chart tracks your total net worth growth over time.',
+  'tips.networth.3': 'Update account balances regularly for the most accurate tracking.',
+
+  'tips.analytics.1': 'The pie chart shows your spending breakdown by category.',
+  'tips.analytics.2': 'Check the health score to see your overall financial fitness.',
+  'tips.analytics.3': 'Compare spending across different time periods with the date filter.',
+
+  'tips.reports.1': 'Generate spending summaries for any date range you choose.',
+  'tips.reports.2': 'Export reports as CSV for use in spreadsheets or tax filing.',
+  'tips.reports.3': 'The tax report filters expenses by business-tagged transactions.',
+
+  'tips.family.1': 'Create a family group and invite members to share expenses.',
+  'tips.family.2': 'Split bills equally, by percentage, or with custom amounts.',
+  'tips.family.3': 'Track who owes what with the automatic balance calculation.',
+
+  'tips.people.1': 'Track money you owe to or are owed by individual people.',
+  'tips.people.2': 'Record partial payments to keep running balances accurate.',
+  'tips.people.3': 'View the full history of transactions with each person.',
+
+  'tips.wishlist.1': 'Add items you want to buy and track their prices.',
+  'tips.wishlist.2': 'Prioritize items to help decide what to save for next.',
+  'tips.wishlist.3': 'Link wishlist items to savings goals for focused saving.',
+
+  'tips.challenges.1': 'Join a spending challenge to build better financial habits.',
+  'tips.challenges.2': 'Track daily progress and stay motivated with streaks.',
+  'tips.challenges.3': 'Create custom challenges tailored to your savings goals.',
+
+  'tips.receipts.1': 'All scanned receipts are saved here for easy reference.',
+  'tips.receipts.2': 'Tap any receipt to see the full image and extracted details.',
+  'tips.receipts.3': 'Use receipt scanning from the Add Transaction page to auto-fill data.',
+
+  'tips.review.1': 'The monthly review summarizes your spending, income, and savings.',
+  'tips.review.2': 'Compare your performance against previous months.',
+  'tips.review.3': 'Check category breakdowns to spot where you overspent.',
+
+  'tips.settings.1': 'Set your default currency and language preferences here.',
+  'tips.settings.2': 'Export all your data as CSV for backup or analysis.',
+  'tips.settings.3': 'Manage accounts and configure notification preferences.',
 };
 
 export default en;

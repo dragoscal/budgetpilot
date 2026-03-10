@@ -9,6 +9,7 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { Camera, Search, X, Receipt, ExternalLink, Calendar, Tag } from 'lucide-react';
+import HelpButton from '../components/HelpButton';
 
 export default function ReceiptGallery() {
   const { effectiveUserId } = useAuth();
@@ -75,7 +76,10 @@ export default function ReceiptGallery() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">{t('receipts.gallery')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('receipts.gallery')}</h1>
+          <HelpButton section="receipts" />
+        </div>
         <span className="text-sm text-cream-500">{receipts.length} {receipts.length !== 1 ? t('receipts.receipts') : t('receipts.receipt')}</span>
       </div>
 

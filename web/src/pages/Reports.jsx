@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
+import HelpButton from '../components/HelpButton';
 
 const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#14b8a6'];
 
@@ -133,7 +134,10 @@ export default function Reports() {
     <div className="space-y-6 print:space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <h1 className="page-title mb-0">{t('reports.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('reports.title')}</h1>
+          <HelpButton section="reports" />
+        </div>
         <div className="flex gap-2">
           <button onClick={handleExportCSV} className="btn-ghost text-xs flex items-center gap-1">
             <Download size={14} /> {t('reports.csv')}

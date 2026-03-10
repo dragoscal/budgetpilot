@@ -119,6 +119,7 @@ const ro = {
   'nav.openMenu': 'Deschide meniul',
   'nav.expandSidebar': 'Extinde bara laterală',
   'nav.collapseSidebar': 'Restrânge bara laterală',
+  'nav.guide': 'Ghid',
 
   // ─── Panou ───────────────────────────────────────────
   'dashboard.hey': 'Salut, {name}',
@@ -1867,6 +1868,175 @@ const ro = {
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Țintă partajare',
   'pwa.sharedReceived': 'Text partajat primit',
+
+  // ─── Ghid / Ajutor ─────────────────────────────────────────
+  'guide.title': 'Ghid',
+  'guide.subtitle': 'Tot ce ai nevoie pentru a începe și a-ți gestiona finanțele',
+  'guide.gettingStarted': 'Primii pași',
+  'guide.features': 'Funcții',
+  'guide.tips': 'Sfaturi',
+  'guide.faq': 'Întrebări frecvente',
+
+  // Primii pași
+  'guide.step1Title': 'Creează-ți contul',
+  'guide.step1Desc': 'Înregistrează-te cu adresa ta de email și alege moneda preferată. Datele tale sunt stocate în siguranță și sincronizate pe toate dispozitivele.',
+  'guide.step2Title': 'Adaugă un cont',
+  'guide.step2Desc': 'Mergi la Setări și adaugă conturile bancare, portofelul de numerar sau cardurile. Asta ajută la urmărirea banilor.',
+  'guide.step3Title': 'Înregistrează prima tranzacție',
+  'guide.step3Desc': 'Apasă butonul + pentru a adăuga o cheltuială sau un venit. Poți folosi și introducerea rapidă cu limbaj natural, de ex. "cafea 15 lei".',
+  'guide.step4Title': 'Setează un buget',
+  'guide.step4Desc': 'Mergi la Bugete și creează limite lunare pentru categorii precum Mâncare, Transport sau Distracție.',
+  'guide.step5Title': 'Creează un obiectiv de economii',
+  'guide.step5Desc': 'Mergi la Obiective și setează o sumă țintă — o vacanță, un telefon nou sau un fond de urgență.',
+  'guide.step6Title': 'Explorează analizele',
+  'guide.step6Desc': 'Verifică Dashboard, Analize și Fluxul de numerar pentru a vedea tiparele de cheltuieli, tendințele și scorul de sănătate financiară.',
+  'guide.stepComplete': 'Pasul {n} din 6',
+
+  // Ghid funcții
+  'guide.dashboardTitle': 'Dashboard',
+  'guide.dashboardDesc': 'Privire de ansamblu asupra finanțelor tale. Vezi soldul total, cheltuielile lunare, comparația venituri vs cheltuieli și tranzacțiile recente.',
+  'guide.transactionsTitle': 'Tranzacții',
+  'guide.transactionsDesc': 'Vezi, caută, filtrează și gestionează toate veniturile și cheltuielile. Suportă editare în masă, export CSV și filtrare pe categorii.',
+  'guide.budgetsTitle': 'Bugete',
+  'guide.budgetsDesc': 'Setează limite lunare de cheltuieli pe categorii. Barele de progres vizuale arată cât ai cheltuit vs limita ta, cu alerte colorate.',
+  'guide.goalsTitle': 'Obiective de economii',
+  'guide.goalsDesc': 'Urmărește progresul către țintele de economii. Adaugă contribuții, vezi date estimate de finalizare și rămâi motivat cu progresul vizual.',
+  'guide.recurringTitle': 'Plăți recurente',
+  'guide.recurringDesc': 'Gestionează abonamentele și facturile regulate. Primești remindere înainte de data scadenței și urmărești plățile viitoare în calendar.',
+  'guide.loansTitle': 'Împrumuturi',
+  'guide.loansDesc': 'Urmărește împrumuturile date sau primite. Monitorizează soldurile, ratele dobânzii, programele de plată și sumele rămase.',
+  'guide.calendarTitle': 'Calendar',
+  'guide.calendarDesc': 'Vezi tranzacțiile în vizualizare calendar. Observă rapid tiparele de cheltuieli pe zi și planifică în jurul plăților recurente.',
+  'guide.cashflowTitle': 'Flux de numerar',
+  'guide.cashflowDesc': 'Vizualizează banii care intră vs cei care ies în timp. Identifică lunile în care cheltuiești mai mult decât câștigi.',
+  'guide.networthTitle': 'Avere netă',
+  'guide.networthDesc': 'Urmărește averea totală netă în timp, incluzând toate conturile. Vezi tendințele de creștere și distribuția activelor.',
+  'guide.analyticsTitle': 'Analize',
+  'guide.analyticsDesc': 'Analiză detaliată a tiparelor de cheltuieli cu grafice. Defalcări pe categorii, analiză comercianți, tendințe zilnice/săptămânale și scor de sănătate.',
+  'guide.reportsTitle': 'Rapoarte',
+  'guide.reportsDesc': 'Generează rapoarte financiare detaliate. Rezumate lunare, comparații pe categorii și date exportabile pentru evidențele tale.',
+  'guide.familyTitle': 'Familie & Împărțire',
+  'guide.familyDesc': 'Împarte cheltuielile cu membrii familiei sau colegii de apartament. Împarte facturile corect și urmărește cine datorează ce.',
+
+  // Sfaturi
+  'guide.tip1Title': 'Paleta de comenzi rapide',
+  'guide.tip1Desc': 'Apasă Ctrl+K (sau ⌘K pe Mac) oriunde pentru a căuta și naviga instant la orice pagină, tranzacție sau acțiune.',
+  'guide.tip2Title': 'Introducere în limbaj natural',
+  'guide.tip2Desc': 'Când adaugi tranzacții, scrie natural precum "cafea 15 lei" sau "salariu 5000". Aplicația înțelege suma, categoria și descrierea.',
+  'guide.tip3Title': 'Scanează bonuri cu AI',
+  'guide.tip3Desc': 'Fotografiază bonul fiscal, iar AI-ul extrage automat suma, comerciantul, data și categoria.',
+  'guide.tip4Title': 'Import din CSV',
+  'guide.tip4Desc': 'Exportă extrasul bancar ca CSV și importă-l direct. Aplicația mapează coloanele și categorizează tranzacțiile automat.',
+  'guide.tip5Title': 'Ascunde sumele sensibile',
+  'guide.tip5Desc': 'Apasă iconița ochi de pe Dashboard pentru a ascunde toate sumele monetare. Perfect pentru a verifica aplicația în public.',
+  'guide.tip6Title': 'Detecție inteligentă recurente',
+  'guide.tip6Desc': 'Aplicația învață tiparele tale. Dacă plătești aceeași sumă către același comerciant lunar, sugerează crearea unei plăți recurente.',
+  'guide.tip7Title': 'Alerte de buget',
+  'guide.tip7Desc': 'Primești avertizări automate când atingi 80% și 100% din orice buget. Rămâi pe drumul cel bun fără să verifici manual.',
+  'guide.tip8Title': 'Mod întunecat',
+  'guide.tip8Desc': 'Comută între tema deschisă și întunecată din bara laterală. Aplicația urmează automat și preferința sistemului tău.',
+
+  // Întrebări frecvente
+  'faq.q1': 'Cum adaug o tranzacție?',
+  'faq.a1': 'Apasă butonul + din bara de navigare sau mergi la pagina Adaugă tranzacție. Introdu suma, selectează o categorie și opțional adaugă note. Poți scrie și în limbaj natural cu Adăugare rapidă.',
+  'faq.q2': 'Ce este Adăugarea rapidă?',
+  'faq.a2': 'Adăugarea rapidă îți permite să scrii tranzacții în limbaj natural. De exemplu, "cafea 15 lei" va crea o cheltuială de 15 lei în categoria Mâncare. Înțelege sume, monede și categorii comune.',
+  'faq.q3': 'Cum funcționează bugetele?',
+  'faq.a3': 'Bugetele îți permit să setezi limite lunare pe categorii. Mergi la Bugete, creează un buget pentru o categorie (Mâncare, Transport), setează limita, iar aplicația urmărește cheltuielile cu bare de progres vizuale.',
+  'faq.q4': 'Pot folosi mai multe monede?',
+  'faq.a4': 'Da! Poți seta moneda principală în Setări și adăuga tranzacții în orice monedă. Aplicația convertește sumele folosind cursurile actuale pentru rapoarte.',
+  'faq.q5': 'Se sincronizează aplicația pe mai multe dispozitive?',
+  'faq.a5': 'Da. Datele tale se sincronizează automat când ești online. Aplicația funcționează și offline — tranzacțiile sunt salvate local și sincronizate când te reconectezi.',
+  'faq.q6': 'Sunt datele mele financiare în siguranță?',
+  'faq.a6': 'Datele tale sunt criptate în tranzit și stocate în siguranță. Aplicația funcționează offline-first, datele sunt în principal pe dispozitivul tău. Sincronizarea cloud folosește autentificare securizată.',
+  'faq.q7': 'Cum împart cheltuielile cu alții?',
+  'faq.a7': 'Mergi la pagina Familie pentru a crea sau te alătura unui grup. Când adaugi tranzacții, marchează-le ca partajate și alege cum să împarți — egal, procentual sau sume personalizate.',
+  'faq.q8': 'Cum funcționează plățile recurente?',
+  'faq.a8': 'Mergi la Recurente pentru a adăuga abonamente și facturi regulate. Setează suma, frecvența (lunar, săptămânal etc.) și data de început. Aplicația te avertizează înainte de scadență și poate crea tranzacții automat.',
+  'faq.q9': 'Pot scana bonuri fiscale?',
+  'faq.a9': 'Da! Când adaugi o tranzacție, apasă iconița camera pentru a scana un bon. AI-ul extrage automat suma totală, comerciantul, data și sugerează o categorie.',
+  'faq.q10': 'Cum export datele mele?',
+  'faq.a10': 'Mergi la Setări > Export pentru a descărca toate tranzacțiile ca fișier CSV. Poți exporta și intervale specifice de date sau categorii din pagina Tranzacții.',
+  'faq.q11': 'Ce este scorul de sănătate financiară?',
+  'faq.a11': 'Scorul de sănătate (0-100) evaluează obiceiurile tale financiare pe baza ratei de economisire, respectării bugetului, consistenței cheltuielilor și progresului obiectivelor. Verifică-l pe Dashboard sau Analize.',
+  'faq.q12': 'Are aplicația funcții AI?',
+  'faq.a12': 'Da! AI-ul alimentează scanarea bonurilor, categorizarea automată, sugestii de cheltuieli, introducerea în limbaj natural și sugestii inteligente pentru plăți recurente și bugete.',
+
+  // ─── Sfaturi per pagină (popover) ──────────────────────────
+  'tips.title': 'Sfaturi rapide',
+  'tips.seeFullGuide': 'Vezi ghidul complet',
+
+  'tips.dashboard.1': 'Apasă iconița ochi pentru a ascunde sumele când ești în public.',
+  'tips.dashboard.2': 'Folosește iconița roată pentru a personaliza widget-urile vizibile.',
+  'tips.dashboard.3': 'Comută între vizualizarea personală și familie cu tab-urile de sus.',
+
+  'tips.transactions.1': 'Selectează mai multe tranzacții cu checkbox-urile pentru a le categoriza în masă.',
+  'tips.transactions.2': 'Folosește bara de căutare pentru a filtra după comerciant, note sau sumă.',
+  'tips.transactions.3': 'Apasă pe orice tranzacție pentru a edita detalii, schimba categoria sau adăuga etichete.',
+
+  'tips.budgets.1': 'Setează un buget pe categorie pentru a urmări limitele de cheltuieli lunar.',
+  'tips.budgets.2': 'Primești alerte automate la 80% și 100% din buget.',
+  'tips.budgets.3': 'Folosește funcția de transfer pentru a muta bugetul nefolosit în luna următoare.',
+
+  'tips.goals.1': 'Creează obiective pentru ce economisești — vacanțe, electronice, urgențe.',
+  'tips.goals.2': 'Adaugă contribuții regulat pentru a vedea bara de progres cum crește.',
+  'tips.goals.3': 'Data estimată arată când vei atinge ținta la ritmul actual.',
+
+  'tips.recurring.1': 'Adaugă toate abonamentele și facturile ca să nu ratezi nicio plată.',
+  'tips.recurring.2': 'Aplicația detectează automat tiparele recurente din tranzacțiile tale.',
+  'tips.recurring.3': 'Setează remindere pentru a fi notificat înainte de scadențe.',
+
+  'tips.loans.1': 'Urmărește atât împrumuturile date, cât și cele primite.',
+  'tips.loans.2': 'Înregistrează plățile pentru a vedea soldul rămas actualizat automat.',
+  'tips.loans.3': 'Setează rata dobânzii și data scadenței pentru o privire de ansamblu completă.',
+
+  'tips.calendar.1': 'Fiecare zi arată totalul cheltuit — apasă o zi pentru tranzacțiile individuale.',
+  'tips.calendar.2': 'Intensitatea culorii reflectă suma cheltuită — mai închis înseamnă mai mult.',
+  'tips.calendar.3': 'Plățile recurente apar cu o iconiță specială la data scadenței.',
+
+  'tips.cashflow.1': 'Barele verzi sunt venituri, cele roșii cheltuieli — țintește mai mult verde!',
+  'tips.cashflow.2': 'Linia de trend arată fluxul net de numerar în timp.',
+  'tips.cashflow.3': 'Compară lunile pentru a observa tiparele sezoniere de cheltuieli.',
+
+  'tips.networth.1': 'Adaugă toate conturile (bancă, numerar, investiții) pentru o imagine corectă.',
+  'tips.networth.2': 'Graficul urmărește creșterea averii tale nete în timp.',
+  'tips.networth.3': 'Actualizează soldurile conturilor regulat pentru urmărire cât mai precisă.',
+
+  'tips.analytics.1': 'Graficul circular arată distribuția cheltuielilor pe categorii.',
+  'tips.analytics.2': 'Verifică scorul de sănătate pentru a vedea condiția ta financiară generală.',
+  'tips.analytics.3': 'Compară cheltuielile pe perioade diferite cu filtrul de dată.',
+
+  'tips.reports.1': 'Generează rezumate de cheltuieli pentru orice interval de date.',
+  'tips.reports.2': 'Exportă rapoartele ca CSV pentru uz în foi de calcul sau taxe.',
+  'tips.reports.3': 'Raportul de taxe filtrează cheltuielile etichetate ca business.',
+
+  'tips.family.1': 'Creează un grup de familie și invită membri pentru a împărți cheltuielile.',
+  'tips.family.2': 'Împarte facturile egal, procentual sau cu sume personalizate.',
+  'tips.family.3': 'Urmărește cine datorează ce cu calculul automat al balanței.',
+
+  'tips.people.1': 'Urmărește banii pe care îi datorezi sau ți se datorează de la persoane.',
+  'tips.people.2': 'Înregistrează plăți parțiale pentru balanțe mereu actualizate.',
+  'tips.people.3': 'Vezi istoricul complet al tranzacțiilor cu fiecare persoană.',
+
+  'tips.wishlist.1': 'Adaugă lucruri pe care vrei să le cumperi și urmărește prețurile.',
+  'tips.wishlist.2': 'Prioritizează articolele pentru a decide ce să economisești mai întâi.',
+  'tips.wishlist.3': 'Leagă articolele din wishlist la obiective de economii pentru focus.',
+
+  'tips.challenges.1': 'Alătură-te unei provocări de cheltuieli pentru obiceiuri financiare mai bune.',
+  'tips.challenges.2': 'Urmărește progresul zilnic și rămâi motivat cu seriile consecutive.',
+  'tips.challenges.3': 'Creează provocări personalizate adaptate obiectivelor tale de economii.',
+
+  'tips.receipts.1': 'Toate bonurile scanate sunt salvate aici pentru referință ușoară.',
+  'tips.receipts.2': 'Apasă pe orice bon pentru a vedea imaginea completă și detaliile extrase.',
+  'tips.receipts.3': 'Scanează bonuri din pagina Adaugă tranzacție pentru completare automată.',
+
+  'tips.review.1': 'Revizuirea lunară rezumă cheltuielile, veniturile și economiile tale.',
+  'tips.review.2': 'Compară performanța cu lunile anterioare.',
+  'tips.review.3': 'Verifică defalcările pe categorii pentru a vedea unde ai cheltuit prea mult.',
+
+  'tips.settings.1': 'Setează moneda implicită și preferințele de limbă aici.',
+  'tips.settings.2': 'Exportă toate datele ca CSV pentru backup sau analiză.',
+  'tips.settings.3': 'Gestionează conturile și configurează preferințele de notificare.',
 };
 
 export default ro;

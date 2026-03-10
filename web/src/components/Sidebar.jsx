@@ -9,7 +9,7 @@ import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Shield,
-  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home,
+  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home, HelpCircle,
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
 import NotificationCenter from './NotificationCenter';
@@ -195,6 +195,11 @@ export default function Sidebar() {
             </NavLink>
           )}
 
+          <NavLink to="/guide" className={navLinkClass} title={collapsed ? t('nav.guide') : undefined}>
+            <HelpCircle size={16} className="shrink-0" />
+            {!collapsed && <span>{t('nav.guide')}</span>}
+          </NavLink>
+
           <NavLink to="/settings" className={navLinkClass}>
             <Settings size={16} className="shrink-0" />
             {!collapsed && <span>{t('nav.settings')}</span>}
@@ -288,6 +293,18 @@ export default function Sidebar() {
                   >
                     <MessageSquare size={18} className="shrink-0" />
                     <span>{t('nav.feedback')}</span>
+                  </NavLink>
+                  <NavLink
+                    to="/guide"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                      location.pathname === '/guide'
+                        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                        : 'text-cream-600 dark:text-cream-400'
+                    }`}
+                  >
+                    <HelpCircle size={18} className="shrink-0" />
+                    <span>{t('nav.guide')}</span>
                   </NavLink>
                   <NavLink
                     to="/settings"

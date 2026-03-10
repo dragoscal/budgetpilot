@@ -18,6 +18,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
+import HelpButton from '../components/HelpButton';
 import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
@@ -585,6 +586,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <HelpButton section="dashboard" />
           <div className="relative">
             <button
               onClick={() => setShowWidgetSettings(!showWidgetSettings)}

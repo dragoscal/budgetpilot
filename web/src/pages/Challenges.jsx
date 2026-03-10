@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { Trophy, Plus, Flame, Target, Ban, Check, X } from 'lucide-react';
+import HelpButton from '../components/HelpButton';
 
 const getChallengePresets = (t) => [
   { type: 'no_spend', title: t('challenges.presetNoSpendWeekend'), icon: '🚫', description: t('challenges.presetNoSpendWeekendDesc'), durationDays: 2, category: null },
@@ -194,7 +195,10 @@ export default function Challenges() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title mb-0">{t('challenges.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('challenges.title')}</h1>
+          <HelpButton section="challenges" />
+        </div>
         <div className="flex gap-2">
           <button onClick={() => setShowPresets(true)} className="btn-secondary text-xs flex items-center gap-1">
             <Flame size={14} /> {t('challenges.presets')}

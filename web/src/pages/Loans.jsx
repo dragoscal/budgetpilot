@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import HelpButton from '../components/HelpButton';
 import { loans as loansApi, loanPayments as lpApi } from '../lib/api';
 import { formatCurrency, generateId, formatDate, formatDateISO } from '../lib/helpers';
 import { LOAN_TYPES, LOAN_STATUSES, CURRENCIES } from '../lib/constants';
@@ -290,7 +291,10 @@ export default function Loans() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="page-title">{t('loans.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title">{t('loans.title')}</h1>
+          <HelpButton section="loans" />
+        </div>
         <button
           onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ ...EMPTY_FORM }); }}
           className="btn-primary text-xs flex items-center gap-1.5"
