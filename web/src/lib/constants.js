@@ -164,19 +164,44 @@ export const LOAN_STATUSES = [
 ];
 
 export const MERCHANT_CATEGORY_MAP = {
+  // Food delivery (longer keys MUST come before shorter to match first)
+  'bolt food': 'dining', 'uber eats': 'dining',
+  glovo: 'dining', tazz: 'dining', wolt: 'dining', foodpanda: 'dining',
+  // Groceries
   lidl: 'groceries', kaufland: 'groceries', carrefour: 'groceries',
-  'mega image': 'groceries', auchan: 'groceries', profi: 'groceries',
-  penny: 'groceries', cora: 'groceries', selgros: 'groceries',
-  bolt: 'transport', uber: 'transport', taxi: 'transport',
-  emag: 'shopping', altex: 'shopping', dedeman: 'shopping',
+  'mega image': 'groceries', megaimage: 'groceries', auchan: 'groceries',
+  profi: 'groceries', penny: 'groceries', cora: 'groceries', selgros: 'groceries',
+  // Transport (rideshare + fuel)
+  bolt: 'transport', uber: 'transport', taxi: 'transport', 'free now': 'transport',
+  omv: 'transport', petrom: 'transport', rompetrol: 'transport', mol: 'transport', lukoil: 'transport',
+  // Shopping
+  emag: 'shopping', altex: 'shopping', dedeman: 'shopping', flanco: 'shopping',
+  ikea: 'shopping', jysk: 'shopping', decathlon: 'shopping', pepco: 'shopping',
+  zara: 'shopping', 'h&m': 'shopping', reserved: 'shopping',
+  amazon: 'shopping', temu: 'shopping', aliexpress: 'shopping',
+  // Subscriptions
   netflix: 'subscriptions', spotify: 'subscriptions', youtube: 'subscriptions',
-  hbo: 'subscriptions', disney: 'subscriptions', apple: 'subscriptions',
-  enel: 'utilities', digi: 'utilities', vodafone: 'utilities',
-  'e.on': 'utilities', orange: 'utilities', rcs: 'utilities',
+  hbo: 'subscriptions', disney: 'subscriptions',
+  'microsoft 365': 'subscriptions', 'microsoft*microsoft': 'subscriptions',
+  'google one': 'subscriptions', 'apple.com': 'subscriptions',
+  'focus sat': 'subscriptions', focussat: 'subscriptions',
+  // Entertainment/gaming
+  steam: 'entertainment', blizzard: 'entertainment', xbox: 'entertainment',
+  playstation: 'entertainment', nintendo: 'entertainment', epic: 'entertainment',
+  // Utilities
+  enel: 'utilities', engie: 'utilities', digi: 'utilities', vodafone: 'utilities',
+  'e.on': 'utilities', orange: 'utilities', rcs: 'utilities', telekom: 'utilities',
+  // Health
   farmacia: 'health', catena: 'health', sensiblu: 'health',
-  dona: 'health', helpnet: 'health',
+  dona: 'health', helpnet: 'health', 'ana pharm': 'health',
+  // Dining
   mcdonalds: 'dining', kfc: 'dining', 'burger king': 'dining',
   subway: 'dining', starbucks: 'dining', restaurant: 'dining',
+  pizz: 'dining', mattina: 'dining', cuptorul: 'dining',
+  // Pets
+  'maxi pet': 'pets', 'pet shop': 'pets', liprac: 'pets',
+  // Apple (general — subscriptions)
+  apple: 'subscriptions',
 };
 
 export const AI_PROVIDERS = [

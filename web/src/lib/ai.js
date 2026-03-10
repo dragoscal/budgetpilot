@@ -144,6 +144,30 @@ Return JSON:
   }]
 }`;
 
+// ─── JSON EXTRACTION (balanced braces) ──────────────────
+function extractJSON(text) {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return text.substring(start, i + 1);
+    }
+  }
+  // Fallback: greedy regex if balanced matching fails
+  const m = text.match(/\{[\s\S]*\}/);
+  return m ? m[0] : null;
+}
+
 // ─── API CALLER (multi-provider) ─────────────────────────
 async function callAI(messages, systemPrompt, maxTokens = 4000) {
   const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
@@ -171,7 +195,12 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
       }
       throw new Error(err.error || 'AI processing failed via server');
     }
-    return res.json();
+    const proxyResult = await res.json();
+    // Server proxy returns raw Anthropic response — extract inner JSON
+    const proxyText = proxyResult.content?.[0]?.text || (typeof proxyResult === 'string' ? proxyResult : JSON.stringify(proxyResult));
+    const proxyJson = extractJSON(proxyText);
+    if (proxyJson) return JSON.parse(proxyJson);
+    return proxyResult;
   }
 
   if (!apiKey) {
@@ -223,6 +252,15 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
               type: 'image_url',
               image_url: { url: `data:${part.source.media_type};base64,${part.source.data}` },
             };
+            // Convert Anthropic 'document' type to OpenAI-compatible format
+            // OpenAI/OpenRouter don't support PDF documents natively via vision —
+            // send as a text explanation that the PDF content should be extracted
+            if (part.type === 'document') {
+              return {
+                type: 'image_url',
+                image_url: { url: `data:${part.source.media_type};base64,${part.source.data}` },
+              };
+            }
             return part;
           }),
         };
@@ -255,9 +293,10 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     text = data.choices?.[0]?.message?.content || '';
   }
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Could not parse AI response');
-  return JSON.parse(jsonMatch[0]);
+  // Extract JSON using balanced brace matching (not greedy regex)
+  const jsonStr = extractJSON(text);
+  if (!jsonStr) throw new Error('Could not parse AI response');
+  return JSON.parse(jsonStr);
 }
 
 // ─── RECEIPT PROCESSING ───────────────────────────────────
@@ -280,10 +319,19 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
 
   const normalized = normalizeReceiptResult(result, userId);
 
-  // Save to receipt history
+  // Save to receipt history — store full image for gallery display
   try {
+    const firstTx = normalized.transactions[0];
     await saveReceiptHistory({
-      imageBase64: imageBase64.substring(0, 200) + '...', // truncated for storage
+      imageData: imageBase64, // full base64 for gallery
+      mediaType: mediaType,
+      // Flat fields for gallery display (Receipts.jsx reads these directly)
+      merchant: result.receipt?.store || firstTx?.merchant || 'Unknown',
+      total: result.receipt?.total || firstTx?.amount || 0,
+      currency: result.receipt?.currency || firstTx?.currency || 'RON',
+      category: firstTx?.category || 'other',
+      items: firstTx?.items || [],
+      // Also keep structured data
       receipt: result.receipt || null,
       transactions: normalized.transactions,
       warnings: result.warnings || [],
@@ -300,7 +348,7 @@ const BANK_STATEMENT_PROMPT = `You are an expert bank statement parser for a Rom
 
 BANK STATEMENT RULES:
 - Parse EVERY transaction from the statement — debits, credits, transfers, fees
-- Romanian banks: BRD, BCR, ING, Raiffeisen, Banca Transilvania, CEC, UniCredit, OTP, Alpha Bank
+- Romanian banks: BRD, BCR, ING, Raiffeisen, Banca Transilvania, CEC, UniCredit, OTP, Alpha Bank, Revolut, N26, Wise (TransferWise), George (BCR)
 - Date format: convert any format to YYYY-MM-DD
 - Amounts: always POSITIVE numbers. Use "type" to indicate expense/income
 - Currency: detect from statement (RON/EUR/USD/GBP). Default RON if unclear
@@ -314,14 +362,28 @@ COMMON MERCHANT MAPPINGS:
 - POS/card payments at stores → groceries/shopping/etc based on store name
 - ATM withdrawal → "other" (cash withdrawal)
 - Salary/salariu/venit → income
-- Netflix/Spotify/YouTube/Apple → subscriptions
-- Enel/Engie/Digi/RCS-RDS/Vodafone/Orange → utilities
-- Bolt/Uber/FreeNow → transport
-- Glovo/Tazz/Bolt Food → dining
+- Netflix/Spotify/YouTube/Apple/Disney+/HBO → subscriptions
+- Blizzard/Steam/Xbox/PlayStation → entertainment
+- Microsoft 365/Google One → subscriptions
+- Enel/Engie/Digi/RCS-RDS/Vodafone/Orange/Focus Sat → utilities
+- Bolt/Uber/FreeNow → transport (rideshare)
+- Glovo/Tazz/Bolt Food/Wolt → dining (food delivery)
+- OMV/Petrom/Rompetrol/MOL/Lukoil → transport (fuel)
+- Mega Image/Lidl/Kaufland/Carrefour/Auchan/Profi/Penny → groceries
 - Bank fees/comision → "other" (bank fee)
 - Loan payment/rata credit → "other" (loan payment)
-- Insurance/asigurare → "other" (insurance)
+- Insurance/asigurare → insurance
 - Interest/dobanda → income (if credit) or "other" (if debit)
+- "To pocket" / savings transfers → transfer (internal savings)
+- Apple Pay top-up / card top-up → transfer (funding)
+- Revolut/Wise transfers between people → transfer
+
+REVOLUT-SPECIFIC:
+- "To pocket RON Myself from RON" = internal savings transfer — type: "transfer", category: "savings"
+- "Apple Pay top-up by *XXXX" = card funding — type: "income", category: "transfer"
+- "Transfer to/from NAME" = person-to-person transfer — type: "expense"/"income", category: "transfer"
+- POS payments at merchants → categorize by merchant name as usual
+- Revolut currency exchange → type: "transfer", category: "other"
 
 RETURN FORMAT:
 {
@@ -460,11 +522,12 @@ Transactions: ${JSON.stringify(transactions.slice(0, 50))}
 Budgets: ${JSON.stringify(budgets)}
 Goals: ${JSON.stringify(goals)}
 
-Include: total spent, top categories, budget status, savings progress, tips. Keep it under 200 words. Return as plain text, not JSON.`,
+Include: total spent, top categories, budget status, savings progress, tips. Keep it under 200 words.
+Return as JSON: { "summary": "your summary text here" }`,
     },
-  ], 'You are a friendly financial advisor. Give concise, actionable financial summaries.', 500);
+  ], 'You are a friendly financial advisor. Give concise, actionable financial summaries. Always return valid JSON with a "summary" key.', 500);
 
-  return result.content?.[0]?.text || result.toString();
+  return result.summary || result.text || (typeof result === 'string' ? result : JSON.stringify(result));
 }
 
 // ─── NORMALIZE RESULTS ────────────────────────────────────
@@ -562,7 +625,9 @@ function normalizeNLPResult(result, userId = 'local') {
 function inferCategory(merchant) {
   if (!merchant) return 'other';
   const lower = merchant.toLowerCase();
-  for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
+  // Sort by key length descending so "bolt food" matches before "bolt"
+  const entries = Object.entries(MERCHANT_CATEGORY_MAP).sort((a, b) => b[0].length - a[0].length);
+  for (const [key, cat] of entries) {
     if (lower.includes(key)) return cat;
   }
   return 'other';

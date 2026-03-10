@@ -59,7 +59,7 @@ export default function BankStatementUpload({ onResult, onError }) {
         const enrichedResult = {
           transactions: results.transactions,
           receipt: {
-            store: results.bankInfo?.bankName || t('addTransaction.bankStatement'),
+            store: (results.bankInfo?.bankName && results.bankInfo.bankName !== 'Unknown Bank') ? results.bankInfo.bankName : t('addTransaction.bankStatement'),
             date: results.bankInfo?.period?.from
               ? `${results.bankInfo.period.from} to ${results.bankInfo.period.to}`
               : t('addTransaction.unknownPeriod'),

@@ -124,11 +124,11 @@ export default function ReceiptGallery() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {filtered.map((receipt) => {
             const linked = getLinkedTransaction(receipt);
-            const merchant = receipt.result?.merchant || receipt.merchant || 'Unknown';
-            const total = receipt.result?.total ?? receipt.total;
-            const currency = receipt.result?.currency || receipt.currency || 'RON';
+            const merchant = receipt.merchant || receipt.receipt?.store || receipt.result?.merchant || 'Unknown';
+            const total = receipt.total ?? receipt.receipt?.total ?? receipt.result?.total;
+            const currency = receipt.currency || receipt.receipt?.currency || receipt.result?.currency || 'RON';
             const date = receipt.processedAt || receipt.createdAt;
-            const hasImage = receipt.imageData || receipt.thumbnail;
+            const hasImage = receipt.imageData && receipt.imageData.length > 300;
 
             return (
               <button
@@ -140,7 +140,7 @@ export default function ReceiptGallery() {
                 <div className="aspect-[3/4] bg-cream-100 dark:bg-dark-border relative overflow-hidden">
                   {hasImage ? (
                     <img
-                      src={receipt.thumbnail || `data:image/jpeg;base64,${receipt.imageData}`}
+                      src={receipt.thumbnail || `data:${receipt.mediaType || 'image/jpeg'};base64,${receipt.imageData}`}
                       alt="Receipt"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
@@ -187,15 +187,15 @@ export default function ReceiptGallery() {
       {/* Detail modal */}
       <Modal open={!!selected} onClose={() => setSelected(null)} title={t('receipts.receiptDetails')}>
         {selected && (() => {
-          const merchant = selected.result?.merchant || selected.merchant || 'Unknown';
-          const total = selected.result?.total ?? selected.total;
-          const currency = selected.result?.currency || selected.currency || 'RON';
-          const items = selected.result?.items || [];
+          const merchant = selected.merchant || selected.receipt?.store || selected.result?.merchant || 'Unknown';
+          const total = selected.total ?? selected.receipt?.total ?? selected.result?.total;
+          const currency = selected.currency || selected.receipt?.currency || selected.result?.currency || 'RON';
+          const items = selected.items || selected.result?.items || selected.transactions?.[0]?.items || [];
           const date = selected.processedAt || selected.createdAt;
-          const category = selected.result?.category;
+          const category = selected.category || selected.transactions?.[0]?.category || selected.result?.category;
           const cat = category ? getCategoryById(category) : null;
           const linked = getLinkedTransaction(selected);
-          const hasImage = selected.imageData || selected.thumbnail;
+          const hasImage = selected.imageData && selected.imageData.length > 300;
 
           return (
             <div className="space-y-4">
@@ -203,7 +203,7 @@ export default function ReceiptGallery() {
               {hasImage && (
                 <div className="rounded-xl overflow-hidden max-h-64 bg-cream-100 dark:bg-dark-border">
                   <img
-                    src={selected.imageData ? `data:image/jpeg;base64,${selected.imageData}` : selected.thumbnail}
+                    src={selected.imageData ? `data:${selected.mediaType || 'image/jpeg'};base64,${selected.imageData}` : selected.thumbnail}
                     alt="Receipt"
                     className="w-full object-contain max-h-64"
                   />

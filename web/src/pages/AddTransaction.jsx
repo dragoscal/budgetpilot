@@ -427,7 +427,7 @@ export default function AddTransaction() {
         className={`cursor-pointer group/edit inline-flex items-center gap-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 rounded-lg px-1.5 py-0.5 transition-all ${className}`}
         title={t('addTransaction.tapToEdit')}
       >
-        {value || '—'}
+        {(field === 'amount' || field === 'price') && value != null ? Number(value).toFixed(2) : (value || '—')}
         <Pencil size={10} className="text-cream-300 dark:text-cream-600 group-hover/edit:text-indigo-400 shrink-0 transition-colors" />
       </span>
     );
