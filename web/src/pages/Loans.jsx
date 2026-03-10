@@ -600,12 +600,12 @@ export default function Loans() {
                     )}
                     {loan.interestRate > 0 && (
                       <span className="text-xs text-cream-500 flex items-center gap-1">
-                        <Percent size={10} /> {loan.interestRate}% {loan.interestType}
+                        <Percent size={10} /> {loan.interestRate}% {loan.interestType === 'fixed' ? t('loans.fixed') : t('loans.variable')}
                       </span>
                     )}
                     {loan.monthlyPayment > 0 && (
                       <span className="text-xs text-cream-500 flex items-center gap-1">
-                        <Calendar size={10} /> {formatCurrency(loan.monthlyPayment, loan.currency)}/mo
+                        <Calendar size={10} /> {formatCurrency(loan.monthlyPayment, loan.currency)}{t('recurring.perMo')}
                       </span>
                     )}
                   </div>

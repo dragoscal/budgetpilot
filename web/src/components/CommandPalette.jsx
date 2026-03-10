@@ -22,7 +22,7 @@ const PAGES = [
   { path: '/receipts', label: 'nav.receipts', icon: Receipt, keywords: ['receipts', 'bonuri'] },
   { path: '/reports', label: 'nav.reports', icon: FileText, keywords: ['reports', 'export', 'rapoarte'] },
   { path: '/review', label: 'nav.monthlyReview', icon: BarChart3, keywords: ['review', 'monthly', 'revizuire'] },
-  { path: '/family', label: 'nav.household', icon: Users2, keywords: ['family', 'shared', 'familie', 'household', 'gospodărie'] },
+  { path: '/family', label: 'nav.household', icon: Users2, keywords: ['family', 'shared', 'familie', 'household', 'comun', 'cheltuieli comune', 'gospodărie'] },
   { path: '/settings', label: 'nav.settings', icon: Settings, keywords: ['settings', 'setări', 'config'] },
   { path: '/feedback', label: 'nav.feedback', icon: MessageSquare, keywords: ['feedback', 'bug', 'suggest'] },
 ];
