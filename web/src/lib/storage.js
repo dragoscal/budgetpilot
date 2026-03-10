@@ -291,7 +291,12 @@ export async function getSetting(key) {
   const { DEFAULT_SETTINGS } = await import('./constants.js');
   const db = await getDB();
   const record = await db.get('settings', key);
-  return record?.value ?? DEFAULT_SETTINGS[key] ?? undefined;
+  const val = record?.value;
+  // Fall back to default if missing OR empty string (for URL-type settings)
+  if ((val === undefined || val === null || val === '') && DEFAULT_SETTINGS[key]) {
+    return DEFAULT_SETTINGS[key];
+  }
+  return val;
 }
 
 export async function setSetting(key, value) {
