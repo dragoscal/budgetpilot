@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { sortByDate, formatCurrency, sumBy } from '../lib/helpers';
 import TransactionRow from '../components/TransactionRow';
 import SearchFilter from '../components/SearchFilter';
@@ -9,17 +10,19 @@ import ManualForm from '../components/ManualForm';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS } from '../lib/constants';
-import { Receipt, Download, Trash2, Tag } from 'lucide-react';
+import { Receipt, Download, Trash2, Tag, Hash, X } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
 export default function Transactions() {
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const [allTx, setAllTx] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState([]);
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
@@ -31,7 +34,7 @@ export default function Transactions() {
   const loadTransactions = async () => {
     setLoading(true);
     try {
-      const data = await txApi.getAll({ userId: 'local' });
+      const data = await txApi.getAll({ userId: effectiveUserId });
       setAllTx(data);
     } catch (err) {
       toast.error('Failed to load transactions');
@@ -39,6 +42,21 @@ export default function Transactions() {
       setLoading(false);
     }
   };
+
+  // Compute unique tags from all transactions for tag filter
+  const availableTags = useMemo(() => {
+    const tagMap = new Map();
+    for (const t of allTx) {
+      if (!t.tags || !Array.isArray(t.tags)) continue;
+      for (const tag of t.tags) {
+        const normalized = tag.toLowerCase().trim();
+        if (normalized) tagMap.set(normalized, (tagMap.get(normalized) || 0) + 1);
+      }
+    }
+    return Array.from(tagMap.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [allTx]);
 
   const filtered = useMemo(() => {
     let result = [...allTx];
@@ -53,6 +71,11 @@ export default function Transactions() {
     }
     if (categoryFilter) result = result.filter((t) => t.category === categoryFilter);
     if (typeFilter) result = result.filter((t) => t.type === typeFilter);
+    if (tagFilter.length > 0) {
+      result = result.filter((t) =>
+        tagFilter.every((ft) => (t.tags || []).some((tt) => tt.toLowerCase() === ft))
+      );
+    }
 
     // Sort
     const [sortKey, sortDir] = sort.split('-');
@@ -67,7 +90,7 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, sort]);
+  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort]);
 
   const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
   const hasMore = paginated.length < filtered.length;
@@ -165,10 +188,43 @@ export default function Transactions() {
         type={typeFilter} onType={setTypeFilter}
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <select className="input w-auto text-xs" value={sort} onChange={(e) => setSort(e.target.value)}>
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+
+        {/* Tag filter chips */}
+        {availableTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Hash size={14} className="text-cream-400" />
+            {availableTags.slice(0, 12).map(({ tag, count }) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setTagFilter((prev) =>
+                  prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                )}
+                className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
+                  tagFilter.includes(tag)
+                    ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
+                    : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                }`}
+              >
+                {tag} <span className="opacity-50">{count}</span>
+              </button>
+            ))}
+            {tagFilter.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setTagFilter([])}
+                className="p-1 rounded-full text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border transition-colors"
+                title="Clear tag filter"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Transaction list */}
@@ -199,8 +255,8 @@ export default function Transactions() {
           <EmptyState
             icon={Receipt}
             title="No transactions found"
-            description={search || categoryFilter || typeFilter ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
-            action={!search && !categoryFilter ? 'Add transaction' : undefined}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 ? 'Try adjusting your filters' : 'Add your first transaction to get started'}
+            action={!search && !categoryFilter && tagFilter.length === 0 ? 'Add transaction' : undefined}
             onAction={() => window.location.href = '/add'}
           />
         )}

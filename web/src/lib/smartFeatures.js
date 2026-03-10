@@ -104,15 +104,21 @@ function isConsecutiveMonth(a, b) {
 
 export async function checkDuplicate(newTx) {
   const transactions = await getAll('transactions');
+
+  // Pre-filter: only check transactions within ±3 days (O(n) scan but skips most comparisons)
+  const txDate = new Date(newTx.date);
+  const windowMs = 3 * 24 * 60 * 60 * 1000;
+  const nearby = transactions.filter((t) => {
+    if (t.id === newTx.id) return false;
+    const d = new Date(t.date);
+    return Math.abs(d - txDate) <= windowMs;
+  });
+
   const dupes = [];
-
-  for (const existing of transactions) {
-    if (existing.id === newTx.id) continue;
-
+  for (const existing of nearby) {
     const sameDate = existing.date === newTx.date;
     const sameAmount = Math.abs(existing.amount - newTx.amount) < 0.01;
     const sameMerchant = existing.merchant?.toLowerCase().trim() === newTx.merchant?.toLowerCase().trim();
-    const sameCategory = existing.category === newTx.category;
 
     // Exact duplicate: same date + amount + merchant
     if (sameDate && sameAmount && sameMerchant) {
@@ -318,6 +324,111 @@ export function splitTransaction(original, splits) {
   }));
 }
 
+
+// ─── SUBSCRIPTION AUDIT ──────────────────────────────────
+// Analyze recurring items for savings opportunities
+
+export async function auditSubscriptions() {
+  const recurring = await getAll('recurring');
+  const transactions = await getAll('transactions');
+  const active = recurring.filter(r => r.active !== false);
+  const results = [];
+
+  for (const sub of active) {
+    const merchantLower = (sub.name || sub.merchant || '').toLowerCase().trim();
+    if (!merchantLower) continue;
+
+    // Find matching transactions
+    const matchingTx = transactions.filter(t =>
+      t.merchant && t.merchant.toLowerCase().trim() === merchantLower && t.type === 'expense'
+    ).sort((a, b) => b.date?.localeCompare(a.date));
+
+    // Annual cost
+    const freq = sub.frequency || 'monthly';
+    let monthlyMultiplier = 1;
+    if (freq === 'weekly') monthlyMultiplier = 4.33;
+    else if (freq === 'biweekly') monthlyMultiplier = 2.17;
+    else if (freq === 'daily') monthlyMultiplier = 30.44;
+    else if (freq === 'quarterly') monthlyMultiplier = 1 / 3;
+    else if (freq === 'semiannual') monthlyMultiplier = 1 / 6;
+    else if (freq === 'annual') monthlyMultiplier = 1 / 12;
+
+    const monthlyCost = sub.amount * monthlyMultiplier;
+    const annualCost = monthlyCost * 12;
+
+    const audit = {
+      id: sub.id,
+      name: sub.name || sub.merchant,
+      amount: sub.amount,
+      currency: sub.currency || 'RON',
+      category: sub.category,
+      frequency: freq,
+      monthlyCost: Math.round(monthlyCost * 100) / 100,
+      annualCost: Math.round(annualCost * 100) / 100,
+      issues: [],
+    };
+
+    // Check for price changes
+    if (matchingTx.length >= 2) {
+      const recentAmount = matchingTx[0].amount;
+      const olderAmount = matchingTx[matchingTx.length > 3 ? 3 : matchingTx.length - 1].amount;
+      if (recentAmount > olderAmount * 1.05) {
+        const increase = Math.round(((recentAmount - olderAmount) / olderAmount) * 100);
+        audit.issues.push({
+          type: 'price_increase',
+          severity: 'warning',
+          message: `Price increased ${increase}% (${olderAmount} → ${recentAmount})`,
+        });
+      }
+    }
+
+    // Check for potentially unused subscriptions (no transactions in 60+ days)
+    if (matchingTx.length > 0) {
+      const lastTxDate = new Date(matchingTx[0].date);
+      const daysSinceLast = Math.floor((Date.now() - lastTxDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLast > 60) {
+        audit.issues.push({
+          type: 'potentially_unused',
+          severity: 'info',
+          message: `No charges in ${daysSinceLast} days — still using this?`,
+        });
+      }
+    } else if (sub.createdAt) {
+      const createdDate = new Date(sub.createdAt);
+      const daysSinceCreated = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceCreated > 30) {
+        audit.issues.push({
+          type: 'no_transactions',
+          severity: 'info',
+          message: 'No matching transactions found — verify this is still active',
+        });
+      }
+    }
+
+    // High cost flag (>= 100/month equivalent)
+    if (monthlyCost >= 100) {
+      audit.issues.push({
+        type: 'high_cost',
+        severity: 'warning',
+        message: `High cost: ${Math.round(monthlyCost)}/mo (${Math.round(annualCost)}/yr)`,
+      });
+    }
+
+    results.push(audit);
+  }
+
+  // Sort: items with issues first, then by annual cost
+  results.sort((a, b) => {
+    if (a.issues.length !== b.issues.length) return b.issues.length - a.issues.length;
+    return b.annualCost - a.annualCost;
+  });
+
+  const totalMonthly = results.reduce((s, r) => s + r.monthlyCost, 0);
+  const totalAnnual = results.reduce((s, r) => s + r.annualCost, 0);
+  const issueCount = results.filter(r => r.issues.length > 0).length;
+
+  return { items: results, totalMonthly, totalAnnual, issueCount };
+}
 
 // ─── SMART INSIGHTS ───────────────────────────────────────
 // Generate smart spending insights

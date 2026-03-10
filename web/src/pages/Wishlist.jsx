@@ -7,6 +7,7 @@ import { generateId, formatCurrency } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Star, Plus, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 
 const PRIORITIES = [
   { value: 1, label: 'Low', color: 'text-cream-400' },
@@ -17,7 +18,7 @@ const PRIORITIES = [
 ];
 
 export default function Wishlist() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,7 @@ export default function Wishlist() {
 
   const loadItems = async () => {
     setLoading(true);
-    try { setItems(await wishlistApi.getAll({ userId: 'local' })); }
+    try { setItems(await wishlistApi.getAll({ userId: effectiveUserId })); }
     catch (err) { toast.error('Failed to load'); }
     finally { setLoading(false); }
   };
@@ -42,7 +43,7 @@ export default function Wishlist() {
       id: generateId(), ...form,
       estimatedPrice: Number(form.estimatedPrice) || 0,
       priority: Number(form.priority),
-      currency, status: 'wanted', userId: 'local', createdAt: new Date().toISOString(),
+      currency, status: 'wanted', userId: effectiveUserId, createdAt: new Date().toISOString(),
     });
     toast.success('Added to wishlist');
     setShowForm(false);
@@ -64,6 +65,8 @@ export default function Wishlist() {
 
   const wantedItems = items.filter((i) => i.status === 'wanted').sort((a, b) => b.priority - a.priority);
   const purchasedItems = items.filter((i) => i.status === 'purchased');
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">

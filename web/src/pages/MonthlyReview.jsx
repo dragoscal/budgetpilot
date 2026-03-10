@@ -5,10 +5,11 @@ import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndica
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 export default function MonthlyReview() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [currentTx, setCurrentTx] = useState([]);
   const [prevTx, setPrevTx] = useState([]);
@@ -23,10 +24,10 @@ export default function MonthlyReview() {
       setLoading(true);
       try {
         const [allTx, budgets, goals, rec] = await Promise.all([
-          txApi.getAll({ userId: 'local' }),
-          budgetsApi.getAll({ userId: 'local' }),
-          goalsApi.getAll({ userId: 'local' }),
-          recurringApi.getAll({ userId: 'local' }),
+          txApi.getAll({ userId: effectiveUserId }),
+          budgetsApi.getAll({ userId: effectiveUserId }),
+          goalsApi.getAll({ userId: effectiveUserId }),
+          recurringApi.getAll({ userId: effectiveUserId }),
         ]);
         const start = startOfMonth(month);
         const end = endOfMonth(month);
@@ -74,6 +75,8 @@ export default function MonthlyReview() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
   }, [currentTx]);
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">

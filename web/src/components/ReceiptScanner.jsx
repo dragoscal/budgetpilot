@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, Camera, X, Loader2, History } from 'lucide-react';
 import { processReceipt, getReceiptHistory } from '../lib/ai';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ReceiptScanner({ onResult, onError }) {
+  const { effectiveUserId } = useAuth();
   const [dragging, setDragging] = useState(false);
   const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -30,7 +32,7 @@ export default function ReceiptScanner({ onResult, onError }) {
         const base64Data = base64Full.split(',')[1];
         setStatus('AI analyzing items...');
         setProgress(50);
-        const results = await processReceipt(base64Data, mediaType);
+        const results = await processReceipt(base64Data, mediaType, { userId: effectiveUserId });
         setProgress(100);
         setStatus('Done!');
 

@@ -10,12 +10,15 @@ import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/LoadingSkeleton';
-import { PiggyBank, Plus } from 'lucide-react';
+import { PiggyBank, Plus, Users } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { useFamily } from '../contexts/FamilyContext';
 
 export default function Budgets() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const { isFamilyMode, activeFamily, members } = useFamily();
+  const [viewMode, setViewMode] = useState('personal'); // 'personal' | 'family'
   const [month, setMonth] = useState(new Date());
   const [budgetsList, setBudgets] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -31,22 +34,40 @@ export default function Budgets() {
   const currency = user?.defaultCurrency || 'RON';
   const monthKey = format(month, 'yyyy-MM');
 
-  useEffect(() => { loadData(); }, [month]);
+  useEffect(() => { loadData(); }, [month, viewMode]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      const isFamily = viewMode === 'family' && isFamilyMode;
+      const budgetFilter = isFamily && activeFamily
+        ? { familyId: activeFamily.id }
+        : { userId: effectiveUserId };
+
       const [budgets, allTx] = await Promise.all([
-        budgetsApi.getAll({ userId: 'local' }),
-        txApi.getAll({ userId: 'local' }),
+        budgetsApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
+        txApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
       ]);
+
       const start = startOfMonth(month);
       const end = endOfMonth(month);
+
+      // In family mode, aggregate all family members' expenses
+      const familyUserIds = isFamily ? new Set(members.map((m) => m.userId)) : null;
       const monthTx = allTx.filter((t) => {
         const d = new Date(t.date);
-        return d >= start && d <= end && t.type === 'expense';
+        const inMonth = d >= start && d <= end && t.type === 'expense';
+        if (!inMonth) return false;
+        if (isFamily && familyUserIds) return familyUserIds.has(t.userId);
+        return t.userId === effectiveUserId;
       });
-      setBudgets(budgets.filter((b) => !b.month || b.month === monthKey));
+
+      // Filter budgets
+      const filteredBudgets = isFamily
+        ? budgets.filter((b) => b.familyId === activeFamily?.id && (!b.month || b.month === monthKey))
+        : budgets.filter((b) => !b.familyId && (!b.month || b.month === monthKey));
+
+      setBudgets(filteredBudgets);
       setTransactions(monthTx);
     } catch (err) {
       toast.error('Failed to load budgets');
@@ -80,6 +101,7 @@ export default function Budgets() {
         });
         toast.success('Budget updated');
       } else {
+        const isFamily = viewMode === 'family' && isFamilyMode;
         await budgetsApi.create({
           id: generateId(),
           category: formCategory,
@@ -87,7 +109,8 @@ export default function Budgets() {
           currency,
           rollover: formRollover,
           month: monthKey,
-          userId: 'local',
+          userId: effectiveUserId,
+          familyId: isFamily ? activeFamily?.id : null,
           createdAt: new Date().toISOString(),
         });
         toast.success('Budget created');
@@ -133,6 +156,22 @@ export default function Budgets() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="page-title mb-0">Budgets</h1>
         <div className="flex items-center gap-2">
+          {isFamilyMode && (
+            <div className="flex rounded-lg border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
+              <button
+                onClick={() => setViewMode('personal')}
+                className={`px-3 py-1.5 font-medium transition-colors ${viewMode === 'personal' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
+              >
+                Personal
+              </button>
+              <button
+                onClick={() => setViewMode('family')}
+                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${viewMode === 'family' ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900' : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'}`}
+              >
+                <Users size={12} /> Family
+              </button>
+            </div>
+          )}
           <MonthPicker value={month} onChange={setMonth} />
           <button onClick={() => { resetForm(); setEditBudget(null); setShowAdd(true); }} className="btn-primary text-xs flex items-center gap-1 shrink-0">
             <Plus size={14} /> Add

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'budgetpilot';
-const DB_VERSION = 6;
+const DB_VERSION = 8;
 
 let dbPromise = null;
 
@@ -105,6 +105,34 @@ function getDB() {
             const lpStore = db.createObjectStore('loanPayments', { keyPath: 'id' });
             lpStore.createIndex('loanId', 'loanId');
             lpStore.createIndex('date', 'date');
+          }
+        }
+
+        // v7: Family system + shared expenses
+        if (oldVersion < 7) {
+          if (!db.objectStoreNames.contains('families')) {
+            const familyStore = db.createObjectStore('families', { keyPath: 'id' });
+            familyStore.createIndex('createdBy', 'createdBy');
+          }
+          if (!db.objectStoreNames.contains('familyMembers')) {
+            const memberStore = db.createObjectStore('familyMembers', { keyPath: 'id' });
+            memberStore.createIndex('familyId', 'familyId');
+            memberStore.createIndex('userId', 'userId');
+          }
+          if (!db.objectStoreNames.contains('sharedExpenses')) {
+            const sharedStore = db.createObjectStore('sharedExpenses', { keyPath: 'id' });
+            sharedStore.createIndex('familyId', 'familyId');
+            sharedStore.createIndex('paidByUserId', 'paidByUserId');
+            sharedStore.createIndex('date', 'date');
+          }
+        }
+
+        // v8: Spending challenges
+        if (oldVersion < 8) {
+          if (!db.objectStoreNames.contains('challenges')) {
+            const challengeStore = db.createObjectStore('challenges', { keyPath: 'id' });
+            challengeStore.createIndex('userId', 'userId');
+            challengeStore.createIndex('status', 'status');
           }
         }
       },
@@ -268,7 +296,7 @@ export async function saveDraft(draft) {
 export async function getDrafts() {
   const db = await getDB();
   const drafts = await db.getAll('receiptDrafts');
-  return drafts.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  return drafts.sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
 }
 
 export async function getDraftById(id) {

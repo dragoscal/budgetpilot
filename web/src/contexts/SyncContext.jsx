@@ -36,6 +36,20 @@ export function SyncProvider({ children }) {
 
     init();
 
+    // Listen for online/offline changes
+    const handleOnline = () => {
+      setStatus((prev) => ({ ...prev, isOnline: true }));
+      // Trigger sync when coming back online
+      if (hasAuthToken()) {
+        fullSync().catch(() => {});
+      }
+    };
+    const handleOffline = () => {
+      setStatus((prev) => ({ ...prev, isOnline: false }));
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     // Listen for sync completions
     const unsub = onSyncComplete((result) => {
       // Refresh status after each sync
@@ -52,6 +66,8 @@ export function SyncProvider({ children }) {
     return () => {
       unsub();
       stopAutoSync();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 

@@ -7,7 +7,15 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { SyncProvider } from './contexts/SyncContext';
+import { FamilyProvider } from './contexts/FamilyContext';
 import './index.css';
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -17,7 +25,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <AuthProvider>
             <SettingsProvider>
               <SyncProvider>
-                <App />
+                <FamilyProvider>
+                  <App />
+                </FamilyProvider>
               </SyncProvider>
             </SettingsProvider>
           </AuthProvider>

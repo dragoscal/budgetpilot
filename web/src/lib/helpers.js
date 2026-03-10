@@ -122,6 +122,47 @@ export function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+/**
+ * Convert and display amount in default currency, showing both if different
+ * @param {number} amount
+ * @param {string} fromCurrency
+ * @param {string} defaultCurrency
+ * @param {Object} rates — exchange rates from getRates()
+ * @returns {{ original: string, converted: string|null, convertedAmount: number }}
+ */
+export function getDisplayAmount(amount, fromCurrency, defaultCurrency, rates) {
+  const original = formatCurrency(amount, fromCurrency);
+  if (!rates || fromCurrency === defaultCurrency) {
+    return { original, converted: null, convertedAmount: amount };
+  }
+  const fromRate = rates[fromCurrency];
+  const toRate = rates[defaultCurrency];
+  if (!fromRate || !toRate) return { original, converted: null, convertedAmount: amount };
+
+  const inBase = amount / fromRate;
+  const convertedAmount = Math.round(inBase * toRate * 100) / 100;
+  const converted = formatCurrency(convertedAmount, defaultCurrency);
+  return { original, converted: `≈ ${converted}`, convertedAmount };
+}
+
+/**
+ * Sum amounts across currencies, converting everything to the default currency
+ */
+export function sumAmountsMultiCurrency(items, defaultCurrency, rates, amountKey = 'amount', currencyKey = 'currency') {
+  if (!rates) {
+    return items.reduce((sum, item) => sum + (Number(item[amountKey]) || 0), 0);
+  }
+  return items.reduce((sum, item) => {
+    const amount = Number(item[amountKey]) || 0;
+    const curr = item[currencyKey] || defaultCurrency;
+    if (curr === defaultCurrency) return sum + amount;
+    const fromRate = rates[curr];
+    const toRate = rates[defaultCurrency];
+    if (!fromRate || !toRate) return sum + amount;
+    return sum + (amount / fromRate) * toRate;
+  }, 0);
+}
+
 // ─── SUBCATEGORY HELPERS ─────────────────────────────────
 
 export function getParentCategory(subcatId) {

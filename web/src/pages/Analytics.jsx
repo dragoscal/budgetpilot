@@ -5,11 +5,13 @@ import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf } from '../l
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
-import { BarChart3, Lightbulb } from 'lucide-react';
+import { BarChart3, Lightbulb, Hash } from 'lucide-react';
+import { getTagStats } from '../lib/tagHelpers';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
 
 export default function Analytics() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [allTx, setAllTx] = useState([]);
   const [budgetsList, setBudgets] = useState([]);
@@ -22,8 +24,8 @@ export default function Analytics() {
       setLoading(true);
       try {
         const [tx, budgets] = await Promise.all([
-          txApi.getAll({ userId: 'local' }),
-          budgetsApi.getAll({ userId: 'local' }),
+          txApi.getAll({ userId: effectiveUserId }),
+          budgetsApi.getAll({ userId: effectiveUserId }),
         ]);
         setAllTx(tx);
         setBudgets(budgets);
@@ -80,6 +82,9 @@ export default function Analytics() {
       .slice(0, 10);
   }, [expenses]);
 
+  // Tag stats
+  const tagStats = useMemo(() => getTagStats(expenses), [expenses]);
+
   // Summary stats
   const totalSpent = sumBy(expenses, 'amount');
   const totalIncome = sumBy(monthTx.filter((t) => t.type === 'income'), 'amount');
@@ -87,6 +92,8 @@ export default function Analytics() {
   const daysLeft = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate() - new Date().getDate();
   const projected = totalSpent + dailyAvg * Math.max(daysLeft, 0);
   const totalBudget = sumBy(budgetsList, 'amount');
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
@@ -187,6 +194,36 @@ export default function Analytics() {
           </div>
         ) : <p className="text-sm text-cream-500">No data</p>}
       </div>
+
+      {/* Spending by tag */}
+      {tagStats.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Hash size={16} className="text-accent" />
+            <h3 className="section-title mb-0">Spending by tag</h3>
+          </div>
+          <div className="space-y-2">
+            {tagStats.slice(0, 10).map((t, i) => {
+              const pct = totalSpent > 0 ? (t.total / totalSpent) * 100 : 0;
+              return (
+                <div key={t.tag} className="flex items-center gap-3">
+                  <span className="text-xs text-cream-400 w-5">{i + 1}.</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-50 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 text-xs font-medium">
+                    <Hash size={10} className="opacity-60" />{t.tag}
+                  </span>
+                  <div className="flex-1 h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
+                    <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                  </div>
+                  <div className="text-right min-w-[80px]">
+                    <span className="text-sm money font-medium">{formatCurrency(t.total, currency)}</span>
+                    <span className="text-[10px] text-cream-400 ml-1">({t.count}x)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

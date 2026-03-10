@@ -1,17 +1,19 @@
 import { useState, useRef } from 'react';
 import { ArrowRight, Loader2, Calendar } from 'lucide-react';
 import { processNaturalLanguage } from '../lib/ai';
+import { useAuth } from '../contexts/AuthContext';
 
 const EXAMPLES = [
   '45 lei Bolt taxi',
   'netflix 55 lei',
   'salary 8000 lei',
-  '150 lei dinner with friends',
+  '150 lei dinner #friends',
   'rent 2000 lei',
-  '25 eur coffee shop',
+  '25 eur coffee #business',
 ];
 
 export default function QuickAdd({ onResult, onError }) {
+  const { effectiveUserId } = useAuth();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [customDate, setCustomDate] = useState('');
@@ -23,7 +25,7 @@ export default function QuickAdd({ onResult, onError }) {
 
     setLoading(true);
     try {
-      const results = await processNaturalLanguage(value.trim());
+      const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
       const dateOverride = customDate || new Date().toISOString().slice(0, 10);
       onResult?.(results.map((t) => ({ ...t, date: dateOverride, source: 'nlp' })));
       setText('');

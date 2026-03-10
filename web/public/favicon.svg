@@ -1,4 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#3a7d5c"/>
-  <text x="50" y="68" font-size="52" text-anchor="middle" fill="white" font-family="serif" font-weight="bold">B</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#4f46e5"/>
+  <g transform="translate(256,256)">
+    <!-- Wallet body -->
+    <rect x="-140" y="-90" width="280" height="180" rx="24" fill="white" opacity="0.95"/>
+    <!-- Wallet flap -->
+    <path d="M-140,-90 L-140,-30 Q-140,-60 -110,-60 L80,-60 Q110,-60 110,-90 Z" fill="white"/>
+    <!-- Card slot line -->
+    <rect x="80" y="-10" width="60" height="40" rx="10" fill="#4f46e5" opacity="0.3"/>
+    <!-- Coin circle -->
+    <circle cx="110" cy="10" r="16" fill="#4f46e5" opacity="0.5"/>
+  </g>
 </svg>

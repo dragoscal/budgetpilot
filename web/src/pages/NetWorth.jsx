@@ -7,12 +7,13 @@ import { generateId, formatCurrency, sumBy } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Landmark, Plus, Edit3, Trash2 } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const LIABILITY_TYPES = ['credit_card', 'loan'];
 
 export default function NetWorth() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [accountsList, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export default function NetWorth() {
 
   const loadAccounts = async () => {
     setLoading(true);
-    try { setAccounts(await accountsApi.getAll({ userId: 'local' })); }
+    try { setAccounts(await accountsApi.getAll({ userId: effectiveUserId })); }
     catch (err) { toast.error('Failed to load accounts'); }
     finally { setLoading(false); }
   };
@@ -43,7 +44,7 @@ export default function NetWorth() {
   const handleSave = async () => {
     if (!form.name || !form.balance) { toast.error('Name and balance required'); return; }
     try {
-      const data = { ...form, balance: Number(form.balance), userId: 'local', lastUpdated: new Date().toISOString() };
+      const data = { ...form, balance: Number(form.balance), userId: effectiveUserId, lastUpdated: new Date().toISOString() };
       const acctType = ACCOUNT_TYPES.find((t) => t.id === data.type);
       if (acctType) data.icon = acctType.icon;
       if (editAccount) {
@@ -105,6 +106,8 @@ export default function NetWorth() {
       </button>
     </div>
   );
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">

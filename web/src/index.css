@@ -272,11 +272,28 @@ textarea:-webkit-autofill {
 /* ─── Print ───────────────────────────────────────────── */
 @media print {
   .sidebar,
-  .no-print {
+  .no-print,
+  .print\:hidden,
+  aside,
+  nav.fixed {
     display: none !important;
   }
-  .main-content {
+  .main-content,
+  main {
     margin-left: 0 !important;
     max-width: 100% !important;
+    padding: 0 !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .card {
+    border: 1px solid #e5e5e5 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  .money {
+    font-variant-numeric: tabular-nums;
   }
 }

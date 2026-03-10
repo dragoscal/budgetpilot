@@ -7,8 +7,9 @@ import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Wallet, Shield,
-  Building2, Menu, X, MessageSquare,
+  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera,
 } from 'lucide-react';
+import FamilyPicker from './FamilyPicker';
 
 const NAV_SECTIONS = [
   {
@@ -35,13 +36,17 @@ const NAV_SECTIONS = [
       { to: '/cashflow', icon: TrendingUp, label: 'Cash Flow' },
       { to: '/networth', icon: Landmark, label: 'Net Worth' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+      { to: '/reports', icon: ClipboardList, label: 'Reports' },
     ],
   },
   {
     label: 'More',
     items: [
+      { to: '/family', icon: Heart, label: 'Family' },
       { to: '/people', icon: Users, label: 'People & Debts' },
       { to: '/wishlist', icon: Star, label: 'Wishlist' },
+      { to: '/challenges', icon: Trophy, label: 'Challenges' },
+      { to: '/receipts', icon: Camera, label: 'Receipts' },
       { to: '/review', icon: FileText, label: 'Monthly Review' },
     ],
   },
@@ -107,6 +112,9 @@ export default function Sidebar() {
             </div>
           </div>
         )}
+
+        {/* Family picker */}
+        <FamilyPicker collapsed={collapsed} />
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-1 px-3 space-y-3">

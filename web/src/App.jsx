@@ -27,7 +27,13 @@ import MonthlyReview from './pages/MonthlyReview';
 import Admin from './pages/Admin';
 import Feedback from './pages/Feedback';
 import Loans from './pages/Loans';
+import Family from './pages/Family';
+import Reports from './pages/Reports';
+import Challenges from './pages/Challenges';
+import ReceiptGallery from './pages/Receipts';
 import NotFound from './pages/NotFound';
+import InstallPrompt from './components/InstallPrompt';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
 
 import { useEffect } from 'react';
 
@@ -65,6 +71,8 @@ export default function App() {
     <>
       <ScrollToTop />
       <ToastContainer />
+      <InstallPrompt />
+      <KeyboardShortcuts />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
@@ -89,6 +97,10 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute><AppLayout><Admin /></AppLayout></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><AppLayout><Feedback /></AppLayout></ProtectedRoute>} />
         <Route path="/loans" element={<ProtectedRoute><AppLayout><Loans /></AppLayout></ProtectedRoute>} />
+        <Route path="/family" element={<ProtectedRoute><AppLayout><Family /></AppLayout></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
+        <Route path="/challenges" element={<ProtectedRoute><AppLayout><Challenges /></AppLayout></ProtectedRoute>} />
+        <Route path="/receipts" element={<ProtectedRoute><AppLayout><ReceiptGallery /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

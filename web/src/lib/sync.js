@@ -151,8 +151,8 @@ export async function pullFromServer() {
         const storeName = toLocalStore(serverTable);
         for (const record of records) {
           try {
-            // Remap server userId to 'local' for local storage compatibility
-            const localRecord = { ...record, userId: 'local' };
+            // Keep server userId for proper multi-user isolation
+            const localRecord = { ...record };
 
             // Conflict resolution: server wins if updatedAt is newer
             const existing = await getById(storeName, localRecord.id).catch(() => null);

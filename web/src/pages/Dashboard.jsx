@@ -12,11 +12,12 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, Shield, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
 
+
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { hideAmounts, updateHideAmounts, shouldHide } = useHideAmounts();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
@@ -38,11 +39,11 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const [allTx, budgets, goals, rec, accts] = await Promise.all([
-        txApi.getAll({ userId: 'local' }),
-        budgetsApi.getAll({ userId: 'local' }),
-        goalsApi.getAll({ userId: 'local' }),
-        recurringApi.getAll({ userId: 'local' }),
-        accountsApi.getAll({ userId: 'local' }),
+        txApi.getAll({ userId: effectiveUserId }),
+        budgetsApi.getAll({ userId: effectiveUserId }),
+        goalsApi.getAll({ userId: effectiveUserId }),
+        recurringApi.getAll({ userId: effectiveUserId }),
+        accountsApi.getAll({ userId: effectiveUserId }),
       ]);
 
       const start = startOfMonth(month);
@@ -85,7 +86,8 @@ export default function Dashboard() {
     const totalBudget = sumBy(budgetsList, 'amount');
     const budgetRemaining = totalBudget - totalSpent;
     const now = new Date();
-    const [selYear, selMonth] = month.split('-').map(Number);
+    const selYear = month.getFullYear();
+    const selMonth = month.getMonth() + 1;
     const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth() + 1;
     const daysPassed = isCurrentMonth
       ? now.getDate()
@@ -148,6 +150,78 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [budgetsList, transactions]);
 
+  // Smart alerts
+  const smartAlerts = useMemo(() => {
+    const alerts = [];
+
+    // Budget alerts
+    budgetProgress.forEach((b) => {
+      if (b.pct >= 100) {
+        alerts.push({ type: 'danger', icon: AlertTriangle, text: `${getCategoryById(b.category).name} budget exceeded (${b.pct}%)`, link: '/budgets' });
+      } else if (b.pct >= 80) {
+        alerts.push({ type: 'warning', icon: AlertTriangle, text: `${getCategoryById(b.category).name} budget at ${b.pct}%`, link: '/budgets' });
+      }
+    });
+
+    // Upcoming bill in next 2 days
+    const today = new Date().getDate();
+    recurringList.forEach((r) => {
+      const billingDay = r.billingDay || 1;
+      const daysUntil = billingDay >= today ? billingDay - today : 30 - today + billingDay;
+      if (daysUntil <= 2 && daysUntil >= 0) {
+        const label = daysUntil === 0 ? 'today' : daysUntil === 1 ? 'tomorrow' : 'in 2 days';
+        alerts.push({ type: 'info', icon: Bell, text: `${r.name} is due ${label}`, link: '/recurring' });
+      }
+    });
+
+    // Month-over-month spending comparison (at same point in month)
+    if (stats.totalSpent > 0 && prevTransactions.length > 0) {
+      const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
+      const dayOfMonth = new Date().getDate();
+      const prevAtThisPoint = sumBy(
+        prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
+        'amount'
+      );
+      if (prevAtThisPoint > 0) {
+        const diff = ((stats.totalSpent - prevAtThisPoint) / prevAtThisPoint) * 100;
+        if (diff > 30) {
+          alerts.push({ type: 'warning', icon: TrendingUp, text: `Spending ${Math.round(diff)}% higher than last month at this point` });
+        }
+      }
+    }
+
+    return alerts.slice(0, 3);
+  }, [budgetProgress, recurringList, stats, prevTransactions]);
+
+  // No-spend days count
+  const noSpendDays = useMemo(() => {
+    const expenses = transactions.filter((t) => t.type === 'expense');
+    const spendDates = new Set(expenses.map((t) => t.date));
+    const start = startOfMonth(month);
+    const today = new Date();
+    const end = today < endOfMonth(month) ? today : endOfMonth(month);
+    const days = eachDayOfInterval({ start, end });
+    return days.filter((d) => !spendDates.has(format(d, 'yyyy-MM-dd'))).length;
+  }, [transactions, month]);
+
+  // Month comparison text
+  const monthComparison = useMemo(() => {
+    if (prevTransactions.length === 0 || stats.totalSpent === 0) return null;
+    const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
+    const dayOfMonth = new Date().getDate();
+    const prevAtThisPoint = sumBy(
+      prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
+      'amount'
+    );
+    if (prevAtThisPoint === 0) return null;
+    const diff = ((stats.totalSpent - prevAtThisPoint) / prevAtThisPoint) * 100;
+    return {
+      pct: Math.abs(Math.round(diff)),
+      direction: diff > 0 ? 'more' : 'less',
+      isGood: diff <= 0,
+    };
+  }, [stats, prevTransactions]);
+
   const recentTx = useMemo(() => sortByDate(transactions).slice(0, 6), [transactions]);
 
   const upcomingBills = useMemo(() => {
@@ -189,6 +263,43 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Smart Alerts */}
+      {smartAlerts.length > 0 && (
+        <div className="space-y-2">
+          {smartAlerts.map((alert, i) => (
+            <Link
+              key={i}
+              to={alert.link || '#'}
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                alert.type === 'danger' ? 'bg-danger/8 text-danger border border-danger/15 hover:bg-danger/12' :
+                alert.type === 'warning' ? 'bg-warning/8 text-warning border border-warning/15 hover:bg-warning/12' :
+                'bg-info/8 text-info border border-info/15 hover:bg-info/12'
+              }`}
+            >
+              <alert.icon size={14} className="shrink-0" />
+              <span className="flex-1">{alert.text}</span>
+              <ArrowRight size={12} className="shrink-0 opacity-50" />
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+        <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-colors shrink-0">
+          <Zap size={16} /> Quick Add
+        </Link>
+        <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
+          <Camera size={16} /> Scan Receipt
+        </Link>
+        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
+          <RotateCcw size={16} /> Recurring
+        </Link>
+        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
+          <TrendingUp size={16} /> Analytics
+        </Link>
+      </div>
+
       {/* Stat cards — horizontal scroll on mobile, grid on desktop */}
       <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
         <StatCard label="Total Spent" value={formatCurrency(stats.totalSpent, currency)} trend={stats.spentTrend} icon={TrendingDown} accent="#e11d48" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
@@ -199,7 +310,7 @@ export default function Dashboard() {
         <StatCard label="Net Worth" value={formatCurrency(stats.netWorth, currency)} icon={Landmark} accent="#6366f1" hide={hidden} compact className="min-w-[140px] shrink-0 md:min-w-0 md:shrink snap-start" />
       </div>
 
-      {/* In My Pocket — compact on mobile */}
+      {/* In My Pocket + Month Comparison + No-spend days */}
       <div className="card relative overflow-hidden border-success/20 !p-3 md:!p-5">
         <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
         <div className="relative flex items-center justify-between">
@@ -210,6 +321,20 @@ export default function Dashboard() {
           <p className="text-2xl md:text-3xl font-heading font-bold text-success money">
             {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
           </p>
+        </div>
+        {/* Month comparison + No-spend days */}
+        <div className="relative flex items-center gap-3 mt-2 pt-2 border-t border-success/10">
+          {monthComparison && (
+            <span className={`flex items-center gap-1 text-[11px] font-medium ${monthComparison.isGood ? 'text-success' : 'text-warning'}`}>
+              {monthComparison.isGood ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+              {monthComparison.pct}% {monthComparison.direction} than last month
+            </span>
+          )}
+          {noSpendDays > 0 && (
+            <span className="flex items-center gap-1 text-[11px] font-medium text-accent-600 dark:text-accent-400">
+              <Flame size={12} /> {noSpendDays} no-spend day{noSpendDays !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       </div>
 

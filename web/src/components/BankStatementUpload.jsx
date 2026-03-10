@@ -2,8 +2,10 @@ import { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, X, Loader2, Building2, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
 import { processBankStatement } from '../lib/ai';
 import { formatCurrency } from '../lib/helpers';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function BankStatementUpload({ onResult, onError }) {
+  const { effectiveUserId } = useAuth();
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -42,7 +44,7 @@ export default function BankStatementUpload({ onResult, onError }) {
         setProgress(25);
         setStatus('AI analyzing bank statement...');
 
-        const results = await processBankStatement(base64Data);
+        const results = await processBankStatement(base64Data, { userId: effectiveUserId });
 
         setProgress(90);
         setStatus('Preparing transactions...');

@@ -1,0 +1,208 @@
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { families as familiesApi, familyMembers as membersApi } from '../lib/api';
+import { useAuth } from './AuthContext';
+import { generateId } from '../lib/helpers';
+
+const FamilyContext = createContext(null);
+
+const FAMILY_EMOJIS = ['👨‍👩‍👧‍👦', '🏠', '👫', '👪', '🤝', '💜', '🏡', '👨‍👩‍👧'];
+const MEMBER_EMOJIS = ['😊', '😎', '🤓', '😄', '🥰', '🤗', '🦊', '🐻', '🐱', '🦁', '🐼', '🐵'];
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+export function FamilyProvider({ children }) {
+  const { user, effectiveUserId } = useAuth();
+  const [myFamilies, setMyFamilies] = useState([]);
+  const [activeFamily, setActiveFamily] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load families on mount
+  useEffect(() => {
+    loadFamilies();
+  }, [effectiveUserId]);
+
+  const loadFamilies = useCallback(async () => {
+    setLoading(true);
+    try {
+      const allFamilies = await familiesApi.getAll();
+      const allMembers = await membersApi.getAll();
+
+      // Families where the current user is a member
+      const myMembershipIds = new Set(
+        allMembers.filter((m) => m.userId === effectiveUserId).map((m) => m.familyId)
+      );
+      const userFamilies = allFamilies.filter((f) => myMembershipIds.has(f.id));
+      setMyFamilies(userFamilies);
+
+      // Restore active family from sessionStorage
+      const savedActive = sessionStorage.getItem('bp_activeFamily');
+      if (savedActive && userFamilies.find((f) => f.id === savedActive)) {
+        const family = userFamilies.find((f) => f.id === savedActive);
+        setActiveFamily(family);
+        setMembers(allMembers.filter((m) => m.familyId === family.id));
+      } else if (userFamilies.length > 0) {
+        setActiveFamily(userFamilies[0]);
+        setMembers(allMembers.filter((m) => m.familyId === userFamilies[0].id));
+      }
+    } catch (err) {
+      console.error('Failed to load families:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [effectiveUserId]);
+
+  const createFamily = useCallback(async (name, emoji) => {
+    const family = {
+      id: generateId(),
+      name,
+      emoji: emoji || FAMILY_EMOJIS[Math.floor(Math.random() * FAMILY_EMOJIS.length)],
+      createdBy: effectiveUserId,
+      inviteCode: generateInviteCode(),
+      defaultCurrency: user?.defaultCurrency || 'RON',
+      createdAt: new Date().toISOString(),
+    };
+
+    await familiesApi.create(family);
+
+    // Add creator as admin member
+    const member = {
+      id: generateId(),
+      familyId: family.id,
+      userId: effectiveUserId,
+      role: 'admin',
+      displayName: user?.name || 'Me',
+      emoji: MEMBER_EMOJIS[0],
+      joinedAt: new Date().toISOString(),
+    };
+    await membersApi.create(member);
+
+    setMyFamilies((prev) => [...prev, family]);
+    setActiveFamily(family);
+    setMembers([member]);
+    sessionStorage.setItem('bp_activeFamily', family.id);
+
+    return family;
+  }, [effectiveUserId, user]);
+
+  const joinFamily = useCallback(async (inviteCode) => {
+    // Find family by invite code
+    const allFamilies = await familiesApi.getAll();
+    const family = allFamilies.find((f) => f.inviteCode === inviteCode.toUpperCase().trim());
+    if (!family) throw new Error('Invalid invite code');
+
+    // Check if already a member
+    const allMembers = await membersApi.getAll();
+    const existing = allMembers.find((m) => m.familyId === family.id && m.userId === effectiveUserId);
+    if (existing) throw new Error('You are already a member of this family');
+
+    // Add as member
+    const member = {
+      id: generateId(),
+      familyId: family.id,
+      userId: effectiveUserId,
+      role: 'member',
+      displayName: user?.name || 'Me',
+      emoji: MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)],
+      joinedAt: new Date().toISOString(),
+    };
+    await membersApi.create(member);
+
+    const familyMembers = allMembers.filter((m) => m.familyId === family.id);
+    setMyFamilies((prev) => [...prev, family]);
+    setActiveFamily(family);
+    setMembers([...familyMembers, member]);
+    sessionStorage.setItem('bp_activeFamily', family.id);
+
+    return family;
+  }, [effectiveUserId, user]);
+
+  const switchFamily = useCallback(async (familyId) => {
+    if (!familyId) {
+      // Switch to personal mode
+      setActiveFamily(null);
+      setMembers([]);
+      sessionStorage.removeItem('bp_activeFamily');
+      return;
+    }
+
+    const family = myFamilies.find((f) => f.id === familyId);
+    if (!family) return;
+
+    const allMembers = await membersApi.getAll();
+    setActiveFamily(family);
+    setMembers(allMembers.filter((m) => m.familyId === family.id));
+    sessionStorage.setItem('bp_activeFamily', family.id);
+  }, [myFamilies]);
+
+  const updateFamily = useCallback(async (changes) => {
+    if (!activeFamily) return;
+    const updated = { ...activeFamily, ...changes };
+    await familiesApi.update(updated);
+    setActiveFamily(updated);
+    setMyFamilies((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+  }, [activeFamily]);
+
+  const leaveFamily = useCallback(async (familyId) => {
+    const allMembers = await membersApi.getAll();
+    const myMembership = allMembers.find((m) => m.familyId === familyId && m.userId === effectiveUserId);
+    if (!myMembership) return;
+
+    await membersApi.remove(myMembership.id);
+
+    setMyFamilies((prev) => prev.filter((f) => f.id !== familyId));
+    if (activeFamily?.id === familyId) {
+      setActiveFamily(null);
+      setMembers([]);
+      sessionStorage.removeItem('bp_activeFamily');
+    }
+  }, [effectiveUserId, activeFamily]);
+
+  const updateMember = useCallback(async (memberId, changes) => {
+    const member = members.find((m) => m.id === memberId);
+    if (!member) return;
+    const updated = { ...member, ...changes };
+    await membersApi.update(updated);
+    setMembers((prev) => prev.map((m) => (m.id === memberId ? updated : m)));
+  }, [members]);
+
+  const isFamilyMode = !!activeFamily;
+  const myMembership = members.find((m) => m.userId === effectiveUserId);
+  const isAdmin = myMembership?.role === 'admin';
+
+  return (
+    <FamilyContext.Provider
+      value={{
+        myFamilies,
+        activeFamily,
+        members,
+        loading,
+        isFamilyMode,
+        isAdmin,
+        myMembership,
+        createFamily,
+        joinFamily,
+        switchFamily,
+        updateFamily,
+        leaveFamily,
+        updateMember,
+        loadFamilies,
+        FAMILY_EMOJIS,
+        MEMBER_EMOJIS,
+      }}
+    >
+      {children}
+    </FamilyContext.Provider>
+  );
+}
+
+export function useFamily() {
+  const ctx = useContext(FamilyContext);
+  if (!ctx) throw new Error('useFamily must be used within FamilyProvider');
+  return ctx;
+}

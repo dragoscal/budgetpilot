@@ -5,10 +5,11 @@ import { formatCurrency, getCategoryById, sumBy, sortByDate } from '../lib/helpe
 import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import TransactionRow from '../components/TransactionRow';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday } from 'date-fns';
 
 export default function CalendarPage() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
   const [recurringItems, setRecurring] = useState([]);
@@ -22,8 +23,8 @@ export default function CalendarPage() {
       setLoading(true);
       try {
         const [allTx, rec] = await Promise.all([
-          txApi.getAll({ userId: 'local' }),
-          recurringApi.getAll({ userId: 'local' }),
+          txApi.getAll({ userId: effectiveUserId }),
+          recurringApi.getAll({ userId: effectiveUserId }),
         ]);
         const start = startOfMonth(month);
         const end = endOfMonth(month);
@@ -55,6 +56,8 @@ export default function CalendarPage() {
   const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Shift Sunday to end
 
   const selectedDayData = selectedDay ? dayData[selectedDay] : null;
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">

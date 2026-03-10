@@ -1,5 +1,71 @@
-import { Search, Filter, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, X, ChevronDown } from 'lucide-react';
 import { CATEGORIES } from '../lib/constants';
+
+function CategoryDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const current = value ? CATEGORIES.find((c) => c.id === value) : null;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="input w-auto min-w-[130px] flex items-center gap-2 text-left"
+      >
+        {current ? (
+          <>
+            <span className="shrink-0">{current.icon}</span>
+            <span className="truncate text-sm">{current.name}</span>
+          </>
+        ) : (
+          <span className="text-cream-400 text-sm">All categories</span>
+        )}
+        <ChevronDown size={14} className="ml-auto text-cream-400 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 right-0 sm:left-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden" style={{ minWidth: '200px', maxHeight: '320px' }}>
+          <div className="overflow-y-auto" style={{ maxHeight: '320px' }}>
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left ${
+                !value ? 'bg-cream-100 dark:bg-dark-border font-medium' : ''
+              }`}
+            >
+              <span className="text-cream-400">All categories</span>
+            </button>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => { onChange(cat.id); setOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left ${
+                  value === cat.id ? 'bg-cream-100 dark:bg-dark-border font-medium' : ''
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SearchFilter({ search, onSearch, category, onCategory, type, onType, showFilters = true }) {
   return (
@@ -21,12 +87,7 @@ export default function SearchFilter({ search, onSearch, category, onCategory, t
       </div>
       {showFilters && (
         <div className="flex gap-2">
-          <select className="input w-auto min-w-[130px]" value={category} onChange={(e) => onCategory(e.target.value)}>
-            <option value="">All categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <CategoryDropdown value={category} onChange={onCategory} />
           <select className="input w-auto min-w-[110px]" value={type} onChange={(e) => onType(e.target.value)}>
             <option value="">All types</option>
             <option value="expense">Expenses</option>

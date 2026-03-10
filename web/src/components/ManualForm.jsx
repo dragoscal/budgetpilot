@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
 import { generateId, formatDateISO } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
+import { useAuth } from '../contexts/AuthContext';
 import CategoryPicker from './CategoryPicker';
+import TagInput from './TagInput';
 
 export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add transaction' }) {
+  const { effectiveUserId } = useAuth();
   const [type, setType] = useState(initial.type || 'expense');
   const [merchant, setMerchant] = useState(initial.merchant || '');
   const [amount, setAmount] = useState(initial.amount || '');
@@ -13,7 +16,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
   const [subcategory, setSubcategory] = useState(initial.subcategory || null);
   const [date, setDate] = useState(initial.date || formatDateISO(new Date()));
   const [description, setDescription] = useState(initial.description || '');
-  const [tags, setTags] = useState(initial.tags?.join(', ') || '');
+  const [tags, setTags] = useState(initial.tags || []);
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState([]);
@@ -102,9 +105,9 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       subcategory: subcategory || null,
       date,
       description: description.trim(),
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: tags.filter(Boolean),
       source: initial.source || 'manual',
-      userId: 'local',
+      userId: effectiveUserId,
       createdAt: initial.createdAt || new Date().toISOString(),
     };
 
@@ -113,7 +116,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
       setMerchant('');
       setAmount('');
       setDescription('');
-      setTags('');
+      setTags([]);
       setSubcategory(null);
       setCategoryAutoSet(false);
     }
@@ -203,8 +206,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel = 'Add 
         </div>
 
         <div className="col-span-2">
-          <label className="label">Tags (comma-separated)</label>
-          <input className="input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. vacation, business" />
+          <TagInput tags={tags} onChange={setTags} userId={effectiveUserId} />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { loans as loansApi, loanPayments as lpApi } from '../lib/api';
 import { formatCurrency, generateId, formatDate, formatDateISO } from '../lib/helpers';
 import { LOAN_TYPES, LOAN_STATUSES, CURRENCIES } from '../lib/constants';
@@ -20,6 +21,7 @@ const EMPTY_PAYMENT = { amount: '', principalPortion: '', interestPortion: '', d
 
 export default function Loans() {
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const [loansList, setLoansList] = useState([]);
   const [payments, setPayments] = useState({});
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ export default function Loans() {
         paymentDay: Number(form.paymentDay) || 1,
         status: remaining <= 0 ? 'paid_off' : 'active',
         notes: form.notes.trim() || null,
-        userId: 'local',
+        userId: effectiveUserId,
         createdAt: editingId ? undefined : now,
         updatedAt: now,
       };
@@ -161,12 +163,20 @@ export default function Loans() {
     e.preventDefault();
     if (!paymentForm.amount || Number(paymentForm.amount) <= 0) return toast.error('Enter payment amount');
 
+    const loan = loansList.find((l) => l.id === loanId);
+    const amount = Number(paymentForm.amount);
+    const principal = Number(paymentForm.principalPortion) || 0;
+    const interest = Number(paymentForm.interestPortion) || 0;
+    const effectivePrincipal = principal || (interest ? amount - interest : amount);
+
+    // Prevent overpaying beyond remaining balance
+    if (loan && effectivePrincipal > loan.remainingBalance) {
+      return toast.error(`Principal portion (${formatCurrency(effectivePrincipal, currency)}) exceeds remaining balance (${formatCurrency(loan.remainingBalance, currency)})`);
+    }
+
     setSavingPayment(true);
     try {
       const now = new Date().toISOString();
-      const amount = Number(paymentForm.amount);
-      const principal = Number(paymentForm.principalPortion) || 0;
-      const interest = Number(paymentForm.interestPortion) || 0;
 
       await lpApi.create({
         id: generateId(),
@@ -176,15 +186,13 @@ export default function Loans() {
         interestPortion: interest || (principal ? amount - principal : 0),
         date: paymentForm.date,
         note: paymentForm.note.trim() || null,
-        userId: 'local',
+        userId: effectiveUserId,
         createdAt: now,
         updatedAt: now,
       });
 
       // Update remaining balance
-      const loan = loansList.find((l) => l.id === loanId);
       if (loan) {
-        const effectivePrincipal = principal || (interest ? amount - interest : amount);
         const newRemaining = Math.max(0, loan.remainingBalance - effectivePrincipal);
         await loansApi.update({
           ...loan,
@@ -208,12 +216,17 @@ export default function Loans() {
   const deletePayment = async (payment, loan) => {
     try {
       await lpApi.remove(payment.id);
-      // Restore remaining balance
-      const restored = loan.remainingBalance + (payment.principalPortion || payment.amount);
+      // Restore remaining balance, capped at principal
+      const restored = Math.min(
+        loan.remainingBalance + (payment.principalPortion || payment.amount),
+        loan.principalAmount
+      );
+      // Recalculate status based on new balance
+      const newStatus = restored <= 0 ? 'paid_off' : restored >= loan.principalAmount ? 'active' : loan.status === 'paid_off' ? 'active' : loan.status;
       await loansApi.update({
         ...loan,
-        remainingBalance: Math.min(restored, loan.principalAmount),
-        status: 'active',
+        remainingBalance: restored,
+        status: newStatus,
         updatedAt: new Date().toISOString(),
       });
       toast.success('Payment removed');

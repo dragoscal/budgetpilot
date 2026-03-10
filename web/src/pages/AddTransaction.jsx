@@ -36,6 +36,11 @@ export default function AddTransaction() {
   // Undo state for deleted items
   const [deletedItem, setDeletedItem] = useState(null); // { txIdx, itemIdx, item, timeout }
 
+  // Cleanup undo timeout on unmount
+  useEffect(() => {
+    return () => { if (deletedItem?.timeout) clearTimeout(deletedItem.timeout); };
+  }, [deletedItem]);
+
   // Add new item state
   const [addingItem, setAddingItem] = useState(null); // txIdx or null
   const [newItem, setNewItem] = useState({ name: '', price: '', qty: '1', category: 'other' });

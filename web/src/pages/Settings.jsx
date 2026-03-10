@@ -9,8 +9,9 @@ import { exportData, importData, clearData } from '../lib/api';
 import { deleteAccount } from '../lib/auth';
 import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
+import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2 } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Key, Globe, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -42,6 +43,10 @@ export default function SettingsPage() {
   const [aiTestResult, setAiTestResult] = useState(null);
   const [aiTesting, setAiTesting] = useState(false);
   const [keySyncStatus, setKeySyncStatus] = useState(null); // null | 'syncing' | 'synced' | 'local'
+  const [exchangeRates, setExchangeRates] = useState({});
+  const [rateOverrides, setRateOverrides] = useState({});
+  const [ratesUpdatedAt, setRatesUpdatedAt] = useState(null);
+  const [ratesFetching, setRatesFetching] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -61,6 +66,16 @@ export default function SettingsPage() {
     setWebhookUrl(settings.webhookUrl || '');
     setDefaultCurrency(settings.defaultCurrency || user?.defaultCurrency || 'RON');
     setUserName(settings.userName || user?.name || '');
+
+    // Load exchange rates
+    try {
+      const rates = await getRates(settings.defaultCurrency || 'RON');
+      setExchangeRates(rates);
+      const overrides = await getManualOverrides();
+      setRateOverrides(overrides);
+      const updAt = await getRatesUpdatedAt();
+      setRatesUpdatedAt(updAt);
+    } catch { /* offline — use defaults */ }
   };
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === aiProvider) || AI_PROVIDERS[0];
@@ -522,10 +537,100 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Household - future */}
-      <div className="card opacity-60">
-        <h3 className="section-title">Household</h3>
-        <p className="text-sm text-cream-500">Coming soon — invite family members to share budgets and goals.</p>
+      {/* Exchange Rates */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><DollarSign size={14} /> Exchange Rates</h3>
+        <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
+          Auto-fetched rates for multi-currency conversion. Override any rate manually.
+        </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-cream-500">
+              {ratesUpdatedAt ? `Last updated: ${new Date(ratesUpdatedAt).toLocaleString()}` : 'Using default rates'}
+            </div>
+            <button
+              onClick={async () => {
+                setRatesFetching(true);
+                try {
+                  const rates = await fetchRates(defaultCurrency);
+                  const overrides = await getManualOverrides();
+                  setExchangeRates({ ...rates, ...overrides });
+                  const updAt = await getRatesUpdatedAt();
+                  setRatesUpdatedAt(updAt);
+                  toast.success('Exchange rates updated');
+                } catch {
+                  toast.error('Failed to fetch rates — check connection');
+                } finally {
+                  setRatesFetching(false);
+                }
+              }}
+              disabled={ratesFetching}
+              className="btn-secondary text-xs flex items-center gap-1.5"
+            >
+              <RefreshCw size={12} className={ratesFetching ? 'animate-spin' : ''} />
+              {ratesFetching ? 'Fetching...' : 'Refresh rates'}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {CURRENCIES.filter(c => c.code !== defaultCurrency).map((c) => {
+              const rate = exchangeRates[c.code];
+              const hasOverride = rateOverrides[c.code] !== undefined;
+              return (
+                <div key={c.code} className="flex items-center gap-3">
+                  <span className="text-sm font-medium w-12">{c.code}</span>
+                  <span className="text-xs text-cream-500 flex-1">
+                    1 {defaultCurrency} = {rate ? rate.toFixed(4) : '—'} {c.code}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    className="input w-28 text-right text-sm"
+                    value={hasOverride ? rateOverrides[c.code] : ''}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      if (val === '' || val === null) {
+                        await setManualOverride(c.code, null);
+                        const newOverrides = { ...rateOverrides };
+                        delete newOverrides[c.code];
+                        setRateOverrides(newOverrides);
+                        const rates = await getRates(defaultCurrency);
+                        setExchangeRates(rates);
+                      } else {
+                        const num = parseFloat(val);
+                        if (!isNaN(num) && num > 0) {
+                          await setManualOverride(c.code, num);
+                          setRateOverrides({ ...rateOverrides, [c.code]: num });
+                          setExchangeRates({ ...exchangeRates, [c.code]: num });
+                        }
+                      }
+                    }}
+                    placeholder="Override"
+                  />
+                  {hasOverride && (
+                    <span className="text-[10px] text-warning font-medium">manual</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {Object.keys(rateOverrides).length > 0 && (
+            <button
+              onClick={async () => {
+                await clearOverrides();
+                setRateOverrides({});
+                const rates = await getRates(defaultCurrency);
+                setExchangeRates(rates);
+                toast.success('Overrides cleared');
+              }}
+              className="btn-ghost text-xs text-warning"
+            >
+              Clear all manual overrides
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Danger Zone — Delete Account */}

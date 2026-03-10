@@ -10,7 +10,7 @@ import EmptyState from '../components/EmptyState';
 import { Target, Plus } from 'lucide-react';
 
 export default function Goals() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [goalsList, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function Goals() {
   const loadGoals = async () => {
     setLoading(true);
     try {
-      const data = await goalsApi.getAll({ userId: 'local' });
+      const data = await goalsApi.getAll({ userId: effectiveUserId });
       setGoals(data);
     } catch (err) {
       toast.error('Failed to load goals');
@@ -50,7 +50,7 @@ export default function Goals() {
         currentAmount: Number(form.currentAmount) || 0,
         interestRate: form.interestRate ? Number(form.interestRate) : undefined,
         minimumPayment: form.minimumPayment ? Number(form.minimumPayment) : undefined,
-        userId: 'local',
+        userId: effectiveUserId,
       };
       if (editGoal) {
         await goalsApi.update(editGoal.id, goalData);

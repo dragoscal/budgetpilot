@@ -1,6 +1,7 @@
 import { getSetting, add, getAll } from './storage';
 import { MERCHANT_CATEGORY_MAP, CATEGORIES, SUBCATEGORIES, AI_PROVIDERS } from './constants';
 import { generateId, formatDateISO } from './helpers';
+import { extractHashtags } from './tagHelpers';
 
 // ─── ENHANCED RECEIPT SYSTEM PROMPT ───────────────────────
 const RECEIPT_SYSTEM_PROMPT = `You are an expert receipt and expense parser for a Romanian budgeting app called BudgetPilot. You excel at reading receipts in any language (especially Romanian) and categorizing every item.
@@ -260,7 +261,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
 }
 
 // ─── RECEIPT PROCESSING ───────────────────────────────────
-export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
+export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { userId = 'local' } = {}) {
   const result = await callAI([
     {
       role: 'user',
@@ -277,7 +278,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
     },
   ], RECEIPT_SYSTEM_PROMPT, 4000);
 
-  const normalized = normalizeReceiptResult(result);
+  const normalized = normalizeReceiptResult(result, userId);
 
   // Save to receipt history
   try {
@@ -288,7 +289,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg') {
       warnings: result.warnings || [],
       summary: result.summary || '',
       processedAt: new Date().toISOString(),
-    });
+    }, userId);
   } catch (e) { /* silently fail */ }
 
   return normalized;
@@ -354,7 +355,7 @@ IMPORTANT:
 - If a transaction description is unclear, set category to "other" and confidence low
 - For card payments, extract the actual merchant name from "POS <merchant>" format`;
 
-export async function processBankStatement(pdfBase64) {
+export async function processBankStatement(pdfBase64, { userId = 'local' } = {}) {
   const result = await callAI([
     {
       role: 'user',
@@ -371,10 +372,10 @@ export async function processBankStatement(pdfBase64) {
     },
   ], BANK_STATEMENT_PROMPT, 8000);
 
-  return normalizeBankStatementResult(result);
+  return normalizeBankStatementResult(result, userId);
 }
 
-function normalizeBankStatementResult(result) {
+function normalizeBankStatementResult(result, userId = 'local') {
   const txns = result.transactions || [];
   const today = formatDateISO(new Date());
 
@@ -392,6 +393,8 @@ function normalizeBankStatementResult(result) {
     confidence: t.confidence || 0.7,
     needsReview: (t.confidence || 0.7) < 0.7,
     reference: t.reference || null,
+    userId,
+    createdAt: new Date().toISOString(),
   }));
 
   return {
@@ -411,16 +414,30 @@ function normalizeBankStatementResult(result) {
 }
 
 // ─── NLP PROCESSING ───────────────────────────────────────
-export async function processNaturalLanguage(text) {
+export async function processNaturalLanguage(text, { userId = 'local' } = {}) {
+  // Extract #hashtags before sending to AI
+  const { cleanText, tags: extractedTags } = extractHashtags(text);
+  const inputText = cleanText || text;
+
   const today = formatDateISO(new Date());
   const result = await callAI([
     {
       role: 'user',
-      content: `Parse this expense/income: "${text}". Today is ${today}. Return JSON.`,
+      content: `Parse this expense/income: "${inputText}". Today is ${today}. Return JSON.`,
     },
   ], NLP_SYSTEM_PROMPT, 1000);
 
-  return normalizeNLPResult(result);
+  const normalized = normalizeNLPResult(result, userId);
+
+  // Merge extracted #tags into each transaction's tags
+  if (extractedTags.length > 0) {
+    return normalized.map((t) => ({
+      ...t,
+      tags: [...new Set([...(t.tags || []), ...extractedTags])],
+    }));
+  }
+
+  return normalized;
 }
 
 // ─── MONTHLY SUMMARY ──────────────────────────────────────
@@ -451,7 +468,7 @@ Include: total spent, top categories, budget status, savings progress, tips. Kee
 }
 
 // ─── NORMALIZE RESULTS ────────────────────────────────────
-function normalizeReceiptResult(result) {
+function normalizeReceiptResult(result, userId = 'local') {
   const receipt = result.receipt || {};
   const rawTxns = result.transactions || [result];
 
@@ -506,7 +523,7 @@ function normalizeReceiptResult(result) {
       items,
       notes: t.notes || '',
       tags: [],
-      userId: 'local',
+      userId,
       createdAt: new Date().toISOString(),
     };
   });
@@ -520,7 +537,7 @@ function normalizeReceiptResult(result) {
   };
 }
 
-function normalizeNLPResult(result) {
+function normalizeNLPResult(result, userId = 'local') {
   const txns = result.transactions || [result];
   return txns.map((t) => ({
     id: generateId(),
@@ -537,7 +554,7 @@ function normalizeNLPResult(result) {
     items: [],
     notes: '',
     tags: [],
-    userId: 'local',
+    userId,
     createdAt: new Date().toISOString(),
   }));
 }
@@ -560,11 +577,11 @@ function generateLocalSummary(transactions, budgets) {
 }
 
 // ─── RECEIPT HISTORY ──────────────────────────────────────
-async function saveReceiptHistory(receiptData) {
+async function saveReceiptHistory(receiptData, userId = 'local') {
   await add('receipts', {
     id: generateId(),
     ...receiptData,
-    userId: 'local',
+    userId,
   });
 }
 

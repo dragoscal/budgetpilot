@@ -4,15 +4,16 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CATEGORIES, CURRENCIES, RECURRING_FREQUENCIES } from '../lib/constants';
 import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
-import { detectRecurringPatterns } from '../lib/smartFeatures';
+import { detectRecurringPatterns, auditSubscriptions } from '../lib/smartFeatures';
 import RecurringRow from '../components/RecurringRow';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { RotateCcw, Plus, Sparkles, Check, X } from 'lucide-react';
+import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 
 export default function Recurring() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,9 @@ export default function Recurring() {
   const [editItem, setEditItem] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [dismissedSuggestions, setDismissedSuggestions] = useState(new Set());
+  const [showAudit, setShowAudit] = useState(false);
+  const [audit, setAudit] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '' };
   const [form, setForm] = useState(defaultForm);
@@ -31,7 +35,7 @@ export default function Recurring() {
   const loadItems = async () => {
     setLoading(true);
     try {
-      const data = await recurringApi.getAll({ userId: 'local' });
+      const data = await recurringApi.getAll({ userId: effectiveUserId });
       setItems(data);
       const patterns = await detectRecurringPatterns();
       setSuggestions(patterns);
@@ -65,7 +69,7 @@ export default function Recurring() {
         frequency: form.frequency || 'monthly',
         endDate: form.endDate || null,
         active: true,
-        userId: 'local',
+        userId: effectiveUserId,
       };
       if (editItem) {
         await recurringApi.update(editItem.id, data);
@@ -118,7 +122,7 @@ export default function Recurring() {
         billingDay: suggestion.billingDay,
         frequency: 'monthly',
         active: true,
-        userId: 'local',
+        userId: effectiveUserId,
         autoDetected: true,
         createdAt: new Date().toISOString(),
       });
@@ -137,6 +141,8 @@ export default function Recurring() {
     setForm({ ...defaultForm, currency });
     setShowForm(true);
   };
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
@@ -227,6 +233,92 @@ export default function Recurring() {
       ) : !loading && activeSuggestions.length === 0 ? (
         <EmptyState icon={RotateCcw} title="No recurring items" description="Track subscriptions and recurring bills" action="Add recurring" onAction={openNewForm} />
       ) : null}
+
+      {/* Subscription Audit */}
+      {items.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search size={14} className="text-accent-500" />
+              <h3 className="section-title mb-0">Subscription Audit</h3>
+            </div>
+            <button
+              onClick={async () => {
+                if (showAudit) { setShowAudit(false); return; }
+                setAuditLoading(true);
+                try {
+                  const result = await auditSubscriptions();
+                  setAudit(result);
+                  setShowAudit(true);
+                } catch { toast.error('Audit failed'); }
+                finally { setAuditLoading(false); }
+              }}
+              className="btn-secondary text-xs flex items-center gap-1.5"
+              disabled={auditLoading}
+            >
+              <Search size={12} />
+              {auditLoading ? 'Analyzing...' : showAudit ? 'Hide audit' : 'Run audit'}
+            </button>
+          </div>
+
+          {showAudit && audit && (
+            <div className="mt-4 space-y-3">
+              {/* Audit summary */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Monthly</p>
+                  <p className="text-sm font-heading font-bold money">{formatCurrency(audit.totalMonthly, currency)}</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Annual</p>
+                  <p className="text-sm font-heading font-bold money">{formatCurrency(audit.totalAnnual, currency)}</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-cream-50 dark:bg-cream-800/20">
+                  <p className="text-[10px] text-cream-500 uppercase tracking-wider">Issues</p>
+                  <p className={`text-sm font-heading font-bold ${audit.issueCount > 0 ? 'text-warning' : 'text-success'}`}>
+                    {audit.issueCount}
+                  </p>
+                </div>
+              </div>
+
+              {/* Audit items */}
+              <div className="space-y-2">
+                {audit.items.map((item) => {
+                  const cat = getCategoryById(item.category);
+                  return (
+                    <div key={item.id} className={`p-3 rounded-lg border ${item.issues.length > 0 ? 'border-warning/30 bg-warning/5' : 'border-cream-200 dark:border-dark-border'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span>{cat.icon}</span>
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium money">{formatCurrency(item.monthlyCost, item.currency)}/mo</p>
+                          <p className="text-[10px] text-cream-500">{formatCurrency(item.annualCost, item.currency)}/yr</p>
+                        </div>
+                      </div>
+                      {item.issues.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {item.issues.map((issue, j) => (
+                            <div key={j} className="flex items-center gap-1.5 text-xs">
+                              {issue.severity === 'warning' ? (
+                                <AlertTriangle size={12} className="text-warning shrink-0" />
+                              ) : (
+                                <TrendingUp size={12} className="text-info shrink-0" />
+                              )}
+                              <span className={issue.severity === 'warning' ? 'text-warning' : 'text-info'}>{issue.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Form Modal */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} title={editItem ? 'Edit recurring' : 'New recurring'}>

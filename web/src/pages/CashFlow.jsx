@@ -3,15 +3,20 @@ import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf } from '../lib/helpers';
 import StatCard from '../components/StatCard';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { forecastCashFlow } from '../lib/forecasting';
 
 export default function CashFlow() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [allTx, setAllTx] = useState([]);
   const [recurringItems, setRecurring] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('overview'); // 'overview' | 'forecast'
+  const [forecast, setForecast] = useState(null);
+  const [forecastDays, setForecastDays] = useState(90);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
@@ -19,15 +24,18 @@ export default function CashFlow() {
       setLoading(true);
       try {
         const [tx, rec] = await Promise.all([
-          txApi.getAll({ userId: 'local' }),
-          recurringApi.getAll({ userId: 'local' }),
+          txApi.getAll({ userId: effectiveUserId }),
+          recurringApi.getAll({ userId: effectiveUserId }),
         ]);
         setAllTx(tx);
         setRecurring(rec.filter((r) => r.active !== false));
+        // Load forecast
+        const fc = await forecastCashFlow({ userId: effectiveUserId, days: forecastDays, defaultCurrency: currency });
+        setForecast(fc);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [forecastDays]);
 
   // Current month stats
   const now = new Date();
@@ -79,10 +87,47 @@ export default function CashFlow() {
   const recurringIncome = sumBy(recurringItems.filter((r) => r.category === 'income'), 'amount');
   const recurringExpenses = sumBy(recurringItems.filter((r) => r.category !== 'income'), 'amount');
 
+  // Forecast chart data — sample every 3rd day for readability
+  const forecastChartData = useMemo(() => {
+    if (!forecast) return [];
+    return forecast.projections
+      .filter((_, i) => i % 3 === 0 || i === forecast.projections.length - 1)
+      .map(p => ({
+        date: format(new Date(p.date), 'dd MMM'),
+        balance: p.balance,
+        income: p.income,
+        expenses: p.expenses,
+      }));
+  }, [forecast]);
+
+  if (loading) return <SkeletonPage />;
+
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Cash Flow</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="page-title mb-0">Cash Flow</h1>
+        <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'forecast', label: 'Forecast', icon: Zap },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                tab === t.id
+                  ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                  : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
+              }`}
+            >
+              {t.icon && <t.icon size={12} />}
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {tab === 'overview' && <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard label="Monthly Income" value={formatCurrency(monthIncome, currency)} icon={TrendingUp} />
         <StatCard label="Monthly Expenses" value={formatCurrency(monthExpenses, currency)} icon={TrendingDown} />
@@ -164,6 +209,127 @@ export default function CashFlow() {
           Based on recurring items: est. income {formatCurrency(recurringIncome, currency)}, est. expenses {formatCurrency(recurringExpenses, currency)}, est. net {formatCurrency(recurringIncome - recurringExpenses, currency)}.
         </p>
       </div>
+      </>}
+
+      {/* ─── Forecast Tab ─────────────────────────────── */}
+      {tab === 'forecast' && forecast && <>
+        {/* Forecast summary cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="card text-center">
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Current Balance</p>
+            <p className="text-lg font-heading font-bold money">{formatCurrency(forecast.summary.startingBalance, currency)}</p>
+          </div>
+          <div className="card text-center">
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Projected End</p>
+            <p className={`text-lg font-heading font-bold money ${forecast.summary.endBalance >= 0 ? 'text-success' : 'text-danger'}`}>
+              {formatCurrency(forecast.summary.endBalance, currency)}
+            </p>
+          </div>
+          <div className="card text-center">
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Lowest Point</p>
+            <p className={`text-lg font-heading font-bold money ${forecast.summary.lowestBalance >= 0 ? '' : 'text-danger'}`}>
+              {formatCurrency(forecast.summary.lowestBalance, currency)}
+            </p>
+            {forecast.summary.lowestDate && (
+              <p className="text-[10px] text-cream-400">{format(new Date(forecast.summary.lowestDate), 'dd MMM')}</p>
+            )}
+          </div>
+          <div className="card text-center">
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider mb-1">Avg Daily Spend</p>
+            <p className="text-lg font-heading font-bold money">{formatCurrency(forecast.summary.avgDailySpend, currency)}</p>
+          </div>
+        </div>
+
+        {/* Danger zones */}
+        {forecast.dangerZones.length > 0 && (
+          <div className="card border-danger/30 bg-danger/5">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-danger" />
+              <h3 className="text-sm font-semibold text-danger">Danger Zones</h3>
+            </div>
+            <p className="text-xs text-cream-600 dark:text-cream-400 mb-2">
+              Your projected balance goes negative in {forecast.dangerZones.length} period{forecast.dangerZones.length > 1 ? 's' : ''}:
+            </p>
+            <div className="space-y-1">
+              {forecast.dangerZones.map((z, i) => (
+                <div key={i} className="flex justify-between text-xs bg-white dark:bg-dark-card rounded-lg px-3 py-2 border border-danger/15">
+                  <span>{format(new Date(z.startDate), 'dd MMM')} — {format(new Date(z.endDate), 'dd MMM')}</span>
+                  <span className="font-medium text-danger">{formatCurrency(z.lowestBalance, currency)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Forecast period selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-cream-500">Forecast period:</span>
+          {[30, 60, 90, 180].map(d => (
+            <button
+              key={d}
+              onClick={() => setForecastDays(d)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                forecastDays === d
+                  ? 'bg-accent-600 text-white'
+                  : 'bg-cream-100 dark:bg-dark-border text-cream-600 dark:text-cream-400 hover:bg-cream-200'
+              }`}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+
+        {/* Forecast chart */}
+        <div className="card">
+          <h3 className="section-title">Projected balance ({forecastDays} days)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={forecastChartData}>
+              <defs>
+                <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }}
+                formatter={(v) => formatCurrency(v, currency)}
+              />
+              <ReferenceLine y={0} stroke="#e11d48" strokeDasharray="4 4" />
+              <Area type="monotone" dataKey="balance" stroke="#6366f1" fill="url(#balanceGrad)" strokeWidth={2} name="Balance" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Upcoming recurring events */}
+        {forecast.projections.some(p => p.events.length > 0) && (
+          <div className="card">
+            <h3 className="section-title">Upcoming bills & income</h3>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {forecast.projections
+                .filter(p => p.events.length > 0)
+                .slice(0, 20)
+                .map((p, i) => (
+                  <div key={i}>
+                    {p.events.map((ev, j) => (
+                      <div key={j} className="flex items-center justify-between py-1.5 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-cream-400 w-14">{format(new Date(p.date), 'dd MMM')}</span>
+                          <span className="font-medium">{ev.name}</span>
+                        </div>
+                        <span className={`money font-medium ${ev.isIncome ? 'text-success' : ''}`}>
+                          {ev.isIncome ? '+' : '-'}{formatCurrency(ev.amount, currency)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </>}
     </div>
   );
 }

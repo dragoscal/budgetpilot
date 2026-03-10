@@ -10,9 +10,10 @@ import {
   ChevronRight, Wallet, TrendingUp, TrendingDown, Clock,
   HandCoins, Banknote, UserPlus, DollarSign, CalendarClock, AlertTriangle, Info,
 } from 'lucide-react';
+import { SkeletonPage } from '../components/LoadingSkeleton';
 
 export default function People() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const [peopleList, setPeople] = useState([]);
   const [debtsList, setDebts] = useState([]);
@@ -41,8 +42,8 @@ export default function People() {
     setLoading(true);
     try {
       const [people, debts, payments] = await Promise.all([
-        peopleApi.getAll({ userId: 'local' }),
-        debtsApi.getAll({ userId: 'local' }),
+        peopleApi.getAll({ userId: effectiveUserId }),
+        debtsApi.getAll({ userId: effectiveUserId }),
         paymentsApi.getAll(),
       ]);
       setPeople(people);
@@ -97,7 +98,7 @@ export default function People() {
   const handleAddPerson = async () => {
     if (!personForm.name.trim()) { toast.error('Name required'); return; }
     await peopleApi.create({
-      id: generateId(), ...personForm, userId: 'local', createdAt: new Date().toISOString(),
+      id: generateId(), ...personForm, userId: effectiveUserId, createdAt: new Date().toISOString(),
     });
     toast.success('Person added');
     setShowPersonForm(false);
@@ -116,7 +117,7 @@ export default function People() {
     await debtsApi.create({
       id: debtId, ...debtForm, amount,
       remaining: amount, currency, status: 'active',
-      date: debtDate, userId: 'local', createdAt: new Date().toISOString(),
+      date: debtDate, userId: effectiveUserId, createdAt: new Date().toISOString(),
     });
 
     // Auto-create a linked transaction
@@ -132,7 +133,7 @@ export default function People() {
       source: 'manual',
       notes: `Debt #${debtId.slice(0, 8)}`,
       tags: ['debt'],
-      userId: 'local',
+      userId: effectiveUserId,
       createdAt: new Date().toISOString(),
     });
 
@@ -178,7 +179,7 @@ export default function People() {
       source: 'manual',
       notes: `Settlement for debt #${settleDebt.id.slice(0, 8)}`,
       tags: ['debt-settlement'],
-      userId: 'local',
+      userId: effectiveUserId,
       createdAt: new Date().toISOString(),
     });
 
@@ -217,6 +218,8 @@ export default function People() {
 
   const selectedPersonData = selectedPerson ? peopleList.find(p => p.id === selectedPerson) : null;
   const selectedPersonBal = selectedPerson ? (balances[selectedPerson] || { net: 0, lent: 0, borrowed: 0 }) : null;
+
+  if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">

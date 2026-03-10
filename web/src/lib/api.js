@@ -106,9 +106,13 @@ function createCrud(storeName) {
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
         try {
+          // Strip 'local' userId — server sets it from auth
+          const serverData = { ...(changes || updated) };
+          if (serverData.userId === 'local') delete serverData.userId;
+
           await apiFetch(apiUrl, `/api/${apiTable}/${id}`, {
             method: 'PUT',
-            body: JSON.stringify(changes || updated),
+            body: JSON.stringify(serverData),
           });
           // Immediate push succeeded — no need to queue
         } catch {
@@ -148,6 +152,10 @@ export const debtPayments = createCrud('debtPayments');
 export const wishlistApi = createCrud('wishlist');
 export const loans = createCrud('loans');
 export const loanPayments = createCrud('loanPayments');
+export const families = createCrud('families');
+export const familyMembers = createCrud('familyMembers');
+export const sharedExpenses = createCrud('sharedExpenses');
+export const challenges = createCrud('challenges');
 
 // Settings
 export const settings = {

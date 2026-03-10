@@ -1,9 +1,9 @@
 import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate } from '../lib/helpers';
 import { TRANSACTION_SOURCES } from '../lib/constants';
 import { useHideAmounts } from '../contexts/SettingsContext';
-import { Trash2, Edit3 } from 'lucide-react';
+import { Trash2, Edit3, Split } from 'lucide-react';
 
-export default function TransactionRow({ transaction, onEdit, onDelete, selected, onSelect, hide: hideProp }) {
+export default function TransactionRow({ transaction, onEdit, onDelete, onSplit, selected, onSelect, hide: hideProp, isSplit }) {
   const { shouldHide } = useHideAmounts();
   const cat = getCategoryById(transaction.category);
   const subcat = transaction.subcategory ? getSubcategoryById(transaction.subcategory) : null;
@@ -50,8 +50,18 @@ export default function TransactionRow({ transaction, onEdit, onDelete, selected
         }`}>
           {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency, { hide })}
         </p>
+        {isSplit && (
+          <span className="text-[10px] text-accent font-medium flex items-center justify-end gap-0.5">
+            <Split size={8} /> Split
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+        {onSplit && !isSplit && (
+          <button onClick={() => onSplit(transaction)} className="p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title="Split with family">
+            <Split size={14} />
+          </button>
+        )}
         {onEdit && (
           <button onClick={() => onEdit(transaction)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700">
             <Edit3 size={14} />
