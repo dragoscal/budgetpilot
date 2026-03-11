@@ -22,7 +22,7 @@ const PAGE_TIPS = {
   challenges: { tips: 3, guide: 'goals' },
   receipts: { tips: 3, guide: 'transactions' },
   review: { tips: 3, guide: 'analytics' },
-  settings: { tips: 3, guide: 'start' },
+  settings: { tips: 3, guide: 'settings' },
 };
 
 export default function HelpButton({ section, className = '' }) {
