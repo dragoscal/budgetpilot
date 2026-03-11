@@ -600,8 +600,8 @@ export default function Dashboard() {
             </button>
             {showWidgetSettings && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowWidgetSettings(false)} />
-                <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-2xl shadow-xl p-4 space-y-3">
+                <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setShowWidgetSettings(false)} />
+                <div className="fixed inset-x-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-72 max-h-[70vh] overflow-y-auto bg-white dark:bg-dark-card border-t sm:border border-cream-200 dark:border-dark-border sm:rounded-2xl rounded-t-2xl shadow-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-cream-500">{t('dashboard.widgetOrder')}</h4>
                     <button onClick={resetWidgets} className="text-[10px] text-accent-600 dark:text-accent-400 font-medium hover:underline">
