@@ -16,7 +16,7 @@ import CSVImport from '../components/CSVImport';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
-  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet,
+  Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet, CheckCircle2,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -51,6 +51,9 @@ export default function AddTransaction() {
   // Add new item state
   const [addingItem, setAddingItem] = useState(null); // txIdx or null
   const [newItem, setNewItem] = useState({ name: '', price: '', qty: '1', category: 'other' });
+
+  // Recently added transactions (session-only, shown after save)
+  const [recentlyAdded, setRecentlyAdded] = useState([]);
 
   // Draft state
   const [drafts, setDrafts] = useState([]);
@@ -109,16 +112,18 @@ export default function AddTransaction() {
     if (!pendingResults) return;
     try {
       const toSave = pendingResults.filter((tx) => !tx._dismissed);
+      const saved = [];
       for (const tx of toSave) {
         const { _duplicate, _dismissed, ...clean } = tx;
         await txApi.create(clean);
         if (clean.merchant) learnCategory(clean.merchant, clean.category, clean.subcategory || null);
+        saved.push(clean);
       }
       toast.success(t('addTransaction.transactionsAdded').replace('{count}', toSave.length));
       await showBudgetAlerts();
+      setRecentlyAdded((prev) => [...saved, ...prev]);
       setPendingResults(null);
       setReceiptMeta(null);
-      navigate('/transactions');
     } catch (err) {
       toast.error(err.message);
     }
@@ -139,7 +144,7 @@ export default function AddTransaction() {
       await txApi.create(tx);
       toast.success(t('addTransaction.transactionAdded'));
       await showBudgetAlerts();
-      navigate('/transactions');
+      setRecentlyAdded((prev) => [tx, ...prev]);
     } catch (err) {
       toast.error(err.message);
     }
@@ -915,6 +920,49 @@ export default function AddTransaction() {
           <div className="flex gap-2">
             <button onClick={cancelDuplicate} className="btn-ghost text-xs">{t('common.cancel')}</button>
             <button onClick={confirmSaveDespiteDuplicate} className="btn-primary text-xs">{t('addTransaction.saveAnyway')}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Recently Added */}
+      {recentlyAdded.length > 0 && (
+        <div className="card border-success/20 bg-success/5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-success">
+              <CheckCircle2 size={16} />
+              {t('addTransaction.recentlyAdded')}
+              <span className="text-[10px] font-medium bg-success/15 text-success px-1.5 py-0.5 rounded-full">
+                {recentlyAdded.length}
+              </span>
+            </h3>
+            <button
+              onClick={() => navigate('/transactions')}
+              className="text-xs text-accent-600 dark:text-accent-400 hover:underline font-medium"
+            >
+              {t('common.viewAll')}
+            </button>
+          </div>
+          <div className="space-y-2">
+            {recentlyAdded.slice(0, 5).map((tx, i) => {
+              const cat = getCategoryById(tx.category);
+              return (
+                <div key={tx.id || i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                  <span className="text-lg shrink-0">{cat.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{tx.merchant || t(`categories.${tx.category}`)}</p>
+                    <p className="text-[11px] text-cream-500">{tx.date}</p>
+                  </div>
+                  <span className={`text-sm font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
+                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
+                  </span>
+                </div>
+              );
+            })}
+            {recentlyAdded.length > 5 && (
+              <p className="text-[11px] text-cream-500 text-center">
+                +{recentlyAdded.length - 5} {t('common.more')}
+              </p>
+            )}
           </div>
         </div>
       )}

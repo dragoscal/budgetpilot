@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -24,6 +24,29 @@ export default function Onboarding() {
     t('onboarding.stepAi'),
   ];
   const [step, setStep] = useState(0);
+  const isNavigatingRef = useRef(false);
+
+  // Handle browser back button — navigate between steps instead of leaving
+  useEffect(() => {
+    window.history.pushState({ onboarding: true }, '');
+
+    const onPopState = () => {
+      window.history.pushState({ onboarding: true }, '');
+      setStep((prev) => Math.max(0, prev - 1));
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const goNext = () => {
+    window.history.pushState({ onboarding: true }, '');
+    setStep(step + 1);
+  };
+
+  const goPrev = () => {
+    setStep(step - 1);
+  };
 
   // Step 0 — Welcome
   const [displayName, setDisplayName] = useState(user?.name || '');
@@ -368,14 +391,14 @@ export default function Onboarding() {
           {/* Navigation */}
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-cream-200 dark:border-dark-border">
             {step > 0 ? (
-              <button onClick={() => setStep(step - 1)} className="btn-ghost flex items-center gap-1">
+              <button onClick={goPrev} className="btn-ghost flex items-center gap-1">
                 <ArrowLeft size={16} /> {t('common.back')}
               </button>
             ) : <div />}
 
             {step < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(step + 1)}
+                onClick={goNext}
                 disabled={!canNext()}
                 className="btn-primary flex items-center gap-1 disabled:opacity-50"
               >
