@@ -1,20 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useFamily } from '../contexts/FamilyContext';
-import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { sharedExpenses as sharedApi, transactions as txApi } from '../lib/api';
-import { calculateBalances, simplifyDebts, getMemberSummary } from '../lib/settlement';
 import Modal from '../components/Modal';
-import EmptyState from '../components/EmptyState';
-import { formatCurrency, sumBy } from '../lib/helpers';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
-import {
-  Users, Plus, Copy, Check, LogOut, Settings, UserPlus, Crown,
-  LayoutDashboard, Receipt, ArrowRight, CheckCircle2, Eye, Home,
-} from 'lucide-react';
 import HelpButton from '../components/HelpButton';
+import {
+  Users, Plus, UserPlus, LayoutDashboard, Receipt, GitCompare,
+  Handshake, Settings, UserCheck,
+} from 'lucide-react';
 
+// Tab components
+import FamilyOverview from '../components/family/FamilyOverview';
+import FamilyAllExpenses from '../components/family/FamilyAllExpenses';
+import FamilyCompare from '../components/family/FamilyCompare';
+import FamilySettlements from '../components/family/FamilySettlements';
+import FamilyMembers from '../components/family/FamilyMembers';
+import FamilySettings from '../components/family/FamilySettings';
+
+// ─── Inline forms (only used here) ──────────────────────────
 function CreateFamilyForm({ onCreated }) {
   const { createFamily, FAMILY_EMOJIS } = useFamily();
   const { toast } = useToast();
@@ -109,163 +112,36 @@ function JoinFamilyForm({ onJoined }) {
   );
 }
 
-function InviteCodeDisplay({ family }) {
-  const [copied, setCopied] = useState(false);
-  const { t } = useTranslation();
+// ─── Tab definitions ─────────────────────────────────────────
+const TABS = [
+  { id: 'overview', icon: LayoutDashboard, labelKey: 'family.overviewTab' },
+  { id: 'expenses', icon: Receipt, labelKey: 'family.allExpensesTab' },
+  { id: 'compare', icon: GitCompare, labelKey: 'family.compareTab' },
+  { id: 'settlements', icon: Handshake, labelKey: 'family.settlementsTab' },
+  { id: 'members', icon: UserCheck, labelKey: 'family.membersTab' },
+  { id: 'settings', icon: Settings, labelKey: 'family.settingsTab' },
+];
 
-  const copyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(family.inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API not available — use legacy execCommand fallback
-      const input = document.createElement('input');
-      input.value = family.inviteCode;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+const TAB_COMPONENTS = {
+  overview: FamilyOverview,
+  expenses: FamilyAllExpenses,
+  compare: FamilyCompare,
+  settlements: FamilySettlements,
+  members: FamilyMembers,
+  settings: FamilySettings,
+};
 
-  return (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border">
-      <div className="flex-1">
-        <p className="text-xs text-cream-500 mb-1">{t('family.inviteCode')}</p>
-        <p className="text-2xl font-mono font-bold tracking-[0.5em]">{family.inviteCode}</p>
-      </div>
-      <button
-        onClick={copyCode}
-        className={`p-3 rounded-xl transition-colors ${copied ? 'bg-success/10 text-success' : 'bg-cream-200 dark:bg-dark-border text-cream-600 hover:bg-cream-300'}`}
-      >
-        {copied ? <Check size={20} /> : <Copy size={20} />}
-      </button>
-    </div>
-  );
-}
-
-function MemberCard({ member, isMe, isAdmin: viewerIsAdmin, onRoleChange, t }) {
-  return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isMe ? 'bg-accent-50/50 dark:bg-accent-500/5' : ''}`}>
-      <div className="w-10 h-10 rounded-full bg-cream-200 dark:bg-dark-border flex items-center justify-center text-lg">
-        {member.emoji}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm truncate">{member.displayName}</span>
-          {isMe && <span className="text-[10px] text-accent font-medium">{t('family.you')}</span>}
-          {member.role === 'viewer' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-500 flex items-center gap-0.5">
-              <Eye size={9} /> {t('family.viewer')}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-cream-500">
-          {member.role === 'admin' && (
-            <span className="flex items-center gap-0.5 text-warning">
-              <Crown size={10} /> {t('family.admin')}
-            </span>
-          )}
-          <span>{t('family.joinedDate', { date: new Date(member.joinedAt).toLocaleDateString() })}</span>
-        </div>
-      </div>
-      {/* Role selector for admins editing non-admin members */}
-      {viewerIsAdmin && !isMe && member.role !== 'admin' && onRoleChange && (
-        <select
-          value={member.role}
-          onChange={(e) => onRoleChange(member.id, e.target.value)}
-          className="text-xs border border-cream-300 dark:border-dark-border rounded-lg px-2 py-1 bg-white dark:bg-dark-card"
-        >
-          <option value="member">{t('family.membersTab')}</option>
-          <option value="viewer">{t('family.viewer')}</option>
-        </select>
-      )}
-    </div>
-  );
-}
-
+// ─── Main Family page ────────────────────────────────────────
 export default function Family() {
-  const { toast } = useToast();
-  const { effectiveUserId } = useAuth();
   const { t } = useTranslation();
   const {
-    myFamilies, activeFamily, members, loading, isAdmin, myMembership,
-    switchFamily, leaveFamily, updateFamily, updateMember, updateMemberIncome, MEMBER_EMOJIS,
+    myFamilies, activeFamily, members, loading,
+    switchFamily,
   } = useFamily();
-
-  const isViewer = myMembership?.role === 'viewer';
 
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [tab, setTab] = useState('dashboard');
-  const [expenses, setExpenses] = useState([]);
-  const [expensesLoading, setExpensesLoading] = useState(false);
-  const [householdTx, setHouseholdTx] = useState([]);
-  const [householdLoading, setHouseholdLoading] = useState(false);
-
-  // Load shared expenses when family is active
-  useEffect(() => {
-    if (!activeFamily) return;
-    setExpensesLoading(true);
-    sharedApi.getAll({ familyId: activeFamily.id })
-      .then(setExpenses)
-      .catch((err) => {
-        console.error('Failed to load shared expenses:', err);
-      })
-      .finally(() => setExpensesLoading(false));
-  }, [activeFamily]);
-
-  // Load household-scoped transactions
-  useEffect(() => {
-    if (!activeFamily) return;
-    setHouseholdLoading(true);
-    txApi.getAll({ userId: effectiveUserId })
-      .then((allTx) => {
-        setHouseholdTx(allTx.filter((tx) => tx.scope === 'household'));
-      })
-      .catch((err) => {
-        console.error('Failed to load household transactions:', err);
-      })
-      .finally(() => setHouseholdLoading(false));
-  }, [activeFamily, effectiveUserId]);
-
-  // Settlements
-  const balances = useMemo(() => calculateBalances(expenses), [expenses]);
-  const settlements = useMemo(() => simplifyDebts(balances), [balances]);
-  const memberSummary = useMemo(() => getMemberSummary(expenses), [expenses]);
-
-  const getMemberName = (userId) => {
-    const m = members.find((m) => m.userId === userId);
-    return m ? `${m.emoji} ${m.displayName}` : userId;
-  };
-
-  const handleRoleChange = async (memberId, newRole) => {
-    await updateMember(memberId, { role: newRole });
-    toast.success(t('family.roleUpdated'));
-  };
-
-  const handleSettleDebt = async (from, to) => {
-    // Mark all splits as settled between these two users
-    const updated = [];
-    for (const exp of expenses) {
-      if (exp.paidByUserId !== to) continue;
-      const newSplits = exp.splits.map((s) =>
-        s.userId === from && !s.settled ? { ...s, settled: true } : s
-      );
-      if (JSON.stringify(newSplits) !== JSON.stringify(exp.splits)) {
-        const updatedExp = { ...exp, splits: newSplits };
-        await sharedApi.update(updatedExp);
-        updated.push(updatedExp);
-      }
-    }
-    if (updated.length > 0) {
-      setExpenses((prev) => prev.map((e) => updated.find((u) => u.id === e.id) || e));
-      toast.success(t('family.debtSettled'));
-    }
-  };
+  const [tab, setTab] = useState('overview');
 
   if (loading) {
     return (
@@ -281,7 +157,6 @@ export default function Family() {
     return (
       <div className="space-y-6">
         <h1 className="page-title">{t('family.title')}</h1>
-
         <div className="card text-center py-12">
           <div className="w-16 h-16 rounded-2xl bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center mx-auto mb-4">
             <Users size={32} className="text-accent" />
@@ -299,7 +174,6 @@ export default function Family() {
             </button>
           </div>
         </div>
-
         <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('family.createAFamily')}>
           <CreateFamilyForm onCreated={() => setShowCreate(false)} />
         </Modal>
@@ -309,6 +183,8 @@ export default function Family() {
       </div>
     );
   }
+
+  const ActiveTab = TAB_COMPONENTS[tab];
 
   return (
     <div className="space-y-6">
@@ -321,7 +197,11 @@ export default function Family() {
               <h1 className="page-title mb-0">{activeFamily?.name || t('family.title')}</h1>
               <HelpButton section="family" />
             </div>
-            <p className="text-xs text-cream-500">{members.length !== 1 ? t('family.memberCountPlural', { count: members.length }) : t('family.memberCount', { count: members.length })}</p>
+            <p className="text-xs text-cream-500">
+              {members.length !== 1
+                ? t('family.memberCountPlural', { count: members.length })
+                : t('family.memberCount', { count: members.length })}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -334,7 +214,7 @@ export default function Family() {
         </div>
       </div>
 
-      {/* Family switcher (if multiple families) */}
+      {/* Family switcher */}
       {myFamilies.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {myFamilies.map((f) => (
@@ -355,13 +235,7 @@ export default function Family() {
 
       {/* Tab navigation */}
       <div className="flex border-b border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide">
-        {[
-          { id: 'dashboard', label: t('family.dashboardTab'), icon: LayoutDashboard },
-          { id: 'household', label: t('household.expenses'), icon: Home },
-          { id: 'expenses', label: t('family.sharedTab'), icon: Receipt },
-          { id: 'members', label: t('family.membersTab'), icon: Users },
-          { id: 'settings', label: t('family.settingsTab'), icon: Settings },
-        ].map((tb) => (
+        {TABS.map((tb) => (
           <button
             key={tb.id}
             onClick={() => setTab(tb.id)}
@@ -372,392 +246,15 @@ export default function Family() {
             }`}
           >
             <tb.icon size={14} />
-            {tb.label}
+            {t(tb.labelKey)}
           </button>
         ))}
       </div>
 
-      {/* Dashboard tab */}
-      {tab === 'dashboard' && (
-        <div className="space-y-4">
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="card">
-              <p className="text-xs text-cream-500 mb-1">{t('family.totalShared')}</p>
-              <p className="font-heading font-bold text-lg money">
-                {formatCurrency(expenses.reduce((s, e) => s + e.totalAmount, 0), activeFamily?.defaultCurrency || 'RON')}
-              </p>
-              <p className="text-[10px] text-cream-400">{expenses.length !== 1 ? t('family.expenseCountPlural', { count: expenses.length }) : t('family.expenseCount', { count: expenses.length })}</p>
-            </div>
-            <div className="card">
-              <p className="text-xs text-cream-500 mb-1">{t('family.unsettled')}</p>
-              <p className="font-heading font-bold text-lg money text-warning">
-                {formatCurrency(
-                  settlements.reduce((s, t) => s + t.amount, 0),
-                  activeFamily?.defaultCurrency || 'RON'
-                )}
-              </p>
-              <p className="text-[10px] text-cream-400">{settlements.length !== 1 ? t('family.transfersNeeded', { count: settlements.length }) : t('family.transferNeeded', { count: settlements.length })}</p>
-            </div>
-          </div>
+      {/* Active tab content */}
+      <ActiveTab />
 
-          {/* Settlements */}
-          {settlements.length > 0 ? (
-            <div className="card">
-              <h3 className="section-title">{t('family.settlementsNeeded')}</h3>
-              <div className="space-y-3">
-                {settlements.map((st, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-cream-50 dark:bg-dark-bg">
-                    <div className="flex-1 flex items-center gap-2 text-sm">
-                      <span className="font-medium">{getMemberName(st.from)}</span>
-                      <ArrowRight size={14} className="text-cream-400" />
-                      <span className="font-medium">{getMemberName(st.to)}</span>
-                    </div>
-                    <span className="font-heading font-bold money text-warning">
-                      {formatCurrency(st.amount, activeFamily?.defaultCurrency || 'RON')}
-                    </span>
-                    {!isViewer && (
-                      <button
-                        onClick={() => handleSettleDebt(st.from, st.to)}
-                        className="p-2 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
-                        title={t('family.markSettled')}
-                      >
-                        <CheckCircle2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : expenses.length > 0 ? (
-            <div className="card text-center py-6">
-              <CheckCircle2 size={24} className="text-success mx-auto mb-2" />
-              <p className="text-sm font-medium text-success">{t('family.allSettled')}</p>
-              <p className="text-xs text-cream-500">{t('family.noOutstandingDebts')}</p>
-            </div>
-          ) : null}
-
-          {/* Who paid what */}
-          {memberSummary.length > 0 && (
-            <div className="card">
-              <h3 className="section-title">{t('family.whoPaidWhat')}</h3>
-              <div className="space-y-2">
-                {memberSummary.sort((a, b) => b.totalPaid - a.totalPaid).map((s) => (
-                  <div key={s.userId} className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{getMemberName(s.userId)}</span>
-                    <div className="text-right">
-                      <span className="money font-medium">{formatCurrency(s.totalPaid, activeFamily?.defaultCurrency || 'RON')}</span>
-                      <span className="text-xs text-cream-400 ml-1">{t('family.paid')}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {expenses.length === 0 && (
-            <div className="card text-center py-8">
-              <Receipt size={24} className="text-cream-300 mx-auto mb-2" />
-              <p className="text-sm text-cream-500">{t('family.noSharedExpenses')}</p>
-              <p className="text-xs text-cream-400">{t('family.splitFromTransactions')}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Household Expenses tab */}
-      {tab === 'household' && (
-        <div className="space-y-4">
-          {/* Summary stats */}
-          {(() => {
-            const now = new Date();
-            const monthStart = startOfMonth(now);
-            const monthEnd = endOfMonth(now);
-            const thisMonthTx = householdTx.filter((tx) => {
-              const d = new Date(tx.date);
-              return d >= monthStart && d <= monthEnd;
-            });
-            const totalThisMonth = sumBy(thisMonthTx.filter((tx) => tx.type === 'expense'), 'amount');
-            const perMember = members.length > 0 ? totalThisMonth / members.length : 0;
-
-            // Group by month
-            const grouped = {};
-            for (const tx of householdTx) {
-              const key = tx.date ? tx.date.slice(0, 7) : 'unknown';
-              if (!grouped[key]) grouped[key] = [];
-              grouped[key].push(tx);
-            }
-            const sortedMonths = Object.keys(grouped).sort().reverse();
-
-            // Per-member totals this month
-            const memberTotals = {};
-            for (const tx of thisMonthTx) {
-              if (tx.beneficiaries && Array.isArray(tx.beneficiaries)) {
-                for (const b of tx.beneficiaries) {
-                  memberTotals[b.userId] = (memberTotals[b.userId] || 0) + (b.amount || 0);
-                }
-              } else {
-                const payer = tx.paidBy || tx.userId;
-                memberTotals[payer] = (memberTotals[payer] || 0) + tx.amount;
-              }
-            }
-
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="card">
-                    <p className="text-xs text-cream-500 mb-1">{t('household.totalThisMonth')}</p>
-                    <p className="font-heading font-bold text-lg money">
-                      {formatCurrency(totalThisMonth, activeFamily?.defaultCurrency || 'RON')}
-                    </p>
-                    <p className="text-[10px] text-cream-400">
-                      {thisMonthTx.length} {t('common.transactions')}
-                    </p>
-                  </div>
-                  <div className="card">
-                    <p className="text-xs text-cream-500 mb-1">{t('household.perMember')}</p>
-                    <p className="font-heading font-bold text-lg money">
-                      {formatCurrency(perMember, activeFamily?.defaultCurrency || 'RON')}
-                    </p>
-                    <p className="text-[10px] text-cream-400">
-                      {members.length} {t('family.membersTab').toLowerCase()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Per-member breakdown */}
-                {Object.keys(memberTotals).length > 0 && (
-                  <div className="card">
-                    <h3 className="section-title">{t('household.perMember')}</h3>
-                    <div className="space-y-2">
-                      {Object.entries(memberTotals)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([userId, total]) => (
-                          <div key={userId} className="flex items-center justify-between text-sm">
-                            <span className="font-medium">{getMemberName(userId)}</span>
-                            <span className="money font-medium">
-                              {formatCurrency(total, activeFamily?.defaultCurrency || 'RON')}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Grouped by month */}
-                {householdLoading ? (
-                  <div className="card animate-pulse"><div className="h-24 bg-cream-200 dark:bg-dark-border rounded-lg" /></div>
-                ) : sortedMonths.length > 0 ? (
-                  sortedMonths.map((monthKey) => {
-                    const monthTxs = grouped[monthKey].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                    const monthLabel = monthKey !== 'unknown'
-                      ? format(new Date(monthKey + '-01'), 'MMMM yyyy')
-                      : monthKey;
-                    return (
-                      <div key={monthKey}>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-cream-400 mb-2">{monthLabel}</h3>
-                        <div className="space-y-2">
-                          {monthTxs.map((tx) => (
-                            <div key={tx.id} className="card p-3">
-                              <div className="flex items-center justify-between mb-1">
-                                <div>
-                                  <p className="text-sm font-medium">{tx.merchant || tx.description || t('common.unknown')}</p>
-                                  <p className="text-xs text-cream-500">
-                                    {tx.date}
-                                    {tx.paidBy && ` · ${t('household.paidBy')}: ${getMemberName(tx.paidBy)}`}
-                                  </p>
-                                </div>
-                                <p className="font-heading font-bold money">{formatCurrency(tx.amount, tx.currency)}</p>
-                              </div>
-                              {tx.beneficiaries && Array.isArray(tx.beneficiaries) && tx.beneficiaries.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                  {tx.beneficiaries.map((b) => (
-                                    <span
-                                      key={b.userId}
-                                      className="text-[11px] px-2 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-600"
-                                    >
-                                      {getMemberName(b.userId)}: {formatCurrency(b.amount, tx.currency)}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <EmptyState
-                    icon={Home}
-                    title={t('household.expenses')}
-                    description={t('household.noFamily')}
-                  />
-                )}
-              </>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* Shared expenses tab */}
-      {tab === 'expenses' && (
-        <div className="space-y-3">
-          {expenses.length > 0 ? (
-            expenses.sort((a, b) => (b.date || b.createdAt).localeCompare(a.date || a.createdAt)).map((exp) => (
-              <div key={exp.id} className="card p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-medium">{exp.merchant || exp.description}</p>
-                    <p className="text-xs text-cream-500">{exp.date} · {t('family.paidBy', { name: getMemberName(exp.paidByUserId) })}</p>
-                  </div>
-                  <p className="font-heading font-bold money">{formatCurrency(exp.totalAmount, exp.currency)}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {exp.splits?.map((s) => (
-                    <span
-                      key={s.userId}
-                      className={`text-[11px] px-2 py-0.5 rounded-full ${
-                        s.settled
-                          ? 'bg-success/10 text-success'
-                          : 'bg-cream-200 dark:bg-dark-border text-cream-600'
-                      }`}
-                    >
-                      {getMemberName(s.userId)}: {formatCurrency(s.amount, exp.currency)}
-                      {s.settled && ' \u2713'}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : (
-            <EmptyState
-              icon={Receipt}
-              title={t('family.noSharedExpensesEmpty')}
-              description={t('family.splitToSee')}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Members tab */}
-      {tab === 'members' && (
-        <div className="space-y-4">
-          <InviteCodeDisplay family={activeFamily} />
-
-          <div className="card p-0 divide-y divide-cream-100 dark:divide-dark-border">
-            {members.map((m) => (
-              <MemberCard
-                key={m.id}
-                member={m}
-                isMe={m.userId === effectiveUserId}
-                isAdmin={isAdmin}
-                onRoleChange={isAdmin ? handleRoleChange : null}
-                t={t}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Settings tab */}
-      {tab === 'settings' && (
-        <div className="space-y-4">
-          {isViewer && (
-            <div className="p-3 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-500 text-xs font-medium flex items-center gap-2">
-              <Eye size={14} /> {t('family.viewerRestricted')}
-            </div>
-          )}
-          <div className="card space-y-4">
-            <div>
-              <label className="label">{t('family.familyName')}</label>
-              <input
-                className="input"
-                defaultValue={activeFamily?.name}
-                onBlur={(e) => {
-                  if (e.target.value.trim() && e.target.value !== activeFamily?.name) {
-                    updateFamily({ name: e.target.value.trim() });
-                    toast.success(t('family.nameUpdated'));
-                  }
-                }}
-                disabled={!isAdmin}
-              />
-            </div>
-
-            <div>
-              <label className="label">{t('family.yourDisplayName')}</label>
-              <input
-                className="input"
-                defaultValue={myMembership?.displayName}
-                onBlur={(e) => {
-                  if (e.target.value.trim() && myMembership) {
-                    updateMember(myMembership.id, { displayName: e.target.value.trim() });
-                    toast.success(t('family.displayNameUpdated'));
-                  }
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="label">{t('family.monthlyIncome')}</label>
-              <input
-                type="number"
-                className="input"
-                defaultValue={myMembership?.monthlyIncome || ''}
-                placeholder="0"
-                min="0"
-                onBlur={(e) => {
-                  if (myMembership) {
-                    updateMemberIncome(myMembership.id, e.target.value);
-                    toast.success(t('family.roleUpdated'));
-                  }
-                }}
-              />
-              <p className="text-[11px] text-cream-400 mt-1">{t('family.incomeHint')}</p>
-            </div>
-
-            <div>
-              <label className="label">{t('family.yourEmoji')}</label>
-              <div className="flex flex-wrap gap-2">
-                {MEMBER_EMOJIS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => {
-                      if (myMembership) {
-                        updateMember(myMembership.id, { emoji: e });
-                        toast.success(t('family.emojiUpdated'));
-                      }
-                    }}
-                    className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-colors ${
-                      myMembership?.emoji === e ? 'bg-accent-50 dark:bg-accent-500/15 ring-2 ring-accent' : 'bg-cream-100 dark:bg-dark-border hover:bg-cream-200'
-                    }`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Danger zone */}
-          <div className="card border-danger/20">
-            <h4 className="text-sm font-medium text-danger mb-3">{t('family.dangerZone')}</h4>
-            <button
-              onClick={async () => {
-                if (confirm(t('family.leaveConfirm'))) {
-                  await leaveFamily(activeFamily.id);
-                  toast.success(t('family.leftFamily'));
-                }
-              }}
-              className="btn-danger text-xs flex items-center gap-1"
-            >
-              <LogOut size={14} /> {t('family.leaveFamily')}
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* Modals */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('family.createNewFamily')}>
         <CreateFamilyForm onCreated={() => setShowCreate(false)} />
       </Modal>

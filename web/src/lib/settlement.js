@@ -111,3 +111,55 @@ export function getMemberSummary(sharedExpenses) {
     net: s.totalPaid - s.totalOwed,
   }));
 }
+
+/**
+ * Calculate balances from household-scoped transactions (beneficiaries model).
+ * Each tx has paidBy (userId) and beneficiaries [{userId, amount}].
+ * The payer is credited; each beneficiary is debited their share.
+ *
+ * @param {Array} householdTransactions - Transactions with scope='household'
+ * @returns {Map<string, number>} userId → net balance
+ */
+export function calculateHouseholdBalances(householdTransactions) {
+  const balances = new Map();
+
+  for (const tx of householdTransactions) {
+    const payer = tx.paidBy || tx.userId;
+    const beneficiaries = tx.beneficiaries;
+    if (!beneficiaries || !Array.isArray(beneficiaries)) continue;
+
+    for (const b of beneficiaries) {
+      if (b.userId === payer) continue; // Skip payer's own share
+      const amount = b.amount || 0;
+      if (amount <= 0) continue;
+
+      // Payer is owed this amount
+      balances.set(payer, (balances.get(payer) || 0) + amount);
+      // Beneficiary owes this amount
+      balances.set(b.userId, (balances.get(b.userId) || 0) - amount);
+    }
+  }
+
+  return balances;
+}
+
+/**
+ * Merge balances from shared expenses AND household transactions.
+ * Prevents double-counting by combining both sources into one balance map,
+ * then letting simplifyDebts() produce minimal transfers.
+ *
+ * @param {Array} sharedExpenses - Traditional split expenses
+ * @param {Array} householdTransactions - Transactions with scope='household'
+ * @returns {Map<string, number>} userId → net balance
+ */
+export function getComprehensiveBalances(sharedExpenses, householdTransactions) {
+  const sharedBal = calculateBalances(sharedExpenses);
+  const householdBal = calculateHouseholdBalances(householdTransactions);
+
+  const merged = new Map(sharedBal);
+  for (const [userId, amount] of householdBal) {
+    merged.set(userId, (merged.get(userId) || 0) + amount);
+  }
+
+  return merged;
+}

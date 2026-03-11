@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'lumet';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 let dbPromise = null;
 
@@ -142,6 +142,15 @@ export function getDB() {
             const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
             notifStore.createIndex('read', 'read');
             notifStore.createIndex('createdAt', 'createdAt');
+          }
+        }
+
+        // v10: Settlement history
+        if (oldVersion < 10) {
+          if (!db.objectStoreNames.contains('settlementHistory')) {
+            const shStore = db.createObjectStore('settlementHistory', { keyPath: 'id' });
+            shStore.createIndex('familyId', 'familyId');
+            shStore.createIndex('settledAt', 'settledAt');
           }
         }
       },

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { families as familiesApi, familyMembers as membersApi } from '../lib/api';
+import { families as familiesApi, familyMembers as membersApi, transactions as txApi, sharedExpenses as sharedApi } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { generateId } from '../lib/helpers';
 
@@ -34,6 +34,9 @@ export function FamilyProvider({ children }) {
   const [activeFamily, setActiveFamily] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [familyTransactions, setFamilyTransactions] = useState([]);
+  const [familyTransactionsLoading, setFamilyTransactionsLoading] = useState(false);
+  const [sharedExpensesList, setSharedExpensesList] = useState([]);
 
   // Load families on mount
   useEffect(() => {
@@ -69,6 +72,35 @@ export function FamilyProvider({ children }) {
       setLoading(false);
     }
   }, [effectiveUserId]);
+
+  // Load all family members' transactions + shared expenses when family is active
+  const loadFamilyTransactions = useCallback(async () => {
+    if (!activeFamily || members.length === 0) {
+      setFamilyTransactions([]);
+      setSharedExpensesList([]);
+      return;
+    }
+    setFamilyTransactionsLoading(true);
+    try {
+      const memberUserIds = new Set(members.map((m) => m.userId));
+      // Load all transactions and filter to family members
+      const allTx = await txApi.getAll();
+      const familyTx = allTx.filter((tx) => memberUserIds.has(tx.userId));
+      setFamilyTransactions(familyTx);
+
+      // Load shared expenses for this family
+      const shared = await sharedApi.getAll({ familyId: activeFamily.id });
+      setSharedExpensesList(shared);
+    } catch (err) {
+      console.error('Failed to load family transactions:', err);
+    } finally {
+      setFamilyTransactionsLoading(false);
+    }
+  }, [activeFamily, members]);
+
+  useEffect(() => {
+    loadFamilyTransactions();
+  }, [loadFamilyTransactions]);
 
   const createFamily = useCallback(async (name, emoji) => {
     // Check for duplicate family name among user's families
@@ -224,6 +256,9 @@ export function FamilyProvider({ children }) {
         isFamilyMode,
         isAdmin,
         myMembership,
+        familyTransactions,
+        familyTransactionsLoading,
+        sharedExpensesList,
         createFamily,
         joinFamily,
         switchFamily,
@@ -232,6 +267,7 @@ export function FamilyProvider({ children }) {
         updateMember,
         updateMemberIncome,
         loadFamilies,
+        loadFamilyTransactions,
         FAMILY_EMOJIS,
         MEMBER_EMOJIS,
       }}

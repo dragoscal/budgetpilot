@@ -159,6 +159,7 @@ export const families = createCrud('families');
 export const familyMembers = createCrud('familyMembers');
 export const sharedExpenses = createCrud('sharedExpenses');
 export const challenges = createCrud('challenges');
+export const settlementHistory = createCrud('settlementHistory');
 
 // Settings
 export const settings = {
