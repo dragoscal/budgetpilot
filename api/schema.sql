@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   date TEXT NOT NULL,
   description TEXT,
   tags TEXT DEFAULT '[]',
+  originalText TEXT,
   source TEXT DEFAULT 'manual',
   items TEXT DEFAULT '[]',
   splitFrom TEXT,

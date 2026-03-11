@@ -701,6 +701,11 @@ export default function AddTransaction() {
                     </div>
                   )}
 
+                  {tx.originalText && (
+                    <p className="text-[11px] text-cream-400 dark:text-cream-500 mt-1 italic">
+                      &ldquo;{tx.originalText}&rdquo;
+                    </p>
+                  )}
                   {tx.description && <p className="text-xs text-cream-500 mt-1">{tx.description}</p>}
 
                   {/* Duplicate warning */}

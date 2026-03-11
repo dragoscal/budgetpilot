@@ -97,6 +97,14 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
           <label className="label">{t('transactions.description')}</label>
           <input className="input" value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
         </div>
+        {transaction?.originalText && (
+          <div>
+            <label className="label">{t('transactions.originalInput')}</label>
+            <p className="text-sm text-cream-500 dark:text-cream-400 italic px-3 py-2 rounded-xl bg-cream-100 dark:bg-dark-border">
+              &ldquo;{transaction.originalText}&rdquo;
+            </p>
+          </div>
+        )}
         {/* Scope toggle */}
         <div>
           <label className="label">{t('household.title')}</label>

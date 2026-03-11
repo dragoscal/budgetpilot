@@ -257,6 +257,7 @@ const en = {
   'transactions.category': 'Category',
   'transactions.date': 'Date',
   'transactions.description': 'Description',
+  'transactions.originalInput': 'Original input',
   'transactions.confirmBulkDelete': 'Delete {count} transactions? This cannot be undone.',
   'transactions.account': 'Account',
   'transactions.allAccounts': 'All Accounts',

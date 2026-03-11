@@ -610,7 +610,7 @@ export async function processNaturalLanguage(text, { userId = 'local' } = {}) {
     },
   ], NLP_SYSTEM_PROMPT, 1000);
 
-  const normalized = normalizeNLPResult(result, userId);
+  const normalized = normalizeNLPResult(result, userId, text);
 
   // Merge extracted #tags into each transaction's tags
   if (extractedTags.length > 0) {
@@ -728,7 +728,7 @@ function normalizeReceiptResult(result, userId = 'local') {
   };
 }
 
-function normalizeNLPResult(result, userId = 'local') {
+function normalizeNLPResult(result, userId = 'local', originalText = '') {
   const txns = result.transactions || [result];
   return txns.map((t) => ({
     id: generateId(),
@@ -740,6 +740,7 @@ function normalizeNLPResult(result, userId = 'local') {
     date: t.date || formatDateISO(new Date()),
     type: t.type || 'expense',
     description: t.description || '',
+    originalText: originalText || '',
     source: 'nlp',
     confidence: t.confidence || 0.8,
     items: [],

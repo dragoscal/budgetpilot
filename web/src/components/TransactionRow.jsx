@@ -66,6 +66,9 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
             </>
           )}
         </div>
+        {transaction.originalText && (
+          <p className="text-[10px] text-cream-400 italic truncate">&ldquo;{transaction.originalText}&rdquo;</p>
+        )}
       </div>
       <div className="text-right shrink-0">
         <p className={`text-sm font-heading font-bold money ${

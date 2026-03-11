@@ -257,6 +257,7 @@ const ro = {
   'transactions.category': 'Categorie',
   'transactions.date': 'Data',
   'transactions.description': 'Descriere',
+  'transactions.originalInput': 'Text original',
   'transactions.confirmBulkDelete': 'Ștergi {count} tranzacții? Această acțiune nu poate fi anulată.',
   'transactions.account': 'Cont',
   'transactions.allAccounts': 'Toate conturile',
