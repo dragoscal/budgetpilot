@@ -9,7 +9,7 @@ import {
   LayoutDashboard, PlusCircle, Receipt, PiggyBank, Target, RotateCcw,
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Shield,
-  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home, HelpCircle,
+  Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home, HelpCircle, FileSpreadsheet,
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
 import NotificationCenter from './NotificationCenter';
@@ -60,6 +60,7 @@ export default function Sidebar() {
         { to: '/wishlist', icon: Star, label: t('nav.wishlist') },
         { to: '/challenges', icon: Trophy, label: t('nav.challenges') },
         { to: '/receipts', icon: Camera, label: t('nav.receipts') },
+        { to: '/import-budget', icon: FileSpreadsheet, label: t('nav.importBudget') },
         { to: '/review', icon: FileText, label: t('nav.review') },
       ],
     },

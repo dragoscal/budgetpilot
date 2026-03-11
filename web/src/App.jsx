@@ -41,6 +41,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Challenges = lazy(() => import('./pages/Challenges'));
 const ReceiptGallery = lazy(() => import('./pages/Receipts'));
 const Guide = lazy(() => import('./pages/Guide'));
+const ImportBudget = lazy(() => import('./pages/ImportBudget'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function ScrollToTop() {
@@ -129,6 +130,7 @@ export default function App() {
           <Route path="/reports" element={<ProtectedRoute><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
           <Route path="/challenges" element={<ProtectedRoute><AppLayout><Challenges /></AppLayout></ProtectedRoute>} />
           <Route path="/receipts" element={<ProtectedRoute><AppLayout><ReceiptGallery /></AppLayout></ProtectedRoute>} />
+          <Route path="/import-budget" element={<ProtectedRoute><AppLayout><ImportBudget /></AppLayout></ProtectedRoute>} />
           <Route path="/guide" element={<ProtectedRoute><AppLayout><Guide /></AppLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

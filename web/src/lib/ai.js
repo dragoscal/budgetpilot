@@ -777,6 +777,76 @@ function generateLocalSummary(transactions, budgets) {
   return `This month: ${count} transactions totaling ${total.toFixed(2)} in expenses and ${income.toFixed(2)} in income. Daily average: ${daily.toFixed(2)}.`;
 }
 
+// ─── SPREADSHEET ANALYSIS ─────────────────────────────────
+
+const SPREADSHEET_ANALYSIS_PROMPT = `You are an expert spreadsheet parser for a Romanian budgeting app. You analyze household budget spreadsheets to detect their structure.
+
+COMMON LAYOUTS:
+1. "monthly-columns": Each month occupies a group of columns (person amounts + category name). Rows are categories.
+2. "monthly-rows": Each row is a month, columns are categories.
+3. "other": Any layout not matching above.
+
+YOUR TASK:
+Analyze the provided spreadsheet data (first ~40 rows as JSON grid) and detect:
+1. Where month names appear (row/column indices) — they may be in Romanian: Ianuarie, Februarie, Martie, Aprilie, Mai, Iunie, Iulie, August, Septembrie, Octombrie, Noiembrie, Decembrie (or abbreviations)
+2. Where person/people names appear (not month names, not category names)
+3. Where category/expense names appear (repeated each month)
+4. Where amounts are (numeric cells)
+5. The repeating column-group pattern
+
+RETURN THIS EXACT JSON FORMAT:
+{
+  "layout": "monthly-columns",
+  "description": "Brief human-readable description of layout",
+  "headerRow": 0,
+  "dataStartRow": 2,
+  "months": [
+    { "name": "Ianuarie", "monthNumber": 1, "startCol": 0 }
+  ],
+  "columnsPerMonth": 3,
+  "people": [
+    { "name": "PersonName", "columnOffset": 0 }
+  ],
+  "categoryColumnOffset": 1,
+  "categoryNames": ["category1", "category2"],
+  "categoryMappingSuggestions": {
+    "category1": "groceries",
+    "category2": "dining"
+  },
+  "currency": "RON",
+  "warnings": []
+}
+
+FIELD DEFINITIONS:
+- months[].startCol: The first column index (0-based) of each month's column group
+- columnsPerMonth: How many columns each month group spans (e.g., 3 for [person1Amount, categoryName, person2Amount])
+- people[].columnOffset: Offset within each month group for this person's amount column (0-based from startCol)
+- categoryColumnOffset: Offset within each month group for the category name column
+- dataStartRow: First row index (0-based) containing actual data (not headers)
+
+CATEGORY MAPPING — Map to these app categories:
+groceries, dining, transport, shopping, health, subscriptions, utilities, entertainment, education, travel, housing, personal, gifts, insurance, pets, savings, income, transfer, other
+
+Common Romanian → English:
+cumparaturi/mancare → groceries, bautura → dining, restaurant/iesit in oras → dining, utile/utilitati → utilities, chirie → housing, facturi → utilities, haine/imbracaminte → shopping, transport/uber → transport, bilete → transport, sanatate/medic/dentist/farmacie → health, cosmetice/manichiura/tuns → personal, divertisment/party → entertainment, educatie/carti → education, cadouri → gifts, abonamente/netflix/spotify → subscriptions, economii → savings, salariu/venit → income, cafea → dining, comanda mancare → dining, chirie + facturi → housing, utile masina → transport, tigari → personal, aspirator → shopping, orange → subscriptions, consultatie → health, capadoccia → travel
+
+IMPORTANT:
+- Cell data is: { "row": N, "cells": [...values...] }
+- Empty cells are null
+- Numbers may be European format (1.234,56)
+- Return ONLY valid JSON, nothing else`;
+
+export async function processSpreadsheetStructure(gridSample, { userId = 'local' } = {}) {
+  const result = await callAI([
+    {
+      role: 'user',
+      content: `Analyze this spreadsheet structure. The data is rows of cells in JSON format. Detect the layout pattern, months, people, categories, and amount locations.\n\nGrid data:\n${gridSample}`,
+    },
+  ], SPREADSHEET_ANALYSIS_PROMPT, 4000);
+
+  return result;
+}
+
 // ─── RECEIPT HISTORY ──────────────────────────────────────
 async function saveReceiptHistory(receiptData, userId = 'local') {
   await add('receipts', {
