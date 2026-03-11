@@ -1918,6 +1918,19 @@ const ro = {
   'pwa.shareTarget': 'Țintă partajare',
   'pwa.sharedReceived': 'Text partajat primit',
 
+  // ─── Changelog / Noutăți ───────────────────────────────────
+  'changelog.whatsNew': 'Ce e nou',
+  'changelog.subtitle': 'Iată la ce am lucrat',
+  'changelog.gotIt': 'Am înțeles!',
+  'changelog.feature': 'Nou',
+  'changelog.improvement': 'Îmbunătățit',
+  'changelog.fix': 'Reparat',
+  'changelog.v110calendar': 'Calendar redesenat cu hartă termică, puncte pe categorii și rezumate săptămânale',
+  'changelog.v110family': 'Hub-ul familiei e acum colaborativ — bugete comune, obiective și tendințe de cheltuieli',
+  'changelog.v110streaks': 'Urmărirea zilelor fără cheltuieli cu celebrări în calendar',
+  'changelog.v110weekly': 'Grafice săptămânale pentru a observa tiparele de cheltuieli dintr-o privire',
+  'changelog.v110settle': 'Decontări simplificate — accent pe colaborare, nu pe competiție',
+
   // ─── Ghid / Ajutor ─────────────────────────────────────────
   'guide.title': 'Ghid',
   'guide.subtitle': 'Tot ce ai nevoie pentru a începe și a-ți gestiona finanțele',

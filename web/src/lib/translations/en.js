@@ -1918,6 +1918,19 @@ const en = {
   'pwa.shareTarget': 'Share Target',
   'pwa.sharedReceived': 'Shared text received',
 
+  // ─── Changelog / What's New ────────────────────────────────
+  'changelog.whatsNew': "What's New",
+  'changelog.subtitle': 'Here\'s what we\'ve been working on',
+  'changelog.gotIt': 'Got it!',
+  'changelog.feature': 'New',
+  'changelog.improvement': 'Improved',
+  'changelog.fix': 'Fixed',
+  'changelog.v110calendar': 'Redesigned calendar with spending heatmap, category dots, and weekly summaries',
+  'changelog.v110family': 'Family hub is now collaborative — shared budgets, goals, and spending trends',
+  'changelog.v110streaks': 'No-spend streak tracking with celebrations on your calendar',
+  'changelog.v110weekly': 'Weekly spending sparklines so you can spot patterns at a glance',
+  'changelog.v110settle': 'Simplified settlements — focus on teamwork, not competition',
+
   // ─── Guide / Help ──────────────────────────────────────────
   'guide.title': 'Guide',
   'guide.subtitle': 'Everything you need to get started and master your finances',

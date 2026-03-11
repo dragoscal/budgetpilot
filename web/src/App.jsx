@@ -10,6 +10,7 @@ import InstallPrompt from './components/InstallPrompt';
 import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
 import FeedbackFAB from './components/FeedbackFAB';
+import WhatsNew from './components/WhatsNew';
 
 // ─── Lazy-loaded pages (code splitting) ──────────────────
 // Auth pages (small, loaded on demand)
@@ -98,6 +99,7 @@ export default function App() {
       <ToastContainer />
       <InstallPrompt />
       <CommandPalette />
+      <WhatsNew />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           {/* Public routes */}
