@@ -44,7 +44,7 @@ export default function FeedbackFAB() {
     return () => window.removeEventListener('keydown', handler);
   }, [open]);
 
-  // Close on click outside
+  // Close on click/touch outside
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -52,9 +52,16 @@ export default function FeedbackFAB() {
         setOpen(false);
       }
     };
-    // Delay to avoid catching the FAB click itself
-    setTimeout(() => document.addEventListener('mousedown', handler), 0);
-    return () => document.removeEventListener('mousedown', handler);
+    // Delay to avoid catching the FAB click/touch itself
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handler);
+      document.addEventListener('touchstart', handler, { passive: true });
+    }, 50);
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, [open]);
 
   const handleSubmit = async (e) => {

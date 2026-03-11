@@ -2216,6 +2216,276 @@ const ro = {
   'import.viewTransactions': 'Vezi tranzacțiile',
   'import.importAnother': 'Importă alt fișier',
   'import.importError': 'erori',
+
+  // ─── Pagina Ghid (Rescriere completă) ──────────────────
+  // Navigare secțiuni
+  'guide.navWelcome': 'Bun venit',
+  'guide.navQuickStart': 'Start rapid',
+  'guide.navFeatures': 'Funcții',
+  'guide.navWalkthroughs': 'Tutoriale',
+  'guide.navTips': 'Sfaturi',
+  'guide.navFaq': 'FAQ',
+
+  // Hero
+  'guide.heroTitle': 'Bine ai venit în LUMET',
+  'guide.heroSubtitle': 'Partenerul tău de finanțe personale — urmărește cheltuielile, stabilește bugete și atinge-ți obiectivele financiare cu ușurință.',
+  'guide.heroGetStarted': 'Începe acum',
+  'guide.heroJumpTo': 'Deja te descurci?',
+  'guide.heroJumpFeatures': 'Funcții',
+  'guide.heroJumpFaq': 'FAQ',
+
+  // Start rapid
+  'guide.quickStartTitle': 'Start rapid',
+  'guide.quickStartProgress': '{done} din {total} completate',
+  'guide.quickStartReset': 'Resetare',
+  'guide.qs1Title': 'Creează-ți contul',
+  'guide.qs1Desc': 'Înregistrează-te cu email și configurează-ți profilul',
+  'guide.qs2Title': 'Setează moneda',
+  'guide.qs2Desc': 'Alege moneda implicită din Setări',
+  'guide.qs3Title': 'Adaugă prima tranzacție',
+  'guide.qs3Desc': 'Înregistrează o cheltuială sau un venit',
+  'guide.qs4Title': 'Stabilește un buget',
+  'guide.qs4Desc': 'Creează o limită lunară de cheltuieli pe categorie',
+  'guide.qs5Title': 'Explorează analytics',
+  'guide.qs5Desc': 'Vezi grafice de cheltuieli și informații financiare',
+  'guide.qs6Title': 'Încearcă funcțiile AI',
+  'guide.qs6Desc': 'Scanează un bon sau folosește limbaj natural',
+  'guide.qsGo': 'Du-te',
+  'guide.qsDone': 'Gata! Ești un profesionist LUMET.',
+
+  // Carduri funcții
+  'guide.featuresTitle': 'Toate funcțiile',
+  'guide.featuresSubtitle': 'Tot ce oferă LUMET pentru gestionarea finanțelor tale',
+  'guide.featureGroupCore': 'Principale',
+  'guide.featureGroupPlanning': 'Planificare',
+  'guide.featureGroupInsights': 'Analiză',
+  'guide.featureGroupMore': 'Mai multe',
+  'guide.learnMore': 'Află mai mult',
+  'guide.showLess': 'Ascunde',
+  'guide.goToPage': 'Deschide pagina',
+  'guide.proTip': 'Sfat pro',
+
+  // Funcție: Dashboard
+  'guide.dashboard.bullet1': 'Vezi soldul total, veniturile și cheltuielile dintr-o privire',
+  'guide.dashboard.bullet2': 'Widget-uri personalizabile — arată ce contează pentru tine',
+  'guide.dashboard.bullet3': 'Bare de progres buget arată unde te afli luna aceasta',
+  'guide.dashboard.bullet4': 'Lista tranzacții recente pentru revizuire rapidă',
+  'guide.dashboard.proTip': 'Apasă pe iconița de setări pentru a personaliza widget-urile de pe dashboard.',
+
+  // Funcție: Adaugă tranzacție
+  'guide.addTransactionTitle': 'Adaugă tranzacție',
+  'guide.addTransactionDesc': 'Mai multe moduri de a înregistra venituri și cheltuieli: limbaj natural, scanare bon, import CSV și formular manual.',
+  'guide.addTransaction.bullet1': 'NLP rapid: scrie "cafea 15 lei" și detectează totul automat',
+  'guide.addTransaction.bullet2': 'Scanare bon AI din cameră sau upload foto',
+  'guide.addTransaction.bullet3': 'Import CSV din exporturi bancare',
+  'guide.addTransaction.bullet4': 'Formular manual cu selector de categorie și etichete',
+  'guide.addTransaction.proTip': 'Scrie natural, de ex. "uber 45 lei transport". AI-ul înțelege suma, categoria și comerciantul.',
+
+  // Funcție: Tranzacții
+  'guide.transactions.bullet1': 'Caută după comerciant, sumă, notițe sau etichete',
+  'guide.transactions.bullet2': 'Filtrează după categorie, perioadă și tip',
+  'guide.transactions.bullet3': 'Selectează mai multe pentru editare sau ștergere în masă',
+  'guide.transactions.bullet4': 'Exportă rezultatele filtrate în CSV',
+  'guide.transactions.proTip': 'Folosește casetele de selectare pentru a alege mai multe tranzacții, apoi schimbă categoria sau șterge-le în bloc.',
+
+  // Funcție: Bugete
+  'guide.budgets.bullet1': 'Setează limite lunare de cheltuieli per categorie',
+  'guide.budgets.bullet2': 'Bare de progres vizuale cu alerte colorate (verde/galben/roșu)',
+  'guide.budgets.bullet3': 'Șabloane de buget pentru configurare rapidă',
+  'guide.budgets.bullet4': 'Reportare sumă necheltuitā în luna următoare',
+  'guide.budgets.proTip': 'Primești notificări automate la 80% și 100% din fiecare buget.',
+
+  // Funcție: Obiective
+  'guide.goals.bullet1': 'Tipuri de obiective: economisire sau rambursare',
+  'guide.goals.bullet2': 'Adaugă contribuții și urmărește progresul vizual',
+  'guide.goals.bullet3': 'Dată estimată de finalizare bazată pe ritmul tău de economisire',
+  'guide.goals.bullet4': 'Carduri de obiective colorate pentru identificare ușoară',
+  'guide.goals.proTip': 'Setează o dată țintă pentru a vedea exact cât trebuie să economisești lunar.',
+
+  // Funcție: Recurente
+  'guide.recurring.bullet1': 'Urmărește abonamentele și facturile regulate',
+  'guide.recurring.bullet2': 'Detectare automată când aceeași sumă/comerciant se repetă lunar',
+  'guide.recurring.bullet3': 'Frecvențe multiple: săptămânal, lunar, anual și altele',
+  'guide.recurring.bullet4': 'Memento-uri la scadență și integrare calendar',
+  'guide.recurring.proTip': 'Aplicația sugerează automat plăți recurente după 2+ luni cu aceeași tranzacție.',
+
+  // Funcție: Împrumuturi
+  'guide.loans.bullet1': 'Urmărește ipoteci, credite auto, personale și studențești',
+  'guide.loans.bullet2': 'Grafic de amortizare cu defalcare principal/dobândă',
+  'guide.loans.bullet3': 'Înregistrează plățile și vezi soldul rămas actualizat',
+  'guide.loans.bullet4': 'Simulator de rambursare datorii (bulgăre vs avalanșă)',
+  'guide.loans.proTip': 'Folosește Simulatorul de rambursare pentru a compara strategiile și a găsi calea cea mai rapidă.',
+
+  // Funcție: Calendar
+  'guide.calendar.bullet1': 'Vizualizare calendar lunară a tuturor tranzacțiilor',
+  'guide.calendar.bullet2': 'Totaluri zilnice cu intensitate cromatică (mai închis = mai mult cheltuit)',
+  'guide.calendar.bullet3': 'Apasă pe orice zi pentru a vedea tranzacțiile zilei',
+  'guide.calendar.bullet4': 'Plățile recurente marcate cu iconițe speciale',
+  'guide.calendar.proTip': 'Zilele mai închise la culoare înseamnă cheltuieli mai mari — folosește asta pentru a detecta tipare.',
+
+  // Funcție: Cash Flow
+  'guide.cashflow.bullet1': 'Grafic cu bare venituri vs cheltuieli în timp',
+  'guide.cashflow.bullet2': 'Linie de trend a fluxului net de numerar',
+  'guide.cashflow.bullet3': 'Comparație multi-lunară dintr-o privire',
+  'guide.cashflow.bullet4': 'Prognoză cash flow bazată pe AI',
+  'guide.cashflow.proTip': 'Prognoza prezice soldul de la sfârșitul lunii bazat pe tiparele de cheltuieli.',
+
+  // Funcție: Valoare netă
+  'guide.networth.bullet1': 'Adaugă toate conturile: bancă, numerar, investiții, proprietăți',
+  'guide.networth.bullet2': 'Defalcare active vs pasive',
+  'guide.networth.bullet3': 'Grafic de creștere în timp',
+  'guide.networth.bullet4': 'Actualizează soldurile regulat pentru acuratețe',
+  'guide.networth.proTip': 'Include soldurile cărților de credit ca pasive pentru o imagine precisă a valorii nete.',
+
+  // Funcție: Analytics
+  'guide.analytics.bullet1': 'Defalcare cheltuieli pe categorii cu grafic circular',
+  'guide.analytics.bullet2': 'Analiză a tiparelor zilnice de cheltuieli',
+  'guide.analytics.bullet3': 'Clasament top comercianți',
+  'guide.analytics.bullet4': 'Scor de sănătate financiară (0-100)',
+  'guide.analytics.proTip': 'Scorul de sănătate ia în calcul rata de economisire, respectarea bugetului și consistența cheltuielilor.',
+
+  // Funcție: Rapoarte
+  'guide.reports.bullet1': 'Rezumate lunare și anuale',
+  'guide.reports.bullet2': 'Comparație categorie cu categorie',
+  'guide.reports.bullet3': 'Date exportabile în CSV',
+  'guide.reports.bullet4': 'Filtrare personalizată pe perioade',
+  'guide.reports.proTip': 'Folosește rapoartele la declarația de impozit pentru a găsi rapid cheltuielile de afaceri.',
+
+  // Funcție: Familie
+  'guide.family.bullet1': 'Creează o gospodărie și invită membrii familiei',
+  'guide.family.bullet2': 'Împarte cheltuielile cu metode flexibile',
+  'guide.family.bullet3': 'Urmărește cine-a-plătit-ce cu solduri automate',
+  'guide.family.bullet4': 'Sugestii de decontare pentru a minimiza plățile',
+  'guide.family.proTip': 'Marchează tranzacțiile ca "gospodărie" pentru a le include automat în urmărirea familiei.',
+
+  // Funcție: Persoane
+  'guide.peopleTitle': 'Persoane și datorii',
+  'guide.peopleDesc': 'Urmărește banii pe care îi datorezi sau ți se datorează. Înregistrează plăți parțiale și vezi soldurile per persoană.',
+  'guide.people.bullet1': 'Urmărește datorii către și de la persoane',
+  'guide.people.bullet2': 'Înregistrează plățile parțiale pe măsură ce apar',
+  'guide.people.bullet3': 'Sold curent per persoană',
+  'guide.people.bullet4': 'Istoric complet al tranzacțiilor cu fiecare contact',
+  'guide.people.proTip': 'Adaugă persoanele cu care împarți des costurile pentru urmărire rapidă.',
+
+  // Funcție: Wishlist
+  'guide.wishlistTitle': 'Wishlist',
+  'guide.wishlistDesc': 'Ține o listă prioritizată cu lucrurile pe care vrei să le cumperi. Urmărește prețuri și leagă de obiective de economisire.',
+  'guide.wishlist.bullet1': 'Adaugă articole cu prețuri estimate și link-uri',
+  'guide.wishlist.bullet2': 'Nivele de prioritate pentru clasificare (1-5)',
+  'guide.wishlist.bullet3': 'Organizează pe categorii',
+  'guide.wishlist.bullet4': 'Marchează ca achiziționat când cumperi',
+  'guide.wishlist.proTip': 'Clasifică articolele după prioritate pentru a decide ce să economisești mai întâi.',
+
+  // Funcție: Provocări
+  'guide.challengesTitle': 'Provocări',
+  'guide.challengesDesc': 'Gamifică-ți finanțele cu provocări fără cheltuieli, plafonare pe categorii și sprinturi de economisire.',
+  'guide.challenges.bullet1': 'Zile fără cheltuieli pentru a-ți dezvolta disciplina',
+  'guide.challenges.bullet2': 'Provocări cu plafon de buget pe categorie',
+  'guide.challenges.bullet3': 'Sprinturi de economisire',
+  'guide.challenges.bullet4': 'Urmărire streak zilnic cu bară de progres',
+  'guide.challenges.proTip': 'Începe cu o provocare de weekend fără cheltuieli înainte de a încerca o lună întreagă.',
+
+  // Funcție: Bonuri
+  'guide.receiptsTitle': 'Bonuri',
+  'guide.receiptsDesc': 'Răsfoiește toate bonurile scanate. Caută, filtrează și vezi imaginile originale cu detalii extrase.',
+  'guide.receipts.bullet1': 'Galerie cu toate bonurile scanate',
+  'guide.receipts.bullet2': 'Caută și filtrează după dată sau comerciant',
+  'guide.receipts.bullet3': 'Apasă pentru a vedea imaginea completă și detaliile',
+  'guide.receipts.bullet4': 'Legate de tranzacțiile originale',
+  'guide.receipts.proTip': 'Scanează bonurile imediat după cumpărături pentru cea mai bună acuratețe AI.',
+
+  // Funcție: Import buget
+  'guide.importBudgetTitle': 'Import buget',
+  'guide.importBudgetDesc': 'Încarcă foi de calcul Excel sau CSV. AI-ul detectează structura coloanelor și mapează categoriile automat.',
+  'guide.importBudget.bullet1': 'Încarcă fișiere Excel (.xlsx), CSV sau TSV',
+  'guide.importBudget.bullet2': 'Detectare coloane și structură bazată pe AI',
+  'guide.importBudget.bullet3': 'Wizard de mapare categorii cu sugestii AI',
+  'guide.importBudget.bullet4': 'Previzualizare și editare înainte de import',
+  'guide.importBudget.proTip': 'Funcționează excelent cu exporturi Google Sheets. AI-ul detectează structura coloanelor.',
+
+  // Funcție: Recenzie lunară
+  'guide.reviewTitle': 'Recenzie lunară',
+  'guide.reviewDesc': 'Recapitulare de sfârșit de lună: cheltuieli vs venituri, respectarea bugetului și defalcare pe categorii.',
+  'guide.review.bullet1': 'Rezumat cheltuieli de sfârșit de lună',
+  'guide.review.bullet2': 'Comparație venituri vs cheltuieli',
+  'guide.review.bullet3': 'Defalcare pe categorii cu comparație față de luna anterioară',
+  'guide.review.bullet4': 'Recapitulare respectare buget',
+  'guide.review.proTip': 'Verifică Recenzia lunară la sfârșitul lunii pentru a reflecta asupra obiceiurilor de cheltuieli.',
+
+  // Funcție: Setări
+  'guide.settingsTitle': 'Setări',
+  'guide.settingsDesc': 'Configurează moneda, limba, tema, cheile API pentru AI, botul Telegram, conturile și sincronizarea datelor.',
+  'guide.settings.bullet1': 'Setează moneda și limba implicite',
+  'guide.settings.bullet2': 'Configurează cheile API pentru furnizorul AI',
+  'guide.settings.bullet3': 'Integrare bot Telegram pentru urmărire prin chat',
+  'guide.settings.bullet4': 'Export date, import și sincronizare cloud',
+  'guide.settings.proTip': 'Conectează cheia API Anthropic pentru a debloca scanarea bonurilor și categorizarea inteligentă.',
+
+  // Tutoriale pas cu pas
+  'guide.walkthroughsTitle': 'Tutoriale pas cu pas',
+  'guide.walkthroughsSubtitle': 'Urmează aceste ghiduri pentru a profita la maximum de LUMET',
+
+  'guide.wt1Title': 'Adaugă prima tranzacție',
+  'guide.wt1Step1': 'Apasă butonul + din bara de navigare sau mergi la pagina Adaugă tranzacție',
+  'guide.wt1Step2': 'Alege metoda de introducere: NLP rapid, Scanare bon, Manual, CSV sau Extras bancar',
+  'guide.wt1Step3': 'Introdu detaliile tranzacției — suma, categoria, data și notițe opționale',
+  'guide.wt1Step4': 'Revizuiește rezultatul și editează câmpurile detectate automat dacă e necesar',
+  'guide.wt1Step5': 'Apasă Salvează — tranzacția apare imediat în lista ta de tranzacții',
+  'guide.wt1ProTip': 'Folosește Adăugare rapidă — scrie "cafea 15" și AI-ul completează restul.',
+  'guide.wt1Shortcut': 'Apasă Ctrl+K apoi scrie "add" pentru a ajunge direct aici',
+
+  'guide.wt2Title': 'Configurare bugete',
+  'guide.wt2Step1': 'Mergi la pagina Bugete din bara laterală',
+  'guide.wt2Step2': 'Apasă "+ Adaugă buget" și alege o categorie de cheltuieli',
+  'guide.wt2Step3': 'Setează limita lunară',
+  'guide.wt2Step4': 'Urmărește bara de progres cum se umple pe măsură ce cheltuiești — verde, galben, apoi roșu',
+  'guide.wt2ProTip': 'Folosește un Șablon de buget pentru a seta rapid limite pentru Mâncare, Transport și Divertisment.',
+
+  'guide.wt3Title': 'Urmărirea obiectivelor de economisire',
+  'guide.wt3Step1': 'Mergi la pagina Obiective din bara laterală',
+  'guide.wt3Step2': 'Apasă "+ Obiectiv nou" și alege economisire sau rambursare',
+  'guide.wt3Step3': 'Setează suma țintă și opțional o dată țintă',
+  'guide.wt3Step4': 'Adaugă contribuții pe măsură ce economisești — bara de progres și data estimată se actualizează în timp real',
+  'guide.wt3ProTip': 'Setarea unei date țintă arată cât trebuie să economisești în fiecare lună.',
+
+  'guide.wt4Title': 'Scanarea unui bon',
+  'guide.wt4Step1': 'Mergi la Adaugă tranzacție și comută pe tabul Bon',
+  'guide.wt4Step2': 'Fă o poză cu camera sau încarcă o imagine existentă',
+  'guide.wt4Step3': 'AI-ul extrage suma totală, numele comerciantului, data și articolele',
+  'guide.wt4Step4': 'Revizuiește rezultatele, ajustează categoriile dacă e necesar și apasă Salvează',
+  'guide.wt4ProTip': 'Pentru cele mai bune rezultate, asigură-te că bonul este neted, bine iluminat și totalul e vizibil.',
+
+  'guide.wt5Title': 'Gestionarea cheltuielilor gospodăriei',
+  'guide.wt5Step1': 'Mergi la pagina Familie și creează un grup de gospodărie nou',
+  'guide.wt5Step2': 'Adaugă membri ai familiei cu numele și emailul lor',
+  'guide.wt5Step3': 'Când adaugi tranzacții, activează "Gospodărie" și alege metoda de împărțire',
+  'guide.wt5Step4': 'Vezi soldurile și sugestiile de decontare pe pagina de prezentare Familie',
+  'guide.wt5ProTip': 'Tabul Decontări arată numărul minim de plăți necesare pentru a stinge toate datoriile.',
+
+  // Sfaturi (adăugări noi)
+  'guide.tip9Title': 'Bot Telegram',
+  'guide.tip9Desc': 'Conectează un bot Telegram pentru a înregistra cheltuieli prin chat. Trimite mesaje ca "prânz 35 lei" și se înregistrează automat.',
+  'guide.tip10Title': 'Multi-valută',
+  'guide.tip10Desc': 'Adaugă tranzacții în orice monedă. Aplicația convertește automat la moneda ta implicită folosind cursuri de schimb live.',
+
+  // Scurtături tastatură
+  'guide.keyboardTitle': 'Scurtături tastatură',
+  'guide.shortcutSearch': 'Caută orice',
+  'guide.shortcutClose': 'Închide ferestre și meniuri',
+  'guide.shortcutGuide': 'Deschide acest ghid',
+
+  // Grupuri FAQ
+  'faq.groupStart': 'Primii pași',
+  'faq.groupFeatures': 'Funcții și utilizare',
+  'faq.groupData': 'Date și securitate',
+
+  // Întrebări FAQ noi
+  'faq.q13': 'Pot folosi LUMET offline?',
+  'faq.a13': 'Da! LUMET funcționează offline-first. Toate datele sunt stocate local în browser. Când te reconectezi, modificările se sincronizează automat cu cloud-ul.',
+  'faq.q14': 'Cum configurez botul Telegram?',
+  'faq.a14': 'Mergi la Setări, derulează la secțiunea Bot Telegram și introdu tokenul botului și ID-ul de chat. Apoi poți înregistra cheltuieli trimițând mesaje botului.',
+  'faq.q15': 'Ce funcții AI necesită o cheie API?',
+  'faq.a15': 'Scanarea bonurilor, categorizarea inteligentă și parsarea limbajului natural folosesc toate AI. Adaugă cheia Anthropic, OpenAI sau OpenRouter în Setări pentru a le activa.',
 };
 
 export default ro;

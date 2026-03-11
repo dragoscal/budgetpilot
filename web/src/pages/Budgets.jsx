@@ -426,12 +426,12 @@ export default function Budgets() {
                   <span>{t('budgets.rolloverAmount', { amount: formatCurrency(b.rolloverAmount, b.currency || currency) })}</span>
                 </div>
               )}
-              <div className="absolute top-3 right-3 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleEdit(b)} className="p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 text-xs">{t('common.edit')}</button>
                 <button onClick={() => handleDelete(b.id)} className="p-1 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger text-xs">{t('common.delete')}</button>
               </div>
               {b.rollover && !b.rolloverAmount && (
-                <span className="absolute top-3 right-3 text-[10px] text-cream-400 group-hover:hidden">{t('budgets.rollover')}</span>
+                <span className="absolute bottom-2 right-3 text-[10px] text-cream-400 sm:bottom-auto sm:top-3 sm:right-3 sm:group-hover:hidden">{t('budgets.rollover')}</span>
               )}
             </div>
           ))}

@@ -2216,6 +2216,276 @@ const en = {
   'import.viewTransactions': 'View Transactions',
   'import.importAnother': 'Import Another File',
   'import.importError': 'errors',
+
+  // ─── Guide Page (Complete Rewrite) ─────────────────────
+  // Section nav
+  'guide.navWelcome': 'Welcome',
+  'guide.navQuickStart': 'Quick Start',
+  'guide.navFeatures': 'Features',
+  'guide.navWalkthroughs': 'Walkthroughs',
+  'guide.navTips': 'Tips',
+  'guide.navFaq': 'FAQ',
+
+  // Hero
+  'guide.heroTitle': 'Welcome to LUMET',
+  'guide.heroSubtitle': 'Your personal finance companion — track spending, set budgets, and reach your financial goals with ease.',
+  'guide.heroGetStarted': 'Get Started',
+  'guide.heroJumpTo': 'Already know your way around?',
+  'guide.heroJumpFeatures': 'Features',
+  'guide.heroJumpFaq': 'FAQ',
+
+  // Quick Start
+  'guide.quickStartTitle': 'Quick Start',
+  'guide.quickStartProgress': '{done} of {total} complete',
+  'guide.quickStartReset': 'Reset',
+  'guide.qs1Title': 'Create your account',
+  'guide.qs1Desc': 'Sign up with email and set up your profile',
+  'guide.qs2Title': 'Set your currency',
+  'guide.qs2Desc': 'Choose your default currency in Settings',
+  'guide.qs3Title': 'Add your first transaction',
+  'guide.qs3Desc': 'Record an expense or income',
+  'guide.qs4Title': 'Set a budget',
+  'guide.qs4Desc': 'Create a monthly spending limit for a category',
+  'guide.qs5Title': 'Explore analytics',
+  'guide.qs5Desc': 'See spending charts and financial insights',
+  'guide.qs6Title': 'Try AI features',
+  'guide.qs6Desc': 'Scan a receipt or use natural language input',
+  'guide.qsGo': 'Go',
+  'guide.qsDone': 'All done! You\'re a LUMET pro.',
+
+  // Feature cards
+  'guide.featuresTitle': 'All Features',
+  'guide.featuresSubtitle': 'Everything LUMET offers to manage your finances',
+  'guide.featureGroupCore': 'Core',
+  'guide.featureGroupPlanning': 'Planning',
+  'guide.featureGroupInsights': 'Insights',
+  'guide.featureGroupMore': 'More',
+  'guide.learnMore': 'Learn more',
+  'guide.showLess': 'Show less',
+  'guide.goToPage': 'Open page',
+  'guide.proTip': 'Pro tip',
+
+  // Feature: Dashboard
+  'guide.dashboard.bullet1': 'See total balance, income, and expenses at a glance',
+  'guide.dashboard.bullet2': 'Customizable widgets — show what matters to you',
+  'guide.dashboard.bullet3': 'Budget progress bars show where you stand this month',
+  'guide.dashboard.bullet4': 'Recent transactions list for quick review',
+  'guide.dashboard.proTip': 'Click the gear icon to customize which widgets appear on your dashboard.',
+
+  // Feature: Add Transaction
+  'guide.addTransactionTitle': 'Add Transaction',
+  'guide.addTransactionDesc': 'Multiple ways to record income and expenses: natural language, receipt scanning, CSV import, and manual form.',
+  'guide.addTransaction.bullet1': 'Quick NLP: type "coffee 15 lei" and it auto-detects everything',
+  'guide.addTransaction.bullet2': 'AI receipt scanning from camera or photo upload',
+  'guide.addTransaction.bullet3': 'CSV import from bank statement exports',
+  'guide.addTransaction.bullet4': 'Manual form with category picker and tags',
+  'guide.addTransaction.proTip': 'Type naturally like "uber 45 lei transport". The AI understands amount, category, and merchant.',
+
+  // Feature: Transactions
+  'guide.transactions.bullet1': 'Search by merchant, amount, notes, or tags',
+  'guide.transactions.bullet2': 'Filter by category, date range, and type',
+  'guide.transactions.bullet3': 'Select multiple for bulk editing or deletion',
+  'guide.transactions.bullet4': 'Export filtered results to CSV',
+  'guide.transactions.proTip': 'Use checkboxes to select multiple transactions, then change category or delete in bulk.',
+
+  // Feature: Budgets
+  'guide.budgets.bullet1': 'Set monthly spending limits for each category',
+  'guide.budgets.bullet2': 'Visual progress bars with color alerts (green/yellow/red)',
+  'guide.budgets.bullet3': 'Budget templates for quick setup of common categories',
+  'guide.budgets.bullet4': 'Rollover unspent budget to next month',
+  'guide.budgets.proTip': 'You get automatic toast notifications at 80% and 100% of each budget.',
+
+  // Feature: Goals
+  'guide.goals.bullet1': 'Save-up or pay-down goal types',
+  'guide.goals.bullet2': 'Add contributions and track progress with visual bars',
+  'guide.goals.bullet3': 'Projected completion date based on your saving pace',
+  'guide.goals.bullet4': 'Color-coded goal cards for easy identification',
+  'guide.goals.proTip': 'Set a target date to see exactly how much you need to save per month.',
+
+  // Feature: Recurring
+  'guide.recurring.bullet1': 'Track subscriptions and regular bills',
+  'guide.recurring.bullet2': 'Auto-detection when same merchant/amount repeats monthly',
+  'guide.recurring.bullet3': 'Multiple frequencies: weekly, monthly, yearly, and more',
+  'guide.recurring.bullet4': 'Due date reminders and calendar integration',
+  'guide.recurring.proTip': 'The app auto-suggests recurring payments after detecting 2+ months of the same transaction.',
+
+  // Feature: Loans
+  'guide.loans.bullet1': 'Track mortgage, auto, personal, and student loans',
+  'guide.loans.bullet2': 'Amortization schedule with principal/interest breakdown',
+  'guide.loans.bullet3': 'Record payments and see remaining balance update',
+  'guide.loans.bullet4': 'Debt payoff simulator (snowball vs avalanche)',
+  'guide.loans.proTip': 'Use the Debt Payoff Simulator to compare strategies and find the fastest way out.',
+
+  // Feature: Calendar
+  'guide.calendar.bullet1': 'Monthly calendar view of all transactions',
+  'guide.calendar.bullet2': 'Daily totals with color intensity (darker = more spent)',
+  'guide.calendar.bullet3': 'Click any day to see that day\'s transactions',
+  'guide.calendar.bullet4': 'Recurring payments marked with special icons',
+  'guide.calendar.proTip': 'Darker colored days mean higher spending — use this to spot patterns.',
+
+  // Feature: Cash Flow
+  'guide.cashflow.bullet1': 'Income vs expenses bar chart over time',
+  'guide.cashflow.bullet2': 'Net cash flow trend line',
+  'guide.cashflow.bullet3': 'Multi-month comparison at a glance',
+  'guide.cashflow.bullet4': 'AI-powered cash flow forecasting',
+  'guide.cashflow.proTip': 'The forecast predicts your end-of-month balance based on spending patterns.',
+
+  // Feature: Net Worth
+  'guide.networth.bullet1': 'Add all accounts: bank, cash, investments, property',
+  'guide.networth.bullet2': 'Assets vs liabilities breakdown',
+  'guide.networth.bullet3': 'Growth trend chart over time',
+  'guide.networth.bullet4': 'Update balances regularly for accuracy',
+  'guide.networth.proTip': 'Include credit card balances as liabilities for an accurate net worth picture.',
+
+  // Feature: Analytics
+  'guide.analytics.bullet1': 'Category spending breakdown with pie chart',
+  'guide.analytics.bullet2': 'Daily spending pattern analysis',
+  'guide.analytics.bullet3': 'Top merchants ranking',
+  'guide.analytics.bullet4': 'Financial health score (0-100)',
+  'guide.analytics.proTip': 'The health score considers savings rate, budget adherence, and spending consistency.',
+
+  // Feature: Reports
+  'guide.reports.bullet1': 'Monthly and yearly summaries',
+  'guide.reports.bullet2': 'Category-by-category comparison',
+  'guide.reports.bullet3': 'Exportable CSV data',
+  'guide.reports.bullet4': 'Custom date range filtering',
+  'guide.reports.proTip': 'Use reports at tax time to quickly find business-tagged expenses.',
+
+  // Feature: Family
+  'guide.family.bullet1': 'Create a household and invite family members',
+  'guide.family.bullet2': 'Share and split expenses with flexible methods',
+  'guide.family.bullet3': 'Track who-paid-what with automatic balances',
+  'guide.family.bullet4': 'Settlement suggestions to minimize payments',
+  'guide.family.proTip': 'Mark transactions as "household" to automatically include them in family tracking.',
+
+  // Feature: People
+  'guide.peopleTitle': 'People & Debts',
+  'guide.peopleDesc': 'Track money you owe or are owed. Record partial payments and see running balances per person.',
+  'guide.people.bullet1': 'Track debts owed to and from individuals',
+  'guide.people.bullet2': 'Record partial payments as they happen',
+  'guide.people.bullet3': 'Running balance per person',
+  'guide.people.bullet4': 'Full transaction history with each contact',
+  'guide.people.proTip': 'Add people you regularly split costs with for quick debt tracking.',
+
+  // Feature: Wishlist
+  'guide.wishlistTitle': 'Wishlist',
+  'guide.wishlistDesc': 'Keep a prioritized list of things you want to buy. Track prices and link to savings goals.',
+  'guide.wishlist.bullet1': 'Add items with estimated prices and links',
+  'guide.wishlist.bullet2': 'Priority levels for ranking (1-5)',
+  'guide.wishlist.bullet3': 'Organize across categories',
+  'guide.wishlist.bullet4': 'Mark as purchased when you buy them',
+  'guide.wishlist.proTip': 'Rank items by priority to decide what to save for next.',
+
+  // Feature: Challenges
+  'guide.challengesTitle': 'Challenges',
+  'guide.challengesDesc': 'Gamify your finances with no-spend challenges, category budget caps, and savings sprints.',
+  'guide.challenges.bullet1': 'No-spend challenge days to build discipline',
+  'guide.challenges.bullet2': 'Category budget cap challenges',
+  'guide.challenges.bullet3': 'Savings sprint challenges',
+  'guide.challenges.bullet4': 'Daily streak tracking with progress bar',
+  'guide.challenges.proTip': 'Start with a weekend no-spend challenge before trying a full month.',
+
+  // Feature: Receipts
+  'guide.receiptsTitle': 'Receipts',
+  'guide.receiptsDesc': 'Browse all your scanned receipts. Search, filter, and view original images with extracted details.',
+  'guide.receipts.bullet1': 'Gallery of all scanned receipts',
+  'guide.receipts.bullet2': 'Search and filter by date or merchant',
+  'guide.receipts.bullet3': 'Tap to see full image and extracted details',
+  'guide.receipts.bullet4': 'Linked to original transactions',
+  'guide.receipts.proTip': 'Scan receipts right after purchase for the best AI accuracy.',
+
+  // Feature: Import Budget
+  'guide.importBudgetTitle': 'Import Budget',
+  'guide.importBudgetDesc': 'Upload Excel or CSV spreadsheets. AI detects column structure and maps categories automatically.',
+  'guide.importBudget.bullet1': 'Upload Excel (.xlsx), CSV, or TSV files',
+  'guide.importBudget.bullet2': 'AI-powered column and structure detection',
+  'guide.importBudget.bullet3': 'Category mapping wizard with AI suggestions',
+  'guide.importBudget.bullet4': 'Preview and edit before importing',
+  'guide.importBudget.proTip': 'Works great with Google Sheets exports. The AI detects your column structure.',
+
+  // Feature: Monthly Review
+  'guide.reviewTitle': 'Monthly Review',
+  'guide.reviewDesc': 'End-of-month recap of spending vs income, budget adherence, and category breakdowns.',
+  'guide.review.bullet1': 'Month-end spending summary',
+  'guide.review.bullet2': 'Income vs expense comparison',
+  'guide.review.bullet3': 'Category breakdown with previous month comparison',
+  'guide.review.bullet4': 'Budget adherence recap',
+  'guide.review.proTip': 'Check your Monthly Review at month\'s end to reflect on spending habits.',
+
+  // Feature: Settings
+  'guide.settingsTitle': 'Settings',
+  'guide.settingsDesc': 'Configure currency, language, theme, AI provider keys, Telegram bot, accounts, and data sync.',
+  'guide.settings.bullet1': 'Set default currency and language',
+  'guide.settings.bullet2': 'Configure AI provider API keys',
+  'guide.settings.bullet3': 'Telegram bot integration for chat-based tracking',
+  'guide.settings.bullet4': 'Data export, import, and cloud sync',
+  'guide.settings.proTip': 'Connect your Anthropic API key to unlock AI receipt scanning and smart categorization.',
+
+  // Walkthroughs
+  'guide.walkthroughsTitle': 'Step-by-step Walkthroughs',
+  'guide.walkthroughsSubtitle': 'Follow these guides to get the most out of LUMET',
+
+  'guide.wt1Title': 'Adding Your First Transaction',
+  'guide.wt1Step1': 'Click the + button in the bottom nav bar or go to the Add Transaction page',
+  'guide.wt1Step2': 'Choose your input method: Quick NLP, Receipt Scan, Manual, CSV, or Bank Statement',
+  'guide.wt1Step3': 'Enter the transaction details — amount, category, date, and optional notes',
+  'guide.wt1Step4': 'Review the parsed result and edit any auto-detected fields if needed',
+  'guide.wt1Step5': 'Click Save — the transaction appears in your Transactions list immediately',
+  'guide.wt1ProTip': 'Use Quick Add for speed — type "coffee 15" and the AI fills in the rest.',
+  'guide.wt1Shortcut': 'Press Ctrl+K then type "add" to jump straight here',
+
+  'guide.wt2Title': 'Setting Up Budgets',
+  'guide.wt2Step1': 'Go to the Budgets page from the sidebar',
+  'guide.wt2Step2': 'Click "+ Add Budget" and pick a spending category',
+  'guide.wt2Step3': 'Set your monthly limit amount',
+  'guide.wt2Step4': 'Watch the progress bar fill as you spend — green, yellow, then red',
+  'guide.wt2ProTip': 'Use a Budget Template to quickly set limits for Food, Transport, and Entertainment.',
+
+  'guide.wt3Title': 'Tracking Savings Goals',
+  'guide.wt3Step1': 'Go to the Goals page from the sidebar',
+  'guide.wt3Step2': 'Click "+ New Goal" and choose save-up or pay-down',
+  'guide.wt3Step3': 'Set your target amount and optionally a target date',
+  'guide.wt3Step4': 'Add contributions as you save — the progress bar and projected date update in real-time',
+  'guide.wt3ProTip': 'Setting a target date shows how much you need to save each month.',
+
+  'guide.wt4Title': 'Scanning a Receipt',
+  'guide.wt4Step1': 'Go to Add Transaction and switch to the Receipt tab',
+  'guide.wt4Step2': 'Take a photo with your camera or upload an existing image',
+  'guide.wt4Step3': 'AI extracts the total amount, merchant name, date, and line items',
+  'guide.wt4Step4': 'Review the results, adjust categories if needed, and click Save',
+  'guide.wt4ProTip': 'For best results, ensure the receipt is flat, well-lit, and the total is visible.',
+
+  'guide.wt5Title': 'Managing Household Expenses',
+  'guide.wt5Step1': 'Go to the Family page and create a new household group',
+  'guide.wt5Step2': 'Add family members by their name and email',
+  'guide.wt5Step3': 'When adding transactions, toggle "Household" and choose a split method',
+  'guide.wt5Step4': 'View balances and settlement suggestions on the Family overview page',
+  'guide.wt5ProTip': 'The Settlements tab shows the minimum number of payments needed to settle all debts.',
+
+  // Tips (new additions)
+  'guide.tip9Title': 'Telegram bot',
+  'guide.tip9Desc': 'Connect a Telegram bot to log expenses via chat. Send messages like "lunch 35 lei" and it gets recorded automatically.',
+  'guide.tip10Title': 'Multi-currency',
+  'guide.tip10Desc': 'Add transactions in any currency. The app auto-converts to your default currency using live exchange rates.',
+
+  // Keyboard shortcuts
+  'guide.keyboardTitle': 'Keyboard Shortcuts',
+  'guide.shortcutSearch': 'Search anything',
+  'guide.shortcutClose': 'Close modals and dropdowns',
+  'guide.shortcutGuide': 'Open this guide',
+
+  // FAQ groups
+  'faq.groupStart': 'Getting Started',
+  'faq.groupFeatures': 'Features & Usage',
+  'faq.groupData': 'Data & Security',
+
+  // New FAQ entries
+  'faq.q13': 'Can I use LUMET offline?',
+  'faq.a13': 'Yes! LUMET works offline-first. All data is stored locally in your browser. When you reconnect, changes sync automatically with the cloud.',
+  'faq.q14': 'How do I set up the Telegram bot?',
+  'faq.a14': 'Go to Settings, scroll to the Telegram Bot section, and enter your bot token and chat ID. You can then log expenses by sending messages to the bot.',
+  'faq.q15': 'What AI features require an API key?',
+  'faq.a15': 'Receipt scanning, smart categorization, and natural language parsing all use AI. Add your Anthropic, OpenAI, or OpenRouter key in Settings to enable them.',
 };
 
 export default en;
