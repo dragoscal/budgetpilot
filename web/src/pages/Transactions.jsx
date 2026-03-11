@@ -5,7 +5,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
-import { sortByDate, formatCurrency, sumBy } from '../lib/helpers';
+import { sortByDate, formatCurrency, sumBy, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import TransactionRow from '../components/TransactionRow';
 import TransactionEditModal from '../components/TransactionEditModal';
 import SearchFilter from '../components/SearchFilter';
@@ -40,8 +41,9 @@ export default function Transactions() {
   const [deleteTx, setDeleteTx] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [showAllTags, setShowAllTags] = useState(false);
+  const [rates, setRates] = useState(null);
 
-  useEffect(() => { loadTransactions(); }, [effectiveUserId]);
+  useEffect(() => { loadTransactions(); getCachedRates().then(setRates); }, [effectiveUserId]);
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -136,8 +138,8 @@ export default function Transactions() {
   const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
   const hasMore = paginated.length < filtered.length;
 
-  const totalExpenses = sumBy(filtered.filter((t) => t.type === 'expense'), 'amount');
-  const totalIncome = sumBy(filtered.filter((t) => t.type === 'income'), 'amount');
+  const totalExpenses = sumAmountsMultiCurrency(filtered.filter((t) => t.type === 'expense'), currency, rates);
+  const totalIncome = sumAmountsMultiCurrency(filtered.filter((t) => t.type === 'income'), currency, rates);
 
   const handleDelete = async () => {
     if (!deleteTx) return;
