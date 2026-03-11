@@ -614,6 +614,11 @@ const en = {
   'calendar.fri': 'Fri',
   'calendar.sat': 'Sat',
   'calendar.sun': 'Sun',
+  'calendar.totalSpent': 'Total spent',
+  'calendar.totalIncome': 'Total income',
+  'calendar.activeDays': 'Active days',
+  'calendar.noSpendDays': 'No-spend days',
+  'calendar.today': 'Today',
 
   // ─── Cash Flow ───────────────────────────────────────
   'cashflow.title': 'Cash Flow',

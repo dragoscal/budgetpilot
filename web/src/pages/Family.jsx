@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFamily } from '../contexts/FamilyContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -139,6 +139,13 @@ export default function Family() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [tab, setTab] = useState('home');
+
+  // Auto-select first family when visiting this page with none active
+  useEffect(() => {
+    if (!loading && !activeFamily && myFamilies.length > 0) {
+      switchFamily(myFamilies[0].id);
+    }
+  }, [loading, activeFamily, myFamilies, switchFamily]);
 
   if (loading) {
     return (

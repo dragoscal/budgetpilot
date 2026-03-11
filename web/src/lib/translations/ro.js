@@ -614,6 +614,11 @@ const ro = {
   'calendar.fri': 'Vin',
   'calendar.sat': 'Sâm',
   'calendar.sun': 'Dum',
+  'calendar.totalSpent': 'Total cheltuit',
+  'calendar.totalIncome': 'Total venituri',
+  'calendar.activeDays': 'Zile active',
+  'calendar.noSpendDays': 'Zile fără cheltuieli',
+  'calendar.today': 'Astăzi',
 
   // ─── Flux numerar ────────────────────────────────────
   'cashflow.title': 'Flux de numerar',
