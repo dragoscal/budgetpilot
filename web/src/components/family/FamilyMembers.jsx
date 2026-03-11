@@ -1,11 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { formatCurrency, sumBy } from '../../lib/helpers';
 import { Crown, Eye } from 'lucide-react';
-import { startOfMonth, endOfMonth } from 'date-fns';
 
 function InviteCodeDisplay({ family }) {
   const { t } = useTranslation();
@@ -48,29 +46,7 @@ export default function FamilyMembers() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { effectiveUserId } = useAuth();
-  const { activeFamily, members, isAdmin, familyTransactions, updateMember } = useFamily();
-
-  // Calculate per-member spending stats for this month
-  const memberStats = useMemo(() => {
-    const now = new Date();
-    const mStart = startOfMonth(now);
-    const mEnd = endOfMonth(now);
-    const stats = {};
-
-    for (const m of members) {
-      const memberTx = familyTransactions.filter((tx) => tx.userId === m.userId);
-      const thisMonth = memberTx.filter((tx) => {
-        const d = new Date(tx.date);
-        return d >= mStart && d <= mEnd && tx.type === 'expense';
-      });
-      stats[m.userId] = {
-        spentThisMonth: sumBy(thisMonth, 'amount'),
-        txCount: thisMonth.length,
-        totalTx: memberTx.length,
-      };
-    }
-    return stats;
-  }, [members, familyTransactions]);
+  const { activeFamily, members, isAdmin, updateMember } = useFamily();
 
   const handleRoleChange = async (memberId, newRole) => {
     await updateMember(memberId, { role: newRole });
@@ -84,7 +60,6 @@ export default function FamilyMembers() {
       <div className="space-y-3">
         {members.map((m) => {
           const isMe = m.userId === effectiveUserId;
-          const stats = memberStats[m.userId] || {};
 
           return (
             <div
@@ -128,23 +103,6 @@ export default function FamilyMembers() {
                 )}
               </div>
 
-              {/* Spending stats */}
-              <div className="flex gap-4 mt-3 pt-3 border-t border-cream-100 dark:border-dark-border">
-                <div>
-                  <p className="text-[10px] text-cream-400 uppercase tracking-wider">{t('family.spentThisMonth')}</p>
-                  <p className="text-sm font-heading font-bold money">
-                    {formatCurrency(stats.spentThisMonth || 0, activeFamily?.defaultCurrency || 'RON')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cream-400 uppercase tracking-wider">{t('family.txThisMonth')}</p>
-                  <p className="text-sm font-heading font-bold">{stats.txCount || 0}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cream-400 uppercase tracking-wider">{t('family.totalTx')}</p>
-                  <p className="text-sm font-heading font-bold">{stats.totalTx || 0}</p>
-                </div>
-              </div>
             </div>
           );
         })}

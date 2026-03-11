@@ -5,14 +5,13 @@ import { useTranslation } from '../contexts/LanguageContext';
 import Modal from '../components/Modal';
 import HelpButton from '../components/HelpButton';
 import {
-  Users, Plus, UserPlus, LayoutDashboard, Receipt, GitCompare,
+  Users, Plus, UserPlus, Home, Receipt,
   Handshake, Settings, UserCheck,
 } from 'lucide-react';
 
 // Tab components
 import FamilyOverview from '../components/family/FamilyOverview';
 import FamilyAllExpenses from '../components/family/FamilyAllExpenses';
-import FamilyCompare from '../components/family/FamilyCompare';
 import FamilySettlements from '../components/family/FamilySettlements';
 import FamilyMembers from '../components/family/FamilyMembers';
 import FamilySettings from '../components/family/FamilySettings';
@@ -114,19 +113,17 @@ function JoinFamilyForm({ onJoined }) {
 
 // ─── Tab definitions ─────────────────────────────────────────
 const TABS = [
-  { id: 'overview', icon: LayoutDashboard, labelKey: 'family.overviewTab' },
-  { id: 'expenses', icon: Receipt, labelKey: 'family.allExpensesTab' },
-  { id: 'compare', icon: GitCompare, labelKey: 'family.compareTab' },
-  { id: 'settlements', icon: Handshake, labelKey: 'family.settlementsTab' },
+  { id: 'home', icon: Home, labelKey: 'family.homeTab' },
+  { id: 'spending', icon: Receipt, labelKey: 'family.spendingTab' },
+  { id: 'settle', icon: Handshake, labelKey: 'family.settleTab' },
   { id: 'members', icon: UserCheck, labelKey: 'family.membersTab' },
   { id: 'settings', icon: Settings, labelKey: 'family.settingsTab' },
 ];
 
 const TAB_COMPONENTS = {
-  overview: FamilyOverview,
-  expenses: FamilyAllExpenses,
-  compare: FamilyCompare,
-  settlements: FamilySettlements,
+  home: FamilyOverview,
+  spending: FamilyAllExpenses,
+  settle: FamilySettlements,
   members: FamilyMembers,
   settings: FamilySettings,
 };
@@ -141,7 +138,7 @@ export default function Family() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('home');
 
   if (loading) {
     return (

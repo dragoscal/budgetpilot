@@ -1,68 +1,84 @@
 import { useState, useMemo } from 'react';
 import { useFamily } from '../../contexts/FamilyContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { formatCurrency } from '../../lib/helpers';
-import { getCategoryById } from '../../lib/helpers';
+import { formatCurrency, sumBy, getCategoryById, percentOf } from '../../lib/helpers';
+import { startOfMonth, endOfMonth, format, isToday, isYesterday } from 'date-fns';
 import EmptyState from '../EmptyState';
-import { Receipt, Search } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 
 export default function FamilyAllExpenses() {
   const { t } = useTranslation();
+  const { effectiveUserId } = useAuth();
   const { activeFamily, members, familyTransactions, familyTransactionsLoading } = useFamily();
   const currency = activeFamily?.defaultCurrency || 'RON';
 
-  const [scopeFilter, setScopeFilter] = useState('all'); // all | personal | household
-  const [selectedMembers, setSelectedMembers] = useState(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [filter, setFilter] = useState('all'); // all | ours | mine
 
-  const toggleMember = (userId) => {
-    setSelectedMembers((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
+  const now = new Date();
+  const mStart = startOfMonth(now);
+  const mEnd = endOfMonth(now);
+
+  // This month's expenses for category breakdown
+  const thisMonthExpenses = useMemo(() => {
+    return familyTransactions.filter((tx) => {
+      const d = new Date(tx.date);
+      return d >= mStart && d <= mEnd && tx.type === 'expense';
     });
-  };
+  }, [familyTransactions, mStart, mEnd]);
 
+  // Filtered transactions
   const filteredTx = useMemo(() => {
-    let txs = [...familyTransactions];
-
-    // Scope filter
-    if (scopeFilter === 'personal') {
-      txs = txs.filter((tx) => tx.scope !== 'household');
-    } else if (scopeFilter === 'household') {
+    let txs = [...familyTransactions].filter((tx) => tx.type === 'expense');
+    if (filter === 'ours') {
       txs = txs.filter((tx) => tx.scope === 'household');
+    } else if (filter === 'mine') {
+      txs = txs.filter((tx) => tx.userId === effectiveUserId);
     }
-
-    // Member filter
-    if (selectedMembers.size > 0) {
-      txs = txs.filter((tx) => selectedMembers.has(tx.userId));
-    }
-
-    // Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      txs = txs.filter((tx) =>
-        (tx.merchant || '').toLowerCase().includes(q) ||
-        (tx.description || '').toLowerCase().includes(q) ||
-        (tx.category || '').toLowerCase().includes(q)
-      );
-    }
-
-    // Date range
-    if (dateFrom) txs = txs.filter((tx) => tx.date >= dateFrom);
-    if (dateTo) txs = txs.filter((tx) => tx.date <= dateTo);
-
-    // Sort newest first
     txs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     return txs;
-  }, [familyTransactions, scopeFilter, selectedMembers, searchQuery, dateFrom, dateTo]);
+  }, [familyTransactions, filter, effectiveUserId]);
 
-  const getMemberInfo = (userId) => {
+  // Category breakdown (top 6, this month, total household)
+  const categoryBreakdown = useMemo(() => {
+    const catMap = {};
+    for (const tx of thisMonthExpenses) {
+      catMap[tx.category] = (catMap[tx.category] || 0) + tx.amount;
+    }
+    const total = sumBy(thisMonthExpenses, 'amount');
+    return Object.entries(catMap)
+      .map(([cat, amount]) => ({
+        cat,
+        amount,
+        pct: percentOf(amount, total),
+        info: getCategoryById(cat),
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6);
+  }, [thisMonthExpenses]);
+
+  const totalThisMonth = sumBy(thisMonthExpenses, 'amount');
+
+  // Group transactions by date
+  const groupedTx = useMemo(() => {
+    const groups = {};
+    for (const tx of filteredTx.slice(0, 100)) {
+      const dateKey = tx.date || 'unknown';
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(tx);
+    }
+    return Object.entries(groups).map(([date, txs]) => {
+      const d = new Date(date + 'T00:00:00');
+      let label = format(d, 'MMM d');
+      if (isToday(d)) label = 'Today';
+      else if (isYesterday(d)) label = 'Yesterday';
+      return { date, label, txs };
+    });
+  }, [filteredTx]);
+
+  const getMemberEmoji = (userId) => {
     const m = members.find((m) => m.userId === userId);
-    return m ? { emoji: m.emoji || '👤', name: m.displayName || 'Member' } : { emoji: '👤', name: 'Member' };
+    return m?.emoji || '👤';
   };
 
   if (familyTransactionsLoading) {
@@ -71,92 +87,99 @@ export default function FamilyAllExpenses() {
 
   return (
     <div className="space-y-4">
-      {/* Scope filter chips */}
-      <div className="flex gap-2">
-        {['all', 'personal', 'household'].map((scope) => (
-          <button
-            key={scope}
-            onClick={() => setScopeFilter(scope)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              scopeFilter === scope
-                ? 'bg-accent text-white'
-                : 'bg-cream-100 dark:bg-dark-border text-cream-600 dark:text-cream-400 hover:bg-cream-200'
-            }`}
-          >
-            {t(`family.filter${scope.charAt(0).toUpperCase() + scope.slice(1)}`)}
-          </button>
-        ))}
-      </div>
-
-      {/* Member filter pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {members.map((m) => (
-          <button
-            key={m.userId}
-            onClick={() => toggleMember(m.userId)}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              selectedMembers.has(m.userId)
-                ? 'bg-accent-100 dark:bg-accent-500/20 text-accent-700 dark:text-accent-300 ring-1 ring-accent'
-                : 'bg-cream-100 dark:bg-dark-border text-cream-600 dark:text-cream-400'
-            }`}
-          >
-            <span>{m.emoji || '👤'}</span>
-            <span>{m.displayName || 'Member'}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Search + date filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-cream-400" />
-          <input
-            className="input pl-9 text-sm"
-            placeholder={t('family.searchTransactions')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <input type="date" className="input text-xs" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <input type="date" className="input text-xs" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-      </div>
-
-      {/* Count */}
-      <p className="text-xs text-cream-500">
-        {t('family.showingCount', { count: filteredTx.length })}
-      </p>
-
-      {/* Transaction list */}
-      {filteredTx.length > 0 ? (
-        <div className="space-y-2">
-          {filteredTx.slice(0, 100).map((tx) => {
-            const member = getMemberInfo(tx.userId);
-            const cat = getCategoryById(tx.category);
-            return (
-              <div key={tx.id} className="card p-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg shrink-0">{member.emoji}</span>
-                  <span className="text-lg shrink-0">{cat.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{tx.merchant || tx.description || t(`categories.${tx.category}`)}</p>
-                      {tx.scope === 'household' && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 font-medium">
-                          {t('family.filterHousehold')}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-cream-500">{member.name} · {tx.date}</p>
-                  </div>
-                  <span className={`text-sm font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency || currency)}
+      {/* Category breakdown bars */}
+      {categoryBreakdown.length > 0 && (
+        <div className="card">
+          <h3 className="section-title">{t('family.whereMoneyGoes')}</h3>
+          <div className="space-y-2.5">
+            {categoryBreakdown.map((c) => (
+              <div key={c.cat}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="flex items-center gap-1.5">
+                    <span>{c.info.icon}</span>
+                    <span className="font-medium">{c.info.name}</span>
+                  </span>
+                  <span className="text-xs text-cream-500">
+                    {formatCurrency(c.amount, currency)} · {c.pct}%
                   </span>
                 </div>
+                <div className="h-1.5 rounded-full bg-cream-100 dark:bg-dark-border overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${c.pct}%` }}
+                  />
+                </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+          {totalThisMonth > 0 && (
+            <p className="text-xs text-cream-400 mt-3 text-right">
+              {formatCurrency(totalThisMonth, currency)} {t('family.spentThisMonth') || 'this month'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Filter toggle: All / Ours / Mine */}
+      <div className="flex gap-2">
+        {['all', 'ours', 'mine'].map((f) => {
+          const labels = {
+            all: t('family.filterAll'),
+            ours: t('family.filterOurs'),
+            mine: t('family.filterMine'),
+          };
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filter === f
+                  ? 'bg-accent text-white'
+                  : 'bg-cream-100 dark:bg-dark-border text-cream-600 dark:text-cream-400 hover:bg-cream-200'
+              }`}
+            >
+              {labels[f]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Date-grouped transaction list */}
+      {groupedTx.length > 0 ? (
+        <div className="space-y-4">
+          {groupedTx.map((group) => (
+            <div key={group.date}>
+              <p className="text-xs font-medium text-cream-400 uppercase tracking-wider mb-2">{group.label}</p>
+              <div className="space-y-1.5">
+                {group.txs.map((tx) => {
+                  const cat = getCategoryById(tx.category);
+                  return (
+                    <div key={tx.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-cream-50 dark:bg-dark-bg">
+                      <span className="text-lg shrink-0">{cat.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">
+                            {tx.merchant || tx.description || cat.name}
+                          </p>
+                          {tx.scope === 'household' && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 font-medium shrink-0">
+                              {t('family.filterHousehold')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-cream-500">
+                          <span className="inline-block w-3.5 text-center">{getMemberEmoji(tx.userId)}</span> {tx.date}
+                        </p>
+                      </div>
+                      <span className="text-sm font-heading font-bold money text-danger shrink-0">
+                        -{formatCurrency(tx.amount, tx.currency || currency)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <EmptyState

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { sharedExpenses as sharedApi, settlementHistory as historyApi } from '../../lib/api';
-import { getComprehensiveBalances, simplifyDebts, getMemberSummary } from '../../lib/settlement';
+import { getComprehensiveBalances, simplifyDebts } from '../../lib/settlement';
 import { formatCurrency } from '../../lib/helpers';
 import { generateId } from '../../lib/helpers';
 import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, History } from 'lucide-react';
@@ -35,7 +35,6 @@ export default function FamilySettlements() {
     [sharedExpensesList, householdTx]
   );
   const settlements = useMemo(() => simplifyDebts(balances), [balances]);
-  const memberSummary = useMemo(() => getMemberSummary(sharedExpensesList), [sharedExpensesList]);
   const totalUnsettled = settlements.reduce((s, d) => s + d.amount, 0);
 
   const getMemberName = (userId) => {
@@ -141,24 +140,6 @@ export default function FamilySettlements() {
           <CheckCircle2 size={32} className="text-success mx-auto mb-2" />
           <p className="text-sm font-medium text-success">{t('family.everyoneSettled')}</p>
           <p className="text-xs text-cream-400">{t('family.noOutstandingDebts')}</p>
-        </div>
-      )}
-
-      {/* Who paid what */}
-      {memberSummary.length > 0 && (
-        <div className="card">
-          <h3 className="section-title">{t('family.whoPaidWhat')}</h3>
-          <div className="space-y-2">
-            {memberSummary.sort((a, b) => b.totalPaid - a.totalPaid).map((s) => (
-              <div key={s.userId} className="flex items-center justify-between text-sm">
-                <span className="font-medium">{getMemberName(s.userId)}</span>
-                <div className="text-right">
-                  <span className="money font-medium">{formatCurrency(s.totalPaid, currency)}</span>
-                  <span className="text-xs text-cream-400 ml-1">{t('family.paid')}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
