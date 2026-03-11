@@ -628,6 +628,9 @@ const ro = {
   'calendar.streakDesc': 'Continuă — fiecare zi contează!',
   'calendar.busiestDay': 'Cea mai scumpă zi: {date}',
   'calendar.noSpendDay': 'Zi fără cheltuieli!',
+  'calendar.spent': 'Cheltuit',
+  'calendar.week': 'Săpt',
+  'calendar.dayStreak': 'zile consecutive',
 
   // ─── Flux numerar ────────────────────────────────────
   'cashflow.title': 'Flux de numerar',

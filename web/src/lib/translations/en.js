@@ -628,6 +628,9 @@ const en = {
   'calendar.streakDesc': 'Keep it going — every day counts!',
   'calendar.busiestDay': 'Biggest spending day: {date}',
   'calendar.noSpendDay': 'No-spend day!',
+  'calendar.spent': 'Spent',
+  'calendar.week': 'Wk',
+  'calendar.dayStreak': 'day streak',
 
   // ─── Cash Flow ───────────────────────────────────────
   'cashflow.title': 'Cash Flow',
