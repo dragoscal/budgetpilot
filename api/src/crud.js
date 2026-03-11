@@ -20,11 +20,11 @@ function getUserColumn(table) {
 }
 
 // JSON columns that need to be serialized/deserialized
-const JSON_COLUMNS = { transactions: ['tags', 'items'], };
+const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], };
 
 // Valid D1 columns per table — client may send extra fields that don't exist in the schema
 const TABLE_COLUMNS = {
-  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','items','splitFrom','createdAt','updatedAt','deletedAt']),
+  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','items','splitFrom','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
   budgets: new Set(['id','userId','category','amount','currency','month','rollover','createdAt','updatedAt']),
   goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
   accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
