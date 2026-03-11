@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { getSetting, setSetting } from '../lib/storage';
+import { getSetting } from '../lib/storage';
+import { settings as settingsApi } from '../lib/api';
 import { t as tRaw, setCurrentLanguage, getCurrentLanguage, getAvailableLanguages } from '../lib/i18n';
 
 const LanguageContext = createContext(null);
@@ -17,10 +18,24 @@ export function LanguageProvider({ children }) {
     });
   }, []);
 
+  // Listen for server settings sync (after login / pullAllDataToCache)
+  useEffect(() => {
+    const handleSync = () => {
+      getSetting('language').then((val) => {
+        if (val && val !== language) {
+          setLanguageState(val);
+          setCurrentLanguage(val);
+        }
+      });
+    };
+    window.addEventListener('settings-synced', handleSync);
+    return () => window.removeEventListener('settings-synced', handleSync);
+  }, [language]);
+
   const setLanguage = useCallback((lang) => {
     setLanguageState(lang);
     setCurrentLanguage(lang);
-    setSetting('language', lang);
+    settingsApi.set('language', lang);
   }, []);
 
   // Wrap t so it triggers re-render when language changes

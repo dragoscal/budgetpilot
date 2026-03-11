@@ -65,36 +65,37 @@ export default function Analytics() {
 
   const expenses = monthTx.filter((t) => t.type === 'expense');
 
-  // Category vs budget
+  // Category vs budget (multi-currency aware)
   const categoryBudgetData = useMemo(() => {
     const byCategory = groupBy(expenses, 'category');
     const categories = [...new Set([...Object.keys(byCategory), ...budgetsList.map((b) => b.category)])];
     return categories.map((catId) => {
       const cat = getCategoryById(catId);
-      const spent = sumBy(byCategory[catId] || [], 'amount');
+      const spent = sumAmountsMultiCurrency(byCategory[catId] || [], currency, rates);
       const budget = budgetsList.find((b) => b.category === catId);
       return { name: t(`categories.${catId}`) || cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color, catId };
     }).filter((d) => d.spent > 0 || d.budget > 0).sort((a, b) => b.spent - a.spent).slice(0, 10);
-  }, [expenses, budgetsList]);
+  }, [expenses, budgetsList, currency, rates]);
 
-  // Daily spending
+  // Daily spending (multi-currency aware)
   const dailySpending = useMemo(() => {
     const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
     return days.map((day) => {
       const key = format(day, 'yyyy-MM-dd');
-      const total = sumBy(expenses.filter((t) => t.date === key), 'amount');
+      const dayExpenses = expenses.filter((t) => t.date === key);
+      const total = sumAmountsMultiCurrency(dayExpenses, currency, rates);
       return { date: format(day, 'dd'), total };
     });
-  }, [expenses, month]);
+  }, [expenses, month, currency, rates]);
 
-  // Top merchants
+  // Top merchants (multi-currency aware)
   const topMerchants = useMemo(() => {
     const grouped = groupBy(expenses, (tx) => tx.merchant || t('common.unknown'));
     return Object.entries(grouped)
-      .map(([merchant, txs]) => ({ merchant, total: sumBy(txs, 'amount'), count: txs.length }))
+      .map(([merchant, txs]) => ({ merchant, total: sumAmountsMultiCurrency(txs, currency, rates), count: txs.length }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
-  }, [expenses]);
+  }, [expenses, currency, rates]);
 
   // Tag stats
   const tagStats = useMemo(() => getTagStats(expenses), [expenses]);

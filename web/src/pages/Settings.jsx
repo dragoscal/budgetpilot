@@ -5,8 +5,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { setSetting, getAllSettings } from '../lib/storage';
-import { exportData, importData, clearData } from '../lib/api';
+import { getAllSettings } from '../lib/storage';
+import { exportData, importData, clearData, settings as settingsApi } from '../lib/api';
 import { deleteAccount, changePassword } from '../lib/auth';
 import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
@@ -110,19 +110,19 @@ export default function SettingsPage() {
 
   const saveSettings = async () => {
     try {
-      await setSetting('apiUrl', apiUrl.trim());
-      await setSetting('apiKey', apiKey.trim());
-      await setSetting('anthropicApiKey', anthropicKey.trim());
-      await setSetting('openaiApiKey', openaiKey.trim());
-      await setSetting('openrouterApiKey', openrouterKey.trim());
-      await setSetting('aiProvider', aiProvider);
-      await setSetting('aiModel', aiModel || currentProvider.defaultModel);
-      await setSetting('hideAmounts', hideAmounts);
-      await setSetting('telegramBotToken', telegramBotToken.trim());
-      await setSetting('telegramChatId', telegramChatId.trim());
-      await setSetting('webhookUrl', webhookUrl.trim());
-      await setSetting('defaultCurrency', defaultCurrency);
-      await setSetting('userName', userName);
+      await settingsApi.set('apiUrl', apiUrl.trim());
+      await settingsApi.set('apiKey', apiKey.trim());
+      await settingsApi.set('anthropicApiKey', anthropicKey.trim());
+      await settingsApi.set('openaiApiKey', openaiKey.trim());
+      await settingsApi.set('openrouterApiKey', openrouterKey.trim());
+      await settingsApi.set('aiProvider', aiProvider);
+      await settingsApi.set('aiModel', aiModel || currentProvider.defaultModel);
+      await settingsApi.set('hideAmounts', hideAmounts);
+      await settingsApi.set('telegramBotToken', telegramBotToken.trim());
+      await settingsApi.set('telegramChatId', telegramChatId.trim());
+      await settingsApi.set('webhookUrl', webhookUrl.trim());
+      await settingsApi.set('defaultCurrency', defaultCurrency);
+      await settingsApi.set('userName', userName);
       if (user) {
         await updateProfile({ name: userName, defaultCurrency });
       }
@@ -326,7 +326,7 @@ export default function SettingsPage() {
                   setNotifPermission(perm);
                   if (perm === 'granted') {
                     setNotificationsEnabled(true);
-                    await setSetting('notificationsEnabled', true);
+                    await settingsApi.set('notificationsEnabled', true);
                     toast.success(t('settings.notificationGranted'));
                   } else if (perm === 'denied') {
                     toast.error(t('settings.notificationDenied'));
@@ -334,7 +334,7 @@ export default function SettingsPage() {
                 } else {
                   // Turning OFF
                   setNotificationsEnabled(false);
-                  await setSetting('notificationsEnabled', false);
+                  await settingsApi.set('notificationsEnabled', false);
                 }
               }}
               className={`relative w-11 h-6 rounded-full transition-colors ${

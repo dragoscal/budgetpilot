@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getSetting, setSetting } from '../lib/storage';
+import { getSetting } from '../lib/storage';
+import { settings as settingsApi } from '../lib/api';
 
 const ThemeContext = createContext(null);
 
@@ -16,11 +17,26 @@ export function ThemeProvider({ children }) {
     });
   }, []);
 
+  // Listen for server settings sync (after login / pullAllDataToCache)
+  useEffect(() => {
+    const handleSync = () => {
+      getSetting('darkMode').then((val) => {
+        const isDark = val === true;
+        if (isDark !== dark) {
+          setDark(isDark);
+          document.documentElement.classList.toggle('dark', isDark);
+        }
+      });
+    };
+    window.addEventListener('settings-synced', handleSync);
+    return () => window.removeEventListener('settings-synced', handleSync);
+  }, [dark]);
+
   const toggleTheme = () => {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle('dark', next);
-    setSetting('darkMode', next);
+    settingsApi.set('darkMode', next);
   };
 
   if (!loaded) return null;

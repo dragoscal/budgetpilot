@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getSetting, setSetting } from '../lib/storage';
+import { getSetting } from '../lib/storage';
+import { settings as settingsApi } from '../lib/api';
 
 const SettingsContext = createContext(null);
 
@@ -14,9 +15,22 @@ export function SettingsProvider({ children }) {
     });
   }, []);
 
+  // Listen for server settings sync (after login / pullAllDataToCache)
+  useEffect(() => {
+    const handleSync = () => {
+      getSetting('hideAmounts').then((val) => {
+        if (val && val !== hideAmounts) {
+          setHideAmounts(val);
+        }
+      });
+    };
+    window.addEventListener('settings-synced', handleSync);
+    return () => window.removeEventListener('settings-synced', handleSync);
+  }, [hideAmounts]);
+
   const updateHideAmounts = (value) => {
     setHideAmounts(value);
-    setSetting('hideAmounts', value);
+    settingsApi.set('hideAmounts', value);
   };
 
   const shouldHide = (type) => {

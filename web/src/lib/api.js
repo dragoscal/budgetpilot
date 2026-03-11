@@ -230,6 +230,19 @@ export async function pullAllDataToCache() {
         }
       }
     }
+
+    // Also pull settings from server and cache locally
+    try {
+      const settingsRes = await apiFetch(apiUrl, '/api/settings');
+      const serverSettings = settingsRes?.data || settingsRes || {};
+      for (const [key, value] of Object.entries(serverSettings)) {
+        await storage.setSetting(key, value);
+      }
+      // Notify contexts that settings were updated from server
+      window.dispatchEvent(new Event('settings-synced'));
+    } catch (err) {
+      console.warn('Failed to pull settings from server:', err.message);
+    }
   } catch (err) {
     console.error('Failed to pull data to cache:', err);
   }
