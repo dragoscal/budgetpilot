@@ -228,7 +228,7 @@ export function registerCrudRoutes(router) {
     query += ' ORDER BY createdAt DESC';
 
     // Pagination
-    const limit = Math.min(parseInt(ctx.query.limit) || 100, 500);
+    const limit = Math.min(parseInt(ctx.query.limit) || 500, 5000);
     const offset = parseInt(ctx.query.offset) || 0;
     query += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);

@@ -1,14 +1,28 @@
 import * as storage from './storage';
 import { getSetting } from './storage';
-import { addToSyncQueue } from './sync';
 
 // Table name mapping: IndexedDB store names → API path names
 const TABLE_MAP = {
   debtPayments: 'debt_payments',
+  loanPayments: 'loan_payments',
+  familyMembers: 'family_members',
+  sharedExpenses: 'shared_expenses',
+};
+
+// Reverse: API table names → IndexedDB store names
+const REVERSE_TABLE_MAP = {
+  debt_payments: 'debtPayments',
+  loan_payments: 'loanPayments',
+  family_members: 'familyMembers',
+  shared_expenses: 'sharedExpenses',
 };
 
 function toApiTable(storeName) {
   return TABLE_MAP[storeName] || storeName;
+}
+
+function toLocalStore(serverTable) {
+  return REVERSE_TABLE_MAP[serverTable] || serverTable;
 }
 
 async function getApiUrl() {
@@ -47,99 +61,106 @@ async function apiFetch(apiUrl, path, options = {}) {
   return data.data !== undefined ? data.data : data;
 }
 
-// Generic CRUD that works in both modes
-// In local mode: operates on IndexedDB + queues changes for sync
-// In API mode: saves locally first (offline-first) + pushes to API + queues as fallback
+// ─── SERVER-FIRST CRUD ───────────────────────────────────
+// In API mode: server is source of truth. IndexedDB is a read cache.
+// In local mode (no apiUrl): operates on IndexedDB only.
 function createCrud(storeName) {
   const apiTable = toApiTable(storeName);
 
   return {
     async getAll(filters = {}) {
-      // Always read from local IndexedDB (offline-first, instant)
+      const apiUrl = await getApiUrl();
+      if (isApiMode(apiUrl) && getAuthToken()) {
+        try {
+          const data = await apiFetch(apiUrl, `/api/${apiTable}?limit=500`);
+          // Replace local cache with server data
+          await storage.clearStore(storeName);
+          for (const record of data) {
+            await storage.add(storeName, record);
+          }
+          return storage.getAll(storeName, filters);
+        } catch (err) {
+          // Server unreachable — fall back to cached data
+          console.warn(`Server fetch failed for ${storeName}, using cache:`, err.message);
+          return storage.getAll(storeName, filters);
+        }
+      }
+      // Local-only mode
       return storage.getAll(storeName, filters);
     },
 
     async getById(id) {
+      const apiUrl = await getApiUrl();
+      if (isApiMode(apiUrl) && getAuthToken()) {
+        try {
+          const record = await apiFetch(apiUrl, `/api/${apiTable}/${id}`);
+          await storage.update(storeName, record).catch(() => storage.add(storeName, record));
+          return record;
+        } catch {
+          return storage.getById(storeName, id);
+        }
+      }
       return storage.getById(storeName, id);
     },
 
     async create(record) {
-      // Always save locally first (offline-first)
-      const result = await storage.add(storeName, record);
-
-      // Try to push to API immediately if available
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
-        try {
-          // Send to server — remove 'local' userId, server sets it from auth
-          const serverRecord = { ...record };
-          if (serverRecord.userId === 'local') delete serverRecord.userId;
-
-          await apiFetch(apiUrl, `/api/${apiTable}`, {
-            method: 'POST',
-            body: JSON.stringify(serverRecord),
-          });
-          // Immediate push succeeded — no need to queue
-        } catch (err) {
-          // Immediate push failed — queue for later sync (offline-first)
-          console.error(`Immediate push failed for ${storeName} create:`, err);
-          addToSyncQueue('create', storeName, record).catch(() => {});
-        }
+        if (!navigator.onLine) throw new Error('You are offline. Cannot save right now.');
+        const serverRecord = { ...record };
+        if (serverRecord.userId === 'local') delete serverRecord.userId;
+        await apiFetch(apiUrl, `/api/${apiTable}`, {
+          method: 'POST',
+          body: JSON.stringify(serverRecord),
+        });
+        // Server succeeded — update local cache
+        await storage.add(storeName, record);
+        return record;
       }
-
-      return result;
+      // Local-only mode
+      return storage.add(storeName, record);
     },
 
     async update(idOrRecord, changes) {
-      // Support both: update(id, changes) and update(fullRecord)
       let id, updated;
       if (changes === undefined && typeof idOrRecord === 'object' && idOrRecord !== null) {
         id = idOrRecord.id;
         updated = { ...idOrRecord, updatedAt: new Date().toISOString() };
-        await storage.update(storeName, updated);
       } else {
         id = idOrRecord;
         const existing = await storage.getById(storeName, id);
-        updated = { ...existing, ...changes };
-        await storage.update(storeName, updated);
+        updated = { ...existing, ...changes, updatedAt: new Date().toISOString() };
       }
 
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
-        try {
-          // Strip 'local' userId — server sets it from auth
-          const serverData = { ...(changes || updated) };
-          if (serverData.userId === 'local') delete serverData.userId;
-
-          await apiFetch(apiUrl, `/api/${apiTable}/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(serverData),
-          });
-          // Immediate push succeeded — no need to queue
-        } catch (err) {
-          // Immediate push failed — queue for later sync (offline-first)
-          console.error(`Immediate push failed for ${storeName} update:`, err);
-          addToSyncQueue('update', storeName, updated).catch(() => {});
-        }
+        if (!navigator.onLine) throw new Error('You are offline. Cannot save right now.');
+        const serverData = { ...updated };
+        if (serverData.userId === 'local') delete serverData.userId;
+        await apiFetch(apiUrl, `/api/${apiTable}/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(serverData),
+        });
+        // Server succeeded — update local cache
+        await storage.update(storeName, updated);
+        return updated;
       }
-
+      // Local-only mode
+      await storage.update(storeName, updated);
       return updated;
     },
 
     async remove(id) {
-      await storage.remove(storeName, id);
-
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl)) {
-        try {
-          await apiFetch(apiUrl, `/api/${apiTable}/${id}`, { method: 'DELETE' });
-          // Immediate push succeeded — no need to queue
-        } catch (err) {
-          // Immediate push failed — queue for later sync (offline-first)
-          console.error(`Immediate push failed for ${storeName} delete:`, err);
-          addToSyncQueue('delete', storeName, { id }).catch(() => {});
-        }
+        if (!navigator.onLine) throw new Error('You are offline. Cannot delete right now.');
+        await apiFetch(apiUrl, `/api/${apiTable}/${id}`, { method: 'DELETE' });
+        // Server succeeded — remove from local cache
+        await storage.remove(storeName, id);
+        return;
       }
+      // Local-only mode
+      await storage.remove(storeName, id);
     },
   };
 }
@@ -161,7 +182,7 @@ export const sharedExpenses = createCrud('sharedExpenses');
 export const challenges = createCrud('challenges');
 export const settlementHistory = createCrud('settlementHistory');
 
-// Settings
+// ─── SETTINGS ────────────────────────────────────────────
 export const settings = {
   async get(key) {
     return storage.getSetting(key);
@@ -169,8 +190,6 @@ export const settings = {
 
   async set(key, value) {
     await storage.setSetting(key, value);
-
-    // Also push to backend if available
     const apiUrl = await getApiUrl();
     if (isApiMode(apiUrl)) {
       try {
@@ -179,7 +198,6 @@ export const settings = {
           body: JSON.stringify({ [key]: value }),
         });
       } catch (err) {
-        // Local is source of truth — backend push is best-effort
         console.error('Failed to push setting to server:', err);
       }
     }
@@ -190,7 +208,34 @@ export const settings = {
   },
 };
 
-// Feedback (bug reports & suggestions)
+// ─── PULL ALL DATA TO CACHE (on login) ──────────────────
+export async function pullAllDataToCache() {
+  const apiUrl = await getApiUrl();
+  if (!isApiMode(apiUrl) || !getAuthToken()) return;
+
+  try {
+    const data = await apiFetch(apiUrl, '/api/sync/pull?since=1970-01-01T00:00:00.000Z&limit=5000');
+    if (data) {
+      const tables = data.data || data;
+      for (const [serverTable, records] of Object.entries(tables)) {
+        if (serverTable === 'syncedAt') continue;
+        const localStore = toLocalStore(serverTable);
+        try {
+          await storage.clearStore(localStore);
+          for (const record of records) {
+            await storage.add(localStore, record);
+          }
+        } catch (err) {
+          console.warn(`Failed to cache ${localStore}:`, err.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to pull data to cache:', err);
+  }
+}
+
+// ─── FEEDBACK ────────────────────────────────────────────
 export const feedbackApi = {
   async submit(data) {
     const apiUrl = await getApiUrl();
@@ -207,7 +252,7 @@ export const feedbackApi = {
   },
 };
 
-// Data management
+// ─── DATA MANAGEMENT ─────────────────────────────────────
 export async function exportData() {
   return storage.exportAll();
 }

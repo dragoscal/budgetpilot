@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as auth from '../lib/auth';
 import { migrateLocalToUser } from '../lib/migration';
+import { pullAllDataToCache } from '../lib/api';
+import { clearAllData } from '../lib/storage';
 
 const AuthContext = createContext(null);
 
@@ -13,6 +15,10 @@ export function AuthProvider({ children }) {
     auth.getCurrentUser().then((u) => {
       setUser(u);
       setLoading(false);
+      // Populate cache on app start if user is already logged in
+      if (u?.id && u.id !== 'local') {
+        pullAllDataToCache().catch((e) => console.warn('Initial cache pull error:', e));
+      }
     });
   }, []);
 
@@ -29,10 +35,13 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     const u = await auth.login(credentials);
     setUser(u);
-    // Trigger migration immediately after login
     if (u?.id) {
       migrateLocalToUser(u.id).catch((e) =>
         console.warn('Post-login migration error:', e)
+      );
+      // Pull all server data to local cache
+      pullAllDataToCache().catch((e) =>
+        console.warn('Post-login cache pull error:', e)
       );
     }
     return u;
@@ -41,10 +50,12 @@ export function AuthProvider({ children }) {
   const register = useCallback(async (data) => {
     const u = await auth.register(data);
     setUser(u);
-    // Trigger migration after registration too (in case they had local data)
     if (u?.id) {
       migrateLocalToUser(u.id).catch((e) =>
         console.warn('Post-register migration error:', e)
+      );
+      pullAllDataToCache().catch((e) =>
+        console.warn('Post-register cache pull error:', e)
       );
     }
     return u;
@@ -53,6 +64,8 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     auth.logout();
     setUser(null);
+    // Clear local cache to prevent stale data for next user
+    clearAllData().catch((e) => console.warn('Logout cache clear error:', e));
   }, []);
 
   const updateProfile = useCallback(async (changes) => {
