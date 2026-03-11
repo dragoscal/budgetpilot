@@ -5,12 +5,12 @@ import { t as tRaw, setCurrentLanguage, getCurrentLanguage, getAvailableLanguage
 const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguageState] = useState('ro'); // default Romanian
+  const [language, setLanguageState] = useState('en'); // default English
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     getSetting('language').then((val) => {
-      const lang = val || 'ro';
+      const lang = val || 'en';
       setLanguageState(lang);
       setCurrentLanguage(lang);
       setLoaded(true);

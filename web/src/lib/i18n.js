@@ -7,7 +7,7 @@ import en from './translations/en';
 
 const translations = { ro, en };
 
-let currentLang = 'ro'; // default — overridden by LanguageContext on mount
+let currentLang = 'en'; // default — overridden by LanguageContext on mount
 
 export function getCurrentLanguage() {
   return currentLang;
