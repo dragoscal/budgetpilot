@@ -359,7 +359,7 @@ export default function SettingsPage() {
                 <span className="text-cream-600 dark:text-cream-400 font-medium">{t('settings.notificationDefault')}</span>
               )}
               {notifPermission === 'unsupported' && (
-                <span className="text-cream-400 font-medium">Unsupported</span>
+                <span className="text-cream-400 font-medium">{t('settings.notificationUnsupported')}</span>
               )}
             </p>
             {notifPermission === 'denied' && (

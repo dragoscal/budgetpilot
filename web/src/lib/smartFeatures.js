@@ -13,8 +13,9 @@ import { MERCHANT_CATEGORY_MAP } from './constants';
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
 
-export async function detectRecurringPatterns() {
-  const transactions = await getAll('transactions');
+export async function detectRecurringPatterns(userId) {
+  const filter = userId ? { userId } : {};
+  const transactions = await getAll('transactions', filter);
   if (transactions.length < 2) return [];
 
   // Group by merchant (normalized)
@@ -27,7 +28,7 @@ export async function detectRecurringPatterns() {
   }
 
   const suggestions = [];
-  const existingRecurring = await getAll('recurring');
+  const existingRecurring = await getAll('recurring', filter);
   const existingMerchants = new Set(existingRecurring.map(r => r.merchant?.toLowerCase().trim()));
 
   for (const [merchant, txns] of Object.entries(byMerchant)) {
@@ -102,8 +103,9 @@ function isConsecutiveMonth(a, b) {
 // ─── DUPLICATE DETECTION ──────────────────────────────────
 // Check if a new transaction looks like an existing one
 
-export async function checkDuplicate(newTx) {
-  const transactions = await getAll('transactions');
+export async function checkDuplicate(newTx, userId) {
+  const filter = userId ? { userId } : {};
+  const transactions = await getAll('transactions', filter);
 
   // Pre-filter: only check transactions within ±3 days (O(n) scan but skips most comparisons)
   const txDate = new Date(newTx.date);
@@ -254,11 +256,12 @@ export async function inferCategorySmart(merchant) {
 // ─── MERCHANT AUTOCOMPLETE ────────────────────────────────
 // Suggest merchants based on history + learned categories
 
-export async function getMerchantSuggestions(query) {
+export async function getMerchantSuggestions(query, userId) {
   if (!query || query.length < 1) return [];
   const lower = query.toLowerCase().trim();
 
-  const transactions = await getAll('transactions');
+  const filter = userId ? { userId } : {};
+  const transactions = await getAll('transactions', filter);
 
   // Build merchant frequency map
   const merchantMap = {};
@@ -295,8 +298,9 @@ export async function getMerchantSuggestions(query) {
 // ─── BUDGET ALERTS ────────────────────────────────────────
 // Check budget status and return alerts
 
-export async function checkBudgetAlerts(monthTransactions) {
-  const budgets = await getAll('budgets');
+export async function checkBudgetAlerts(monthTransactions, userId) {
+  const filter = userId ? { userId } : {};
+  const budgets = await getAll('budgets', filter);
   if (!budgets.length) return [];
 
   // Sum spending by category
@@ -376,9 +380,10 @@ export function splitTransaction(original, splits) {
 // ─── SUBSCRIPTION AUDIT ──────────────────────────────────
 // Analyze recurring items for savings opportunities
 
-export async function auditSubscriptions() {
-  const recurring = await getAll('recurring');
-  const transactions = await getAll('transactions');
+export async function auditSubscriptions(userId) {
+  const filter = userId ? { userId } : {};
+  const recurring = await getAll('recurring', filter);
+  const transactions = await getAll('transactions', filter);
   const active = recurring.filter(r => r.active !== false);
   const results = [];
 
@@ -481,7 +486,7 @@ export async function auditSubscriptions() {
 // ─── SMART INSIGHTS ───────────────────────────────────────
 // Generate smart spending insights
 
-export async function generateInsights(monthTransactions) {
+export async function generateInsights(monthTransactions, userId) {
   const insights = [];
 
   if (monthTransactions.length === 0) return insights;
@@ -537,7 +542,8 @@ export async function generateInsights(monthTransactions) {
   }
 
   // Unusual spending detection
-  const allTx = await getAll('transactions');
+  const allFilter = userId ? { userId } : {};
+  const allTx = await getAll('transactions', allFilter);
   const prevMonthExpenses = allTx.filter(t => {
     if (t.type !== 'expense') return false;
     const d = new Date(t.date);

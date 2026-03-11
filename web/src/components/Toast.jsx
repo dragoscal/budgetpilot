@@ -1,4 +1,5 @@
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, Undo2 } from 'lucide-react';
 
 const ICONS = {
@@ -19,27 +20,28 @@ const COLORS = {
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useToast();
+  const { t } = useTranslation();
 
   return (
     <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
-      {toasts.map((t) => {
-        const Icon = ICONS[t.type] || Info;
+      {toasts.map((item) => {
+        const Icon = ICONS[item.type] || Info;
         return (
           <div
-            key={t.id}
-            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm ${COLORS[t.type] || COLORS.info}`}
+            key={item.id}
+            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm ${COLORS[item.type] || COLORS.info}`}
           >
             <Icon size={18} className="mt-0.5 shrink-0" />
-            <p className="text-sm flex-1">{t.message}</p>
-            {t.type === 'undo' && t.onUndo && (
+            <p className="text-sm flex-1">{item.message}</p>
+            {item.type === 'undo' && item.onUndo && (
               <button
-                onClick={() => { t.onUndo(); removeToast(t.id); }}
+                onClick={() => { item.onUndo(); removeToast(item.id); }}
                 className="shrink-0 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold uppercase tracking-wider transition-colors"
               >
-                Undo
+                {t('common.undo')}
               </button>
             )}
-            <button onClick={() => removeToast(t.id)} className="shrink-0 opacity-60 hover:opacity-100">
+            <button onClick={() => removeToast(item.id)} className="shrink-0 opacity-60 hover:opacity-100">
               <X size={14} />
             </button>
           </div>

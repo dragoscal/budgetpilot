@@ -12,6 +12,7 @@ import {
   AlertTriangle, CheckCircle, BarChart3, CircleDollarSign,
 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
+import DebtPayoffSimulator from '../components/DebtPayoffSimulator';
 
 const EMPTY_FORM = {
   name: '', type: 'personal', lender: '', principalAmount: '',
@@ -345,6 +346,9 @@ export default function Loans() {
           </div>
         </div>
       )}
+
+      {/* Debt Payoff Simulator */}
+      <DebtPayoffSimulator loans={loansList} currency={currency} />
 
       {/* Add/Edit Form */}
       {showForm && (

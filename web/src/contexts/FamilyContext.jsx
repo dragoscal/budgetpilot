@@ -198,7 +198,7 @@ export function FamilyProvider({ children }) {
     setActiveFamily(family);
     setMembers(allMembers.filter((m) => m.familyId === family.id));
     sessionStorage.setItem('bp_activeFamily', family.id);
-  }, [myFamilies]);
+  }, [myFamilies, effectiveUserId]);
 
   const updateFamily = useCallback(async (changes) => {
     if (!activeFamily) return;

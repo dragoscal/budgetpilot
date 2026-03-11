@@ -76,6 +76,7 @@ const ro = {
   'common.saving': 'Se salvează...',
   'common.unknown': 'Necunoscut',
   'common.other': 'Altele',
+  'common.undo': 'Anulează',
 
   // ─── Navigare ────────────────────────────────────────
   'nav.main': 'Principal',
@@ -121,6 +122,7 @@ const ro = {
   'nav.expandSidebar': 'Extinde bara laterală',
   'nav.collapseSidebar': 'Restrânge bara laterală',
   'nav.guide': 'Ghid',
+  'nav.add': 'Adaugă',
 
   // ─── Panou ───────────────────────────────────────────
   'dashboard.hey': 'Salut, {name}',
@@ -1501,6 +1503,21 @@ const ro = {
   'admin.minutesAgo': 'acum {count}m',
   'admin.hoursAgo': 'acum {count}h',
   'admin.daysAgo': 'acum {count}z',
+  'admin.actionLogin': 'Autentificare',
+  'admin.actionRegister': 'Înregistrare',
+  'admin.actionCreate': 'Creare',
+  'admin.actionUpdate': 'Actualizare',
+  'admin.actionDelete': 'Ștergere',
+  'admin.actionSync': 'Sincronizare',
+  'admin.actionAi': 'AI',
+  'admin.actionTelegram': 'Telegram',
+  'admin.actionResetPw': 'Resetare parolă',
+  'admin.actionSuspend': 'Suspendare',
+  'admin.actionActivate': 'Activare',
+  'admin.actionDeleteUser': 'Ștergere utilizator',
+  'admin.actionToggleAi': 'Comutare AI',
+  'admin.actionFeedback': 'Feedback',
+  'admin.actionUpdateFeedback': 'Act. feedback',
 
   // Tab prezentare generală
   'admin.totalUsers': 'Total utilizatori',
@@ -1907,6 +1924,7 @@ const ro = {
   'settings.notificationDenied': 'Refuzată',
   'settings.notificationDefault': 'Nesetat',
   'settings.notificationHelp': 'Notificările au fost refuzate. Pentru a le reactiva, apasă iconița de lacăt din bara de adrese și permite notificările pentru acest site.',
+  'settings.notificationUnsupported': 'Nesuportat',
   'notifications.title': 'Notificări',
   'notifications.markAllRead': 'Marchează tot ca citit',
   'notifications.empty': 'Nicio notificare',
@@ -1920,6 +1938,33 @@ const ro = {
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Țintă partajare',
   'pwa.sharedReceived': 'Text partajat primit',
+
+  // ─── Psihologie cheltuieli ─────────────────────────────────
+  'psychology.title': 'Comportament cheltuieli',
+  'psychology.weekendSpender': 'Cheltuitor de weekend',
+  'psychology.weekendDetail': 'Cheltuiești cu {pct}% mai mult în weekend decât în zilele lucrătoare',
+  'psychology.weekdaySpender': 'Cheltuitor în timpul săptămânii',
+  'psychology.weekdayDetail': 'Cheltuiești cu {pct}% mai puțin în weekend — bună reținere!',
+  'psychology.impulseAlert': 'Obicei de micro-achiziții',
+  'psychology.impulseDetail': '{count} achiziții mici reprezintă {pct}% din cheltuieli',
+  'psychology.morningSpender': 'Cheltuitor matinal',
+  'psychology.afternoonSpender': 'Cheltuitor după-amiaza',
+  'psychology.eveningSpender': 'Cheltuitor seara',
+  'psychology.nightSpender': 'Cheltuitor nocturn',
+  'psychology.timeDetail': '{pct}% din tranzacții sunt în această perioadă',
+  'psychology.accelerating': 'Cheltuieli în accelerare',
+  'psychology.acceleratingDetail': 'Cheltuiești mai repede în a doua jumătate a lunii',
+
+  // ─── Simulator plată datorii ──────────────────────────────
+  'payoff.title': 'Simulator plată datorii',
+  'payoff.extraMonthly': 'Plată lunară suplimentară',
+  'payoff.snowball': 'Bulgăre de zăpadă',
+  'payoff.snowballDesc': 'Plătește mai întâi soldul cel mai mic — creează elan',
+  'payoff.avalanche': 'Avalanșă',
+  'payoff.avalancheDesc': 'Plătește mai întâi dobânda cea mai mare — economisește bani',
+  'payoff.months': 'Luni până la achitare',
+  'payoff.totalInterest': 'Dobândă totală plătită',
+  'payoff.savings': '{strategy} te scutește de {amount} în dobânzi!',
 
   // ─── Changelog / Noutăți ───────────────────────────────────
   'changelog.whatsNew': 'Ce e nou',

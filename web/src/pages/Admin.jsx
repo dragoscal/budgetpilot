@@ -15,22 +15,22 @@ import {
   MessageSquare, Bug, Lightbulb, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
-const ACTION_LABELS = {
-  login: 'Logged in',
-  register: 'Registered',
-  create_record: 'Created record',
-  update_record: 'Updated record',
-  delete_record: 'Deleted record',
-  sync_push: 'Synced data',
-  ai_process: 'Used AI (receipt/NLP)',
-  telegram_expense: 'Added via Telegram',
-  admin_reset_password: 'Reset password (admin)',
-  admin_suspend_user: 'Suspended user (admin)',
-  admin_activate_user: 'Activated user (admin)',
-  admin_delete_user: 'Deleted user (admin)',
-  admin_toggle_ai_access: 'Toggled AI access (admin)',
-  submit_feedback: 'Submitted feedback',
-  admin_update_feedback: 'Updated feedback (admin)',
+const ACTION_LABEL_KEYS = {
+  login: 'admin.actionLogin',
+  register: 'admin.actionRegister',
+  create_record: 'admin.actionCreate',
+  update_record: 'admin.actionUpdate',
+  delete_record: 'admin.actionDelete',
+  sync_push: 'admin.actionSync',
+  ai_process: 'admin.actionAi',
+  telegram_expense: 'admin.actionTelegram',
+  admin_reset_password: 'admin.actionResetPw',
+  admin_suspend_user: 'admin.actionSuspend',
+  admin_activate_user: 'admin.actionActivate',
+  admin_delete_user: 'admin.actionDeleteUser',
+  admin_toggle_ai_access: 'admin.actionToggleAi',
+  submit_feedback: 'admin.actionFeedback',
+  admin_update_feedback: 'admin.actionUpdateFeedback',
 };
 
 function useTimeAgo() {
@@ -276,7 +276,7 @@ function OverviewTab({ stats }) {
               <BarChart data={stats.featureUsage.slice(0, 8)} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="action" type="category" tick={{ fontSize: 10 }} width={100} tickFormatter={a => ACTION_LABELS[a] || a} />
+                <YAxis dataKey="action" type="category" tick={{ fontSize: 10 }} width={100} tickFormatter={a => ACTION_LABEL_KEYS[a] ? t(ACTION_LABEL_KEYS[a]) : a} />
                 <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                 <Bar dataKey="count" fill="#059669" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -545,7 +545,7 @@ function ActivityTab({ activity }) {
                   <span className="font-medium">{a.userName || t('admin.unknown')}</span>
                   {' '}
                   <span className="text-cream-600 dark:text-cream-500">
-                    {ACTION_LABELS[a.action] || a.action}
+                    {ACTION_LABEL_KEYS[a.action] ? t(ACTION_LABEL_KEYS[a.action]) : a.action}
                     {meta.table && ` ${t('admin.inTable', { table: meta.table })}`}
                   </span>
                 </p>

@@ -359,7 +359,7 @@ export default function Sidebar() {
         {[
           { to: '/', icon: LayoutDashboard, label: t('nav.home') },
           { to: '/transactions', icon: Receipt, label: t('nav.history') },
-          { to: '/add', icon: PlusCircle, label: 'Add', special: true },
+          { to: '/add', icon: PlusCircle, label: t('nav.add'), special: true },
           { to: '/budgets', icon: PiggyBank, label: t('nav.budgets') },
         ].map((item) => (
           <NavLink

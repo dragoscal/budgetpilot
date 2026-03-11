@@ -18,6 +18,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import SyncIndicator from '../components/SyncIndicator';
+import SpendingPsychology from '../components/SpendingPsychology';
 import HelpButton from '../components/HelpButton';
 import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home } from 'lucide-react';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -64,6 +65,7 @@ export default function Dashboard() {
     { id: 'budgetOverview', visible: true },
     { id: 'predictions', visible: true },
     { id: 'billSuggestions', visible: true },
+    { id: 'spendingPsychology', visible: true },
     { id: 'recentTransactions', visible: true },
   ];
 
@@ -75,6 +77,7 @@ export default function Dashboard() {
     budgetOverview: 'dashboard.budgetOverview',
     predictions: 'dashboard.predictions',
     billSuggestions: 'dashboard.billSuggestions',
+    spendingPsychology: 'psychology.title',
     recentTransactions: 'dashboard.recentTransactionsWidget',
   };
 
@@ -1160,6 +1163,11 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : null;
+
+          case 'spendingPsychology':
+            return (
+              <SpendingPsychology key="spendingPsychology" transactions={transactions} currency={currency} hidden={hidden} />
+            );
 
           case 'recentTransactions':
             return (

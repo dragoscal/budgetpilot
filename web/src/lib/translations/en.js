@@ -76,6 +76,7 @@ const en = {
   'common.saving': 'Saving...',
   'common.unknown': 'Unknown',
   'common.other': 'Other',
+  'common.undo': 'Undo',
 
   // ─── Navigation ──────────────────────────────────────
   'nav.main': 'Main',
@@ -121,6 +122,7 @@ const en = {
   'nav.expandSidebar': 'Expand sidebar',
   'nav.collapseSidebar': 'Collapse sidebar',
   'nav.guide': 'Guide',
+  'nav.add': 'Add',
 
   // ─── Dashboard ───────────────────────────────────────
   'dashboard.hey': 'Hey, {name}',
@@ -1501,6 +1503,21 @@ const en = {
   'admin.minutesAgo': '{count}m ago',
   'admin.hoursAgo': '{count}h ago',
   'admin.daysAgo': '{count}d ago',
+  'admin.actionLogin': 'Login',
+  'admin.actionRegister': 'Register',
+  'admin.actionCreate': 'Create',
+  'admin.actionUpdate': 'Update',
+  'admin.actionDelete': 'Delete',
+  'admin.actionSync': 'Sync',
+  'admin.actionAi': 'AI',
+  'admin.actionTelegram': 'Telegram',
+  'admin.actionResetPw': 'Reset PW',
+  'admin.actionSuspend': 'Suspend',
+  'admin.actionActivate': 'Activate',
+  'admin.actionDeleteUser': 'Del User',
+  'admin.actionToggleAi': 'Toggle AI',
+  'admin.actionFeedback': 'Feedback',
+  'admin.actionUpdateFeedback': 'Upd Feedback',
 
   // Overview tab
   'admin.totalUsers': 'Total Users',
@@ -1907,6 +1924,7 @@ const en = {
   'settings.notificationDenied': 'Denied',
   'settings.notificationDefault': 'Not set',
   'settings.notificationHelp': 'Notifications were denied. To re-enable, click the lock icon in the address bar and allow notifications for this site.',
+  'settings.notificationUnsupported': 'Not supported',
   'notifications.title': 'Notifications',
   'notifications.markAllRead': 'Mark all read',
   'notifications.empty': 'No notifications',
@@ -1920,6 +1938,33 @@ const en = {
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Share Target',
   'pwa.sharedReceived': 'Shared text received',
+
+  // ─── Spending Psychology ──────────────────────────────────
+  'psychology.title': 'Spending Behavior',
+  'psychology.weekendSpender': 'Weekend spender',
+  'psychology.weekendDetail': 'You spend {pct}% more on weekends than weekdays',
+  'psychology.weekdaySpender': 'Weekday spender',
+  'psychology.weekdayDetail': 'You spend {pct}% less on weekends — nice restraint!',
+  'psychology.impulseAlert': 'Micro-purchase habit',
+  'psychology.impulseDetail': '{count} small purchases add up to {pct}% of your spending',
+  'psychology.morningSpender': 'Morning spender',
+  'psychology.afternoonSpender': 'Afternoon spender',
+  'psychology.eveningSpender': 'Evening spender',
+  'psychology.nightSpender': 'Night owl spender',
+  'psychology.timeDetail': '{pct}% of your transactions happen during this time',
+  'psychology.accelerating': 'Spending accelerating',
+  'psychology.acceleratingDetail': 'You\'re spending faster in the second half of the month',
+
+  // ─── Debt Payoff Simulator ──────────────────────────────
+  'payoff.title': 'Debt Payoff Simulator',
+  'payoff.extraMonthly': 'Extra monthly payment',
+  'payoff.snowball': 'Snowball',
+  'payoff.snowballDesc': 'Pay smallest balance first — builds momentum',
+  'payoff.avalanche': 'Avalanche',
+  'payoff.avalancheDesc': 'Pay highest interest first — saves money',
+  'payoff.months': 'Months to pay off',
+  'payoff.totalInterest': 'Total interest paid',
+  'payoff.savings': '{strategy} saves you {amount} in interest!',
 
   // ─── Changelog / What's New ────────────────────────────────
   'changelog.whatsNew': "What's New",
