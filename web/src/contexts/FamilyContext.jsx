@@ -56,15 +56,12 @@ export function FamilyProvider({ children }) {
       const userFamilies = allFamilies.filter((f) => myMembershipIds.has(f.id));
       setMyFamilies(userFamilies);
 
-      // Restore active family from sessionStorage
+      // Restore active family from sessionStorage (default to personal mode)
       const savedActive = sessionStorage.getItem('bp_activeFamily');
       if (savedActive && userFamilies.find((f) => f.id === savedActive)) {
         const family = userFamilies.find((f) => f.id === savedActive);
         setActiveFamily(family);
         setMembers(allMembers.filter((m) => m.familyId === family.id));
-      } else if (userFamilies.length > 0) {
-        setActiveFamily(userFamilies[0]);
-        setMembers(allMembers.filter((m) => m.familyId === userFamilies[0].id));
       }
     } catch (err) {
       console.error('Failed to load families:', err);
