@@ -8,6 +8,9 @@
  * Dynamically imports xlsx to keep the bundle small (code-split).
  */
 export async function parseSpreadsheet(file) {
+  if (file.size > 50 * 1024 * 1024) {
+    throw new Error('File too large (max 50MB)');
+  }
   const XLSX = await import('xlsx');
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
@@ -216,25 +219,39 @@ export function extractDataFromGrid(rawGrid, aiAnalysis) {
 }
 
 /**
- * Parse a number that may be in European format (1.234,56) or plain format.
+ * Parse a number that may be in European format (1.234,56), space-separated
+ * thousands (1 234,56), or plain format. Handles currency symbols and suffixes.
  */
 export function parseEuropeanNumber(value) {
   if (value == null || value === '') return 0;
   if (typeof value === 'number') return value;
-  const str = String(value).trim();
+  let str = String(value).trim();
   if (!str) return 0;
 
-  // Check if it looks European: has comma as decimal separator
+  // Strip currency symbols and text suffixes (€, $, RON, lei, EUR, etc.)
+  str = str.replace(/^[€$£¥₹]+\s*/, '').replace(/\s*(?:RON|lei|EUR|USD|GBP)\s*$/i, '').trim();
+  if (!str) return 0;
+
+  // Handle space-separated thousands: "1 234,56" or "1 234.56" or "1 234"
+  if (/^\d{1,3}(\s\d{3})+(,\d+)?$/.test(str)) {
+    // Space thousands + comma decimal (European): "1 234,56"
+    return parseFloat(str.replace(/\s/g, '').replace(',', '.')) || 0;
+  }
+  if (/^\d{1,3}(\s\d{3})+(\.\d+)?$/.test(str)) {
+    // Space thousands + dot decimal (standard): "1 234.56"
+    return parseFloat(str.replace(/\s/g, '')) || 0;
+  }
+
+  // European format: dots as thousands, comma as decimal
   // e.g., "1.234,56" or "234,56"
   if (/^\d{1,3}(\.\d{3})*(,\d+)?$/.test(str)) {
-    // European format: dots as thousands, comma as decimal
     return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
   }
   if (/^\d+(,\d+)$/.test(str)) {
     // Simple comma decimal: "234,56"
     return parseFloat(str.replace(',', '.')) || 0;
   }
-  // Standard number
+  // Standard number: strip everything except digits, dot, minus
   return parseFloat(str.replace(/[^0-9.\-]/g, '')) || 0;
 }
 

@@ -283,6 +283,7 @@ async function readSSEStream(response, signal) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = '';
+  const MAX_STREAM_SIZE = 5 * 1024 * 1024; // 5MB safety limit on accumulated text
 
   try {
     let buffer = '';
@@ -301,8 +302,14 @@ async function readSSEStream(response, signal) {
           if (!raw) continue;
           try {
             const evt = JSON.parse(raw);
-            if (evt.t) fullText += evt.t;           // text chunk
-            else if (evt.d) { /* done */ }           // stream complete
+            if (evt.t) {
+              fullText += evt.t;
+              // Safety: prevent runaway memory usage
+              if (fullText.length > MAX_STREAM_SIZE) {
+                reader.cancel();
+                throw new Error('AI response exceeded maximum size. Try a smaller document.');
+              }
+            } else if (evt.d) { /* done */ }
             else if (evt.error) throw new Error(evt.error);
           } catch (e) {
             if (e.message && !e.message.startsWith('Unexpected') && !e.message.startsWith('Expected')) throw e;
@@ -313,7 +320,8 @@ async function readSSEStream(response, signal) {
   } catch (err) {
     if (err.name === 'AbortError') throw err;
     if (!fullText) throw err;
-    // If we have partial text, try to use it
+    // If we have partial text, try to use it (stream broke but we got data)
+    console.warn('SSE stream interrupted with partial data, attempting recovery...');
   }
 
   if (!fullText) throw new Error('No data received from AI stream');
@@ -673,32 +681,63 @@ export async function processBankStatement(pdfBase64, { userId = 'local', signal
 }
 
 function normalizeBankStatementResult(result, userId = 'local') {
-  const txns = result.transactions || [];
-  const today = formatDateISO(new Date());
+  if (!result || typeof result !== 'object') {
+    return { transactions: [], bankInfo: { bankName: 'Unknown Bank', accountNumber: '', period: null, currency: 'RON' }, summary: '0 transactions extracted', hasItemsToReview: false, warnings: ['AI returned invalid response'] };
+  }
 
-  const normalized = txns.map((t) => ({
-    id: generateId(),
-    merchant: t.merchant || t.description || 'Unknown',
-    amount: Math.abs(Number(t.amount)) || 0,
-    currency: t.currency || result.currency || 'RON',
-    category: t.category || 'other',
-    subcategory: t.subcategory || null,
-    date: t.date || today,
-    type: t.type || 'expense',
-    description: t.description || '',
-    source: 'bank_statement',
-    confidence: t.confidence || 0.7,
-    needsReview: (t.confidence || 0.7) < 0.7,
-    reference: t.reference || null,
-    userId,
-    createdAt: new Date().toISOString(),
-  }));
+  const txns = Array.isArray(result.transactions) ? result.transactions : [];
+  const today = formatDateISO(new Date());
+  const warnings = [];
+
+  // Validate date format helper
+  const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+  const normalized = txns
+    .filter((t) => {
+      // Filter out transactions with no usable data
+      if (!t || typeof t !== 'object') return false;
+      const amt = Number(t.amount);
+      if (isNaN(amt) || amt === 0) return false;
+      return true;
+    })
+    .map((t) => {
+      const amount = Math.abs(Number(t.amount));
+      const date = (t.date && isValidDate(t.date)) ? t.date : today;
+      const confidence = typeof t.confidence === 'number' ? Math.min(1, Math.max(0, t.confidence)) : 0.7;
+
+      // Flag if date was invalid
+      if (t.date && !isValidDate(t.date)) {
+        warnings.push(`Invalid date "${t.date}" for ${t.merchant || 'unknown'}, using today`);
+      }
+
+      return {
+        id: generateId(),
+        merchant: String(t.merchant || t.description || 'Unknown').substring(0, 200),
+        amount,
+        currency: t.currency || result.currency || 'RON',
+        category: t.category || 'other',
+        subcategory: t.subcategory || null,
+        date,
+        type: t.type || 'expense',
+        description: String(t.description || '').substring(0, 500),
+        source: 'bank_statement',
+        confidence,
+        needsReview: confidence < 0.7,
+        reference: t.reference || null,
+        userId,
+        createdAt: new Date().toISOString(),
+      };
+    });
+
+  if (txns.length > 0 && normalized.length < txns.length) {
+    warnings.push(`${txns.length - normalized.length} transactions dropped (zero amount or invalid data)`);
+  }
 
   return {
     transactions: normalized,
     bankInfo: {
       bankName: result.bankName || 'Unknown Bank',
-      accountNumber: result.accountNumber || '',
+      accountNumber: result.accountNumber ? String(result.accountNumber).slice(-4) : '',
       period: result.statementPeriod || null,
       currency: result.currency || 'RON',
       openingBalance: result.openingBalance,
@@ -706,7 +745,7 @@ function normalizeBankStatementResult(result, userId = 'local') {
     },
     summary: result.summary || `${normalized.length} transactions extracted`,
     hasItemsToReview: normalized.some((t) => t.needsReview),
-    warnings: [],
+    warnings,
   };
 }
 

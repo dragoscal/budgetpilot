@@ -118,10 +118,27 @@ export default function BankStatementUpload({ onResult, onError }) {
     setBankInfo(null);
 
     const reader = new FileReader();
+
+    // Timeout for FileReader — prevent hanging on very large files
+    const readerTimeout = setTimeout(() => {
+      reader.abort();
+      if (mountedRef.current) {
+        onError?.(t('addTransaction.readTimeout') || 'File reading timed out. The file may be too large or corrupted.');
+        setProcessing(false);
+        setProgress(0);
+        setStatus('');
+      }
+    }, 30000); // 30s timeout for reading
+
     reader.onload = async (e) => {
+      clearTimeout(readerTimeout);
       try {
         const base64Full = e.target.result;
         const base64Data = base64Full.split(',')[1];
+
+        if (!base64Data || base64Data.length < 100) {
+          throw new Error(t('addTransaction.emptyPdf') || 'PDF appears to be empty or corrupted.');
+        }
 
         setProgress(25);
         setStatus(t('addTransaction.aiAnalyzing'));
@@ -137,11 +154,27 @@ export default function BankStatementUpload({ onResult, onError }) {
         // If still mounted, handle inline
         if (!mountedRef.current) return;
         markJobHandled();
+
+        // Validate AI returned actual transactions
+        if (!results || !results.transactions || results.transactions.length === 0) {
+          const msg = t('addTransaction.noTransactionsFound') || 'No transactions found in the PDF. Make sure this is a valid bank statement.';
+          onError?.(msg);
+          setStatus('');
+          return;
+        }
+
         handleResults(results, file.name);
       } catch (err) {
         if (!mountedRef.current) return;
         if (err.name === 'AbortError') return;
-        onError?.(err.message || t('addTransaction.failedProcess'));
+        // Provide clearer error messages
+        let msg = err.message || t('addTransaction.failedProcess');
+        if (msg.includes('API key') || msg.includes('api key')) {
+          msg = t('addTransaction.noAiKey') || 'No AI API key configured. Go to Settings to add one.';
+        } else if (msg.includes('timed out') || msg.includes('timeout')) {
+          msg = t('addTransaction.processTimeout') || 'Processing timed out. The PDF may have too many pages — try splitting it.';
+        }
+        onError?.(msg);
         setStatus('');
       } finally {
         if (mountedRef.current) {
@@ -152,6 +185,7 @@ export default function BankStatementUpload({ onResult, onError }) {
     };
 
     reader.onerror = () => {
+      clearTimeout(readerTimeout);
       onError?.(t('addTransaction.failedReadPdf'));
       setProcessing(false);
       setProgress(0);
