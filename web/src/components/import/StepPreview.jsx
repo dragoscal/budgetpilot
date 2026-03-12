@@ -16,6 +16,7 @@ export default function StepPreview({ extractedData, categoryMappings, personMap
     let droppedZeroAmount = 0;
     let droppedNoPerson = 0;
     let droppedInvalidMonth = 0;
+    const unmappedPersonCounts = {};
 
     for (const row of extractedData) {
       if (!row.amount || row.amount === 0) {
@@ -28,6 +29,7 @@ export default function StepPreview({ extractedData, categoryMappings, personMap
       const mappedPerson = personMappings[row.person];
       if (!mappedPerson) {
         droppedNoPerson++;
+        unmappedPersonCounts[row.person] = (unmappedPersonCounts[row.person] || 0) + 1;
         continue;
       }
 
@@ -72,7 +74,13 @@ export default function StepPreview({ extractedData, categoryMappings, personMap
 
     // Build warning list
     if (droppedZeroAmount > 0) warnings.push(t('import.droppedZeroAmount', { count: droppedZeroAmount }) || `${droppedZeroAmount} rows skipped (zero or missing amount)`);
-    if (droppedNoPerson > 0) warnings.push(t('import.droppedNoPerson', { count: droppedNoPerson }) || `${droppedNoPerson} rows skipped (unmapped person)`);
+    if (droppedNoPerson > 0) {
+      const personDetails = Object.entries(unmappedPersonCounts).map(([name, count]) => `"${name}" (${count})`).join(', ');
+      warnings.push(
+        (t('import.droppedNoPerson', { count: droppedNoPerson }) || `${droppedNoPerson} rows skipped (unmapped person)`)
+        + ` — ${personDetails}`
+      );
+    }
     if (droppedInvalidMonth > 0) warnings.push(t('import.droppedInvalidMonth', { count: droppedInvalidMonth }) || `${droppedInvalidMonth} rows skipped (invalid month)`);
 
     setBuildWarnings(warnings);
@@ -130,10 +138,12 @@ export default function StepPreview({ extractedData, categoryMappings, personMap
 
       {/* Warnings about dropped rows */}
       {buildWarnings.length > 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-warning/5 border border-warning/20">
-          <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
-          <div className="text-xs text-warning">
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-warning/8 border border-warning/25">
+          <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
+          <div className="text-xs text-warning space-y-1.5">
+            <p className="font-semibold text-sm">{t('import.droppedRowsTitle') || 'Some rows were excluded'}</p>
             {buildWarnings.map((w, i) => <p key={i}>{w}</p>)}
+            <p className="text-cream-500 text-[11px]">{t('import.droppedRowsHint') || 'Go back to the person mapping step to map any missing persons.'}</p>
           </div>
         </div>
       )}

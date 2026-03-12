@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { transactions as txApi, recurring as recurringApi } from '../../lib/api';
 import { checkDuplicate, checkTransferPair, learnCategory, detectRecurringPatterns, batchCheckDuplicates } from '../../lib/smartFeatures';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, ChevronDown, ChevronUp, Search, RotateCcw, Play } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, ChevronDown, ChevronUp, Search, RotateCcw, Play, FileText, ArrowDownToLine, Copy, Repeat } from 'lucide-react';
 
 const MAX_CONSECUTIVE_ERRORS = 5;
 
@@ -212,20 +212,31 @@ export default function StepImport({ transactions, importResult, setImportResult
 
           <h3 className="text-lg font-heading font-bold">{t('import.scanComplete')}</h3>
 
-          <div className="space-y-1.5 text-center">
-            <p className="text-sm">
-              <span className="font-bold text-success">{preScanResult.toImport.length}</span>{' '}
-              {t('import.scanResult', { toImport: preScanResult.toImport.length, total: preScanResult.total })}
-            </p>
+          {/* Detailed breakdown card */}
+          <div className="w-full max-w-sm space-y-2">
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+              <FileText size={15} className="text-cream-500 shrink-0" />
+              <span className="text-sm flex-1">{t('import.breakdownTotal')}</span>
+              <span className="text-sm font-bold">{preScanResult.total}</span>
+            </div>
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-success/5 border border-success/15">
+              <ArrowDownToLine size={15} className="text-success shrink-0" />
+              <span className="text-sm flex-1 text-success">{t('import.breakdownReady')}</span>
+              <span className="text-sm font-bold text-success">{preScanResult.toImport.length}</span>
+            </div>
             {preScanResult.duplicates > 0 && (
-              <p className="text-xs text-cream-500">
-                {t('import.duplicatesFound', { count: preScanResult.duplicates })}
-              </p>
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-warning/5 border border-warning/15">
+                <Copy size={15} className="text-warning shrink-0" />
+                <span className="text-sm flex-1 text-warning">{t('import.breakdownDuplicates')}</span>
+                <span className="text-sm font-bold text-warning">{preScanResult.duplicates}</span>
+              </div>
             )}
             {preScanResult.transfers > 0 && (
-              <p className="text-xs text-cream-500">
-                {t('import.transfersSkipped', { count: preScanResult.transfers })}
-              </p>
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-info/5 border border-info/15">
+                <Repeat size={15} className="text-info shrink-0" />
+                <span className="text-sm flex-1 text-info">{t('import.breakdownTransfers')}</span>
+                <span className="text-sm font-bold text-info">{preScanResult.transfers}</span>
+              </div>
             )}
           </div>
 

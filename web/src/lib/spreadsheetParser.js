@@ -43,6 +43,7 @@ export function gridToAISample(rawGrid, maxRows = 40) {
 export function extractDataFromGrid(rawGrid, aiAnalysis) {
   const { months, people, categoryColumnOffset, dataStartRow, layout } = aiAnalysis;
   const extracted = [];
+  const stats = { zeroAmount: 0, emptyCategory: 0, totalRow: 0, invalidMonth: 0 };
 
   if (layout === 'flat-table') {
     // Flat table: one transaction per row with columns mapped by AI
@@ -59,14 +60,14 @@ export function extractDataFromGrid(rawGrid, aiAnalysis) {
 
       // Extract amount
       const amount = parseEuropeanNumber(row[amountCol]);
-      if (!amount || amount <= 0) continue;
+      if (!amount || amount <= 0) { stats.zeroAmount++; continue; }
 
       // Extract category
       const categoryRaw = catCol != null ? row[catCol] : null;
-      if (!categoryRaw || (typeof categoryRaw === 'string' && !categoryRaw.trim())) continue;
+      if (!categoryRaw || (typeof categoryRaw === 'string' && !categoryRaw.trim())) { stats.emptyCategory++; continue; }
       const categoryName = String(categoryRaw).trim();
       const catLower = categoryName.toLowerCase();
-      if (catLower === 'total' || catLower === 'totale' || catLower === 'scop') continue;
+      if (catLower === 'total' || catLower === 'totale' || catLower === 'scop') { stats.totalRow++; continue; }
 
       // Extract month — try month column first, then parse from date
       let monthNumber = null;
@@ -108,7 +109,7 @@ export function extractDataFromGrid(rawGrid, aiAnalysis) {
         monthNumber = months[0].monthNumber;
         monthName = months[0].name;
       }
-      if (!monthNumber) continue;
+      if (!monthNumber) { stats.invalidMonth++; continue; }
 
       // Extract person — from column or fallback to people list
       let personName = '';
@@ -215,6 +216,7 @@ export function extractDataFromGrid(rawGrid, aiAnalysis) {
     }
   }
 
+  extracted._stats = stats;
   return extracted;
 }
 

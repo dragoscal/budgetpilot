@@ -380,7 +380,7 @@ async function readSSEStream(response, signal) {
 }
 
 // ─── API CALLER (multi-provider) ─────────────────────────
-async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {}) {
+async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temperature } = {}) {
   const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
   const provider = (await getSetting('aiProvider')) || 'anthropic';
   const model = await getSetting('aiModel');
@@ -408,7 +408,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
       method: 'POST',
       headers,
       signal: fetchSignal,
-      body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel }),
+      body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel, ...(temperature != null ? { temperature } : {}) }),
     });
     if (!res.ok) {
       // Non-streaming error (auth failures, etc.)
@@ -464,6 +464,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
         system: systemPrompt,
         messages,
         ...(useStream ? { stream: true } : {}),
+        ...(temperature != null ? { temperature } : {}),
       }),
     });
     if (!res.ok) {
@@ -553,6 +554,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
         model: selectedModel,
         max_tokens: maxTokens,
         messages: openaiMessages,
+        ...(temperature != null ? { temperature } : {}),
       }),
     });
     if (!res.ok) {
@@ -1094,7 +1096,7 @@ export async function processSpreadsheetStructure(gridSample, { userId = 'local'
       role: 'user',
       content: `Analyze this spreadsheet structure. The data is rows of cells in JSON format. Detect the layout pattern, months, people, categories, and amount locations.\n\nGrid data:\n${gridSample}`,
     },
-  ], buildSpreadsheetPrompt(customCats), 4000);
+  ], buildSpreadsheetPrompt(customCats), 4000, { temperature: 0 });
 
   return result;
 }

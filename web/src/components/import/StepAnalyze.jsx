@@ -3,7 +3,7 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import { useToast } from '../../contexts/ToastContext';
 import { processSpreadsheetStructure } from '../../lib/ai';
 import { gridToAISample, extractDataFromGrid } from '../../lib/spreadsheetParser';
-import { Brain, ChevronRight, ChevronLeft, RefreshCw, AlertTriangle, Calendar, Users, Tag, Info } from 'lucide-react';
+import { Brain, ChevronRight, ChevronLeft, RefreshCw, AlertTriangle, Calendar, Users, Tag, Info, FileText, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function StepAnalyze({ rawGrid, aiAnalysis, setAiAnalysis, extractedData, setExtractedData, setCategoryMappings, onNext, onBack }) {
   const { t } = useTranslation();
@@ -178,13 +178,39 @@ export default function StepAnalyze({ rawGrid, aiAnalysis, setAiAnalysis, extrac
             </div>
           </div>
 
-          {/* Extraction summary */}
-          <div className="text-sm text-cream-600 dark:text-cream-400">
-            {t('import.extractedRows', { count: extractedData.length })}
+          {/* Extraction summary — detailed breakdown */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-sm text-cream-600 dark:text-cream-400">
+              <FileText size={14} className="text-cream-400 shrink-0" />
+              <span>{t('import.extractedRows', { count: extractedData.length })}</span>
+            </div>
             {skippedRows > 0 && (
-              <span className="text-cream-400 ml-2">
-                ({skippedRows} {t('import.rowsSkipped') || 'rows skipped — missing amount or category'})
-              </span>
+              <div className="ml-5 space-y-1 text-xs text-cream-400">
+                {extractedData._stats?.zeroAmount > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <XCircle size={11} className="text-cream-400 shrink-0" />
+                    <span>{extractedData._stats.zeroAmount} {t('import.statsZeroAmount') || 'rows skipped (zero or missing amount)'}</span>
+                  </div>
+                )}
+                {extractedData._stats?.emptyCategory > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <XCircle size={11} className="text-cream-400 shrink-0" />
+                    <span>{extractedData._stats.emptyCategory} {t('import.statsEmptyCategory') || 'rows skipped (empty category)'}</span>
+                  </div>
+                )}
+                {extractedData._stats?.totalRow > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <XCircle size={11} className="text-cream-400 shrink-0" />
+                    <span>{extractedData._stats.totalRow} {t('import.statsTotalRow') || 'rows skipped (total/summary row)'}</span>
+                  </div>
+                )}
+                {extractedData._stats?.invalidMonth > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <XCircle size={11} className="text-cream-400 shrink-0" />
+                    <span>{extractedData._stats.invalidMonth} {t('import.statsInvalidMonth') || 'rows skipped (invalid month)'}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
