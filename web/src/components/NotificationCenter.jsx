@@ -129,16 +129,41 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
             <span className="ml-auto text-[11px] font-bold text-accent-600 dark:text-accent-400">{unreadCount}</span>
           )}
         </button>
-      ) : (
+      ) : collapsed ? (
         <button
           onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
-          className="relative p-1.5 rounded-lg text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 hover:bg-cream-200/60 dark:hover:bg-cream-700/40 transition-colors"
+          className="relative p-2 rounded-lg text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 hover:bg-cream-100 dark:hover:bg-cream-800/50 transition-colors"
           title={t('notifications.title')}
         >
           <BellIcon size={16} className="shrink-0" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-danger text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-dark-card">
+            <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-danger text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-dark-card">
               {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      ) : (
+        <button
+          onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
+          className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium w-full transition-colors ${
+            unreadCount > 0
+              ? 'text-accent-700 dark:text-accent-300 bg-accent-50/50 dark:bg-accent-500/10'
+              : 'text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50'
+          }`}
+          title={t('notifications.title')}
+        >
+          <div className="relative">
+            <BellIcon size={16} className="shrink-0" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-danger text-white text-[8px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </div>
+          <span>{t('notifications.title')}</span>
+          {unreadCount > 0 && (
+            <span className="ml-auto text-[10px] font-bold bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300 px-1.5 py-0.5 rounded-full">
+              {unreadCount}
             </span>
           )}
         </button>

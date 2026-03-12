@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
@@ -25,12 +25,10 @@ function lazyRetry(importFn, retries = 3) {
           if (!reloaded) {
             sessionStorage.setItem('chunk_reload', '1');
             window.location.reload();
-            // Return a never-resolving promise while the page reloads
             return new Promise(() => {});
           }
           throw err;
         }
-        // Wait progressively longer between retries (500ms, 1s, 1.5s)
         const delay = (retries - retriesLeft + 1) * 500;
         return new Promise((resolve) => setTimeout(resolve, delay)).then(() =>
           attempt(retriesLeft - 1)
@@ -46,12 +44,10 @@ if (sessionStorage.getItem('chunk_reload')) {
 }
 
 // ─── Lazy-loaded pages (code splitting) ──────────────────
-// Auth pages (small, loaded on demand)
 const Login = lazyRetry(() => import('./pages/Login'));
 const Register = lazyRetry(() => import('./pages/Register'));
 const Onboarding = lazyRetry(() => import('./pages/Onboarding'));
 
-// App pages
 const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
 const AddTransaction = lazyRetry(() => import('./pages/AddTransaction'));
 const Transactions = lazyRetry(() => import('./pages/Transactions'));
@@ -84,10 +80,10 @@ function ScrollToTop() {
   return null;
 }
 
+// ─── App layout with INNER Suspense ───
+// Suspense is INSIDE AppLayout so the sidebar stays visible while page chunks load.
+// This prevents the "black screen" flash that happened when Suspense was outside.
 function AppLayout({ children }) {
-  // Key the ErrorBoundary on pathname so it resets when navigating between pages.
-  // Without this, if a page crashes, the ErrorBoundary stays stuck in error state
-  // even after navigating to a different page (React reuses the same instance).
   const { pathname } = useLocation();
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
@@ -98,7 +94,9 @@ function AppLayout({ children }) {
       <main id="main-content" className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">
         <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8 animate-fadeUp">
           <ErrorBoundary key={pathname}>
-            {children}
+            <Suspense fallback={<SkeletonPage />}>
+              {children}
+            </Suspense>
           </ErrorBoundary>
         </div>
       </main>
@@ -106,8 +104,8 @@ function AppLayout({ children }) {
   );
 }
 
-// Suspense fallback with stuck-loading detection
-function PageFallback() {
+// Auth-only fallback (full-page, no sidebar)
+function AuthFallback() {
   const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
@@ -148,12 +146,8 @@ function PageFallback() {
   }
 
   return (
-    <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
-      <div className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">
-        <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8">
-          <SkeletonPage />
-        </div>
-      </div>
+    <div className="min-h-screen bg-cream-100 dark:bg-dark-bg flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cream-900 border-t-transparent rounded-full animate-spin dark:border-cream-100 dark:border-t-transparent" />
     </div>
   );
 }
@@ -179,15 +173,18 @@ export default function App() {
       <WhatsNew />
       <BackgroundJobNotifier />
       <QuickAddFAB />
+
+      {/* Outer Suspense: only catches auth pages (Login/Register/Onboarding).
+          App pages have their own Suspense INSIDE AppLayout so sidebar stays visible. */}
       <ErrorBoundary>
-      <Suspense fallback={<PageFallback />}>
+      <Suspense fallback={<AuthFallback />}>
         <Routes>
-          {/* Public routes */}
+          {/* Public routes — these use the outer Suspense */}
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
           <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />
 
-          {/* Protected routes */}
+          {/* Protected routes — each has Suspense INSIDE AppLayout */}
           <Route path="/" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
           <Route path="/add" element={<ProtectedRoute><AppLayout><AddTransaction /></AppLayout></ProtectedRoute>} />
           <Route path="/transactions" element={<ProtectedRoute><AppLayout><Transactions /></AppLayout></ProtectedRoute>} />
