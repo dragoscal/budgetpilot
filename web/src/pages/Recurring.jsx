@@ -512,7 +512,7 @@ export default function Recurring() {
 
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
-              <Landmark size={16} className="text-cream-500" />
+              <Landmark size={16} className={form.autoDebit ? 'text-success' : 'text-cream-500'} />
               <div>
                 <p className="text-sm font-medium">{t('recurring.autoDebit')}</p>
                 <p className="text-[11px] text-cream-400">{t('recurring.autoDebitDesc')}</p>
@@ -521,13 +521,17 @@ export default function Recurring() {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, autoDebit: !f.autoDebit }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                form.autoDebit ? 'bg-accent' : 'bg-cream-300 dark:bg-dark-border'
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shadow-inner ${
+                form.autoDebit ? 'bg-success' : 'bg-cream-300 dark:bg-dark-border'
               }`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                form.autoDebit ? 'translate-x-6' : 'translate-x-1'
-              }`} />
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform flex items-center justify-center ${
+                form.autoDebit ? 'translate-x-6' : 'translate-x-0.5'
+              }`}>
+                {form.autoDebit && (
+                  <Check size={12} className="text-success" />
+                )}
+              </span>
             </button>
           </div>
 

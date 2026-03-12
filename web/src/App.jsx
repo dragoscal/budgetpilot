@@ -11,6 +11,7 @@ import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
 import WhatsNew from './components/WhatsNew';
 import BackgroundJobNotifier from './components/BackgroundJobNotifier';
+import QuickAddFAB from './components/QuickAddFAB';
 
 // ─── Lazy import with retry (handles chunk failures after deploy) ───
 function lazyRetry(importFn) {
@@ -132,6 +133,7 @@ export default function App() {
       <CommandPalette />
       <WhatsNew />
       <BackgroundJobNotifier />
+      <QuickAddFAB />
       <ErrorBoundary>
       <Suspense fallback={<PageFallback />}>
         <Routes>

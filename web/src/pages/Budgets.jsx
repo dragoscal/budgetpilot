@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
 import { CATEGORIES, BUDGET_TEMPLATES } from '../lib/constants';
-import { generateId, formatCurrency, percentOf, sumBy, getDaysRemaining } from '../lib/helpers';
+import { generateId, formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, getDaysRemaining } from '../lib/helpers';
+import { getCachedRates } from '../lib/exchangeRates';
 import BudgetBar from '../components/BudgetBar';
 import CategoryPicker from '../components/CategoryPicker';
 import MonthPicker from '../components/MonthPicker';
@@ -34,6 +35,7 @@ export default function Budgets() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [templatePreview, setTemplatePreview] = useState(null);
   const [quickAddAmounts, setQuickAddAmounts] = useState({});
+  const [rates, setRates] = useState(null);
 
   // Form state
   const [formCategory, setFormCategory] = useState('');
@@ -84,6 +86,7 @@ export default function Budgets() {
       setTransactions(monthTx);
       setAllMonthTransactions(allMonthTx);
       setPrevMonthTransactions(prevTx);
+      getCachedRates().then(setRates).catch(() => {});
     } catch (err) {
       toast.error(t('budgets.failedLoad'));
     } finally {
@@ -93,12 +96,15 @@ export default function Budgets() {
 
   const budgetData = useMemo(() => {
     return budgetsList.map((b) => {
-      const spent = sumBy(transactions.filter((t) => t.category === b.category), 'amount');
+      const budgetCurrency = b.currency || currency;
+      const catTx = transactions.filter((t) => t.category === b.category);
+      const spent = sumAmountsMultiCurrency(catTx, budgetCurrency, rates);
 
       // Rollover: carry over unused budget from previous month
       let rolloverAmount = 0;
       if (b.rollover) {
-        const prevSpent = sumBy(prevMonthTransactions.filter((t) => t.category === b.category), 'amount');
+        const prevCatTx = prevMonthTransactions.filter((t) => t.category === b.category);
+        const prevSpent = sumAmountsMultiCurrency(prevCatTx, budgetCurrency, rates);
         const prevRemaining = b.amount - prevSpent;
         rolloverAmount = prevRemaining > 0 ? prevRemaining : 0;
       }
@@ -113,17 +119,17 @@ export default function Budgets() {
         remaining: effectiveBudget - spent,
       };
     }).sort((a, b) => b.pct - a.pct);
-  }, [budgetsList, transactions, prevMonthTransactions]);
+  }, [budgetsList, transactions, prevMonthTransactions, rates, currency]);
 
   const totalBudget = sumBy(budgetsList, 'amount');
-  const totalSpent = sumBy(transactions, 'amount');
+  const totalSpent = sumAmountsMultiCurrency(transactions, currency, rates);
   const overallPct = percentOf(totalSpent, totalBudget);
   const daysLeft = getDaysRemaining(month);
 
   // Compute total income for the selected month
   const totalIncome = useMemo(() => {
-    return sumBy(allMonthTransactions.filter((t) => t.type === 'income'), 'amount');
-  }, [allMonthTransactions]);
+    return sumAmountsMultiCurrency(allMonthTransactions.filter((t) => t.type === 'income'), currency, rates);
+  }, [allMonthTransactions, currency, rates]);
 
   const toBeBudgeted = totalIncome - totalBudget;
 

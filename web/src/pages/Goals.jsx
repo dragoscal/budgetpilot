@@ -175,9 +175,28 @@ export default function Goals() {
               <div><label className="label">{t('goals.minPayment')}</label><input type="number" className="input" value={form.minimumPayment} onChange={(e) => setForm((f) => ({ ...f, minimumPayment: e.target.value }))} /></div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">{t('goals.icon')}</label><input className="input" value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))} /></div>
-            <div><label className="label">{t('goals.color')}</label><input type="color" className="input h-10" value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))} /></div>
+          <div className="space-y-2">
+            <label className="label">{t('goals.icon')}</label>
+            <div className="flex flex-wrap gap-1.5">
+              {['🎯', '🏠', '🚗', '✈️', '💻', '📱', '🎓', '💍', '👶', '🏖️', '💰', '🛡️', '🎁', '🐶', '🏋️', '📚', '🎵', '⚽', '🩺', '🔧'].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, icon: emoji }))}
+                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
+                    form.icon === emoji
+                      ? 'bg-accent/15 ring-2 ring-accent scale-110'
+                      : 'bg-cream-100 dark:bg-dark-border hover:bg-cream-200 dark:hover:bg-cream-700'
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="label">{t('goals.color')}</label>
+            <input type="color" className="input h-10" value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))} />
           </div>
           <button onClick={handleSave} className="btn-primary w-full">{editGoal ? t('goals.update') : t('goals.create')}</button>
         </div>

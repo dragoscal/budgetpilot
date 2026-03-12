@@ -118,18 +118,24 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* User */}
+        {/* User + Notification Bell */}
         {!collapsed && user && (
           <div className="px-3 pb-2 shrink-0">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cream-50 dark:bg-cream-800/30">
               <div className="w-7 h-7 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 flex items-center justify-center text-xs font-bold shrink-0">
                 {user.avatar || user.name?.charAt(0)?.toUpperCase()}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium truncate leading-tight">{user.name}</p>
                 <p className="text-[10px] text-cream-400 truncate">{user.email}</p>
               </div>
+              <NotificationCenter collapsed={false} />
             </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="px-2 pb-2 shrink-0 flex justify-center">
+            <NotificationCenter collapsed={true} />
           </div>
         )}
 
@@ -166,8 +172,6 @@ export default function Sidebar() {
         {/* Bottom controls */}
         <div className="border-t border-cream-200 dark:border-dark-border px-3 py-2 space-y-px shrink-0">
           <SyncIndicator collapsed={collapsed} />
-
-          <NotificationCenter collapsed={collapsed} />
 
           <button
             onClick={toggleTheme}

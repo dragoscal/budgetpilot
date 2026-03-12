@@ -830,23 +830,30 @@ export default function Dashboard() {
               <Link to="/budgets" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-success/10 text-success text-xs font-medium hover:bg-success/15 transition-colors">
                 <Target size={16} /> {t('dashboard.welcomeBudget')}
               </Link>
-              <Link to="/import" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-info/10 text-info text-xs font-medium hover:bg-info/15 transition-colors">
+              <Link to="/import-budget" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-info/10 text-info text-xs font-medium hover:bg-info/15 transition-colors">
                 <Zap size={16} /> {t('dashboard.welcomeImport')}
               </Link>
               <Link to="/guide" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-warning/10 text-warning text-xs font-medium hover:bg-warning/15 transition-colors">
                 <BookOpen size={16} /> {t('dashboard.welcomeGuide')}
               </Link>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {welcomeProgress.steps.map((step, i) => (
-                  <div key={i} className={`w-2 h-2 rounded-full transition-colors ${step.done ? 'bg-accent' : 'bg-cream-300 dark:bg-dark-border'}`} />
+                  <div key={i} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full transition-colors ${step.done ? 'bg-accent' : 'bg-cream-300 dark:bg-dark-border'}`} />
+                    <span className={`text-[11px] font-medium ${step.done ? 'text-accent line-through' : 'text-cream-600 dark:text-cream-400'}`}>
+                      {t(`dashboard.step${step.key.charAt(0).toUpperCase() + step.key.slice(1)}`)}
+                    </span>
+                  </div>
                 ))}
-                <span className="text-[11px] text-cream-500 ml-1.5">{t('dashboard.welcomeProgress', { done: welcomeProgress.done, total: welcomeProgress.total })}</span>
               </div>
-              <button onClick={dismissWelcome} className="text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 font-medium transition-colors">
-                {t('dashboard.welcomeDismiss')}
-              </button>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-cream-500">{t('dashboard.welcomeProgress', { done: welcomeProgress.done, total: welcomeProgress.total })}</span>
+                <button onClick={dismissWelcome} className="text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 font-medium transition-colors">
+                  {t('dashboard.welcomeDismiss')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
