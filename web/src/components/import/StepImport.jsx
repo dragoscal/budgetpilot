@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useToast } from '../../contexts/ToastContext';
-import { transactions as txApi } from '../../lib/api';
-import { checkDuplicate, checkTransferPair, learnCategory } from '../../lib/smartFeatures';
+import { transactions as txApi, recurring as recurringApi } from '../../lib/api';
+import { checkDuplicate, checkTransferPair, learnCategory, detectRecurringPatterns, batchCheckDuplicates } from '../../lib/smartFeatures';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, ChevronDown, ChevronUp, Search, RotateCcw, Play } from 'lucide-react';
 
 const MAX_CONSECUTIVE_ERRORS = 5;
 
@@ -19,60 +19,97 @@ export default function StepImport({ transactions, importResult, setImportResult
   const started = useRef(false);
   const cancelledRef = useRef(false);
 
+  // Pre-scan phase
+  const [scanPhase, setScanPhase] = useState('scanning'); // 'scanning' | 'review' | 'importing' | 'done'
+  const [preScanResult, setPreScanResult] = useState(null);
+
+  // Recurring detection
+  const [recurringPatterns, setRecurringPatterns] = useState(null);
+
   useEffect(() => {
     if (started.current || importResult || transactions.length === 0) return;
     started.current = true;
-    runImport();
+    runPreScan();
   }, []);
 
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
   }, []);
 
-  const runImport = async () => {
+  // ─── PRE-SCAN PHASE ─────────────────────────────────────
+  const runPreScan = async () => {
+    setScanPhase('scanning');
+    try {
+      const results = await batchCheckDuplicates(transactions);
+      const toImport = results.filter((r) => !r.isDuplicate && !r.isTransferPair);
+      const dupeCount = results.filter((r) => r.isDuplicate).length;
+      const transferCount = results.filter((r) => r.isTransferPair).length;
+
+      setPreScanResult({
+        toImport: toImport.map((r) => r.transaction),
+        duplicates: dupeCount,
+        transfers: transferCount,
+        total: transactions.length,
+      });
+
+      // If nothing to import, go straight to review
+      setScanPhase('review');
+    } catch (err) {
+      console.error('Pre-scan failed, proceeding with import:', err);
+      // Fallback: skip pre-scan, import everything with per-item checks
+      setPreScanResult({
+        toImport: transactions,
+        duplicates: 0,
+        transfers: 0,
+        total: transactions.length,
+      });
+      setScanPhase('review');
+    }
+  };
+
+  const handleStartImport = () => {
+    setScanPhase('importing');
+    runImport(preScanResult?.toImport || transactions);
+  };
+
+  // ─── IMPORT PHASE ───────────────────────────────────────
+  const runImport = async (txList) => {
     setImporting(true);
     cancelledRef.current = false;
     let saved = 0;
     let skipped = 0;
     const errors = [];
     let consecutiveErrors = 0;
+    const batchId = crypto.randomUUID();
 
-    for (let i = 0; i < transactions.length; i++) {
-      // Check for cancellation
-      if (cancelledRef.current) {
-        break;
-      }
+    for (let i = 0; i < txList.length; i++) {
+      if (cancelledRef.current) break;
 
-      const tx = transactions[i];
+      const tx = txList[i];
       try {
-        // Check for duplicates (skip high-confidence matches)
+        // Safety net: per-item duplicate check (in case DB changed since pre-scan)
         const dupes = await checkDuplicate(tx);
         if (dupes && dupes.length > 0 && dupes[0].confidence >= 0.8) {
           skipped++;
-          consecutiveErrors = 0; // Reset on successful check
+          consecutiveErrors = 0;
         } else if (tx.source === 'bank_statement' && (tx.type === 'transfer' || tx.category === 'transfer')) {
-          // Check for transfer pairs (bank statement imports)
           const pair = await checkTransferPair(tx);
           if (pair) {
             skipped++;
             consecutiveErrors = 0;
           } else {
             const { _personName, _monthName, _monthNumber, ...clean } = tx;
-            await txApi.create(clean);
+            await txApi.create({ ...clean, importBatch: batchId });
             if (tx.merchant && tx.category) learnCategory(tx.merchant, tx.category, tx.subcategory);
             saved++;
             consecutiveErrors = 0;
           }
         } else {
-          // Clean display-only fields before saving
           const { _personName, _monthName, _monthNumber, ...clean } = tx;
-          await txApi.create(clean);
-          // Learn category mapping
-          if (tx.merchant && tx.category) {
-            learnCategory(tx.merchant, tx.category, tx.subcategory);
-          }
+          await txApi.create({ ...clean, importBatch: batchId });
+          if (tx.merchant && tx.category) learnCategory(tx.merchant, tx.category, tx.subcategory);
           saved++;
-          consecutiveErrors = 0; // Reset on success
+          consecutiveErrors = 0;
         }
       } catch (err) {
         console.error(`Import error for ${tx.merchant}:`, err);
@@ -85,33 +122,33 @@ export default function StepImport({ transactions, importResult, setImportResult
         });
         consecutiveErrors++;
 
-        // Early exit if too many consecutive errors (likely API is down)
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-          const remaining = transactions.length - i - 1;
+          const remaining = txList.length - i - 1;
           errors.push({
             merchant: `+${remaining} remaining`,
-            amount: 0,
-            date: '',
-            person: '',
-            error: t('import.tooManyErrors') || `Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. Server may be unreachable.`,
+            amount: 0, date: '', person: '',
+            error: t('import.tooManyErrors') || `Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors.`,
           });
           break;
         }
       }
-      setProgress(Math.round(((i + 1) / transactions.length) * 100));
+      setProgress(Math.round(((i + 1) / txList.length) * 100));
     }
 
     const wasCancelled = cancelledRef.current;
+    const preDupes = preScanResult ? preScanResult.duplicates + preScanResult.transfers : 0;
     const result = {
       saved,
-      skipped,
+      skipped: skipped + preDupes,
       errors: errors.length,
       total: transactions.length,
       cancelled: wasCancelled,
+      batchId: saved > 0 ? batchId : null,
     };
     setImportResult(result);
     setErrorDetails(errors);
     setImporting(false);
+    setScanPhase('done');
 
     if (result.saved > 0) {
       toast.success(t('import.savedCount', { count: result.saved }));
@@ -119,10 +156,88 @@ export default function StepImport({ transactions, importResult, setImportResult
     if (wasCancelled && result.saved > 0) {
       toast.warning(t('import.importCancelled') || `Import cancelled. ${result.saved} transactions were already saved.`);
     }
+
+    // ─── RECURRING DETECTION ────────────────────────────────
+    if (result.saved > 0) {
+      try {
+        const [existingRecurring, patterns] = await Promise.all([
+          recurringApi.getAll(),
+          detectRecurringPatterns(),
+        ]);
+        const existingMerchants = new Set(
+          (Array.isArray(existingRecurring) ? existingRecurring : [])
+            .map((r) => (r.name || r.merchant || '').toLowerCase().trim())
+        );
+        const newPatterns = patterns.filter(
+          (p) => !existingMerchants.has(p.merchant.toLowerCase().trim())
+        );
+        if (newPatterns.length > 0) setRecurringPatterns(newPatterns);
+      } catch (err) {
+        console.warn('Recurring detection failed:', err);
+      }
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* ─── SCANNING PHASE ──────────────────────────────── */}
+      {scanPhase === 'scanning' && (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <div className="w-12 h-12 border-3 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium flex items-center gap-2">
+            <Search size={16} /> {t('import.scanning')}
+          </p>
+          <p className="text-xs text-cream-400">{transactions.length} {t('common.transactions')}</p>
+        </div>
+      )}
+
+      {/* ─── REVIEW PHASE ────────────────────────────────── */}
+      {scanPhase === 'review' && preScanResult && (
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+            <Search size={28} className="text-accent" />
+          </div>
+
+          <h3 className="text-lg font-heading font-bold">{t('import.scanComplete')}</h3>
+
+          <div className="space-y-1.5 text-center">
+            <p className="text-sm">
+              <span className="font-bold text-success">{preScanResult.toImport.length}</span>{' '}
+              {t('import.scanResult', { toImport: preScanResult.toImport.length, total: preScanResult.total })}
+            </p>
+            {preScanResult.duplicates > 0 && (
+              <p className="text-xs text-cream-500">
+                {t('import.duplicatesFound', { count: preScanResult.duplicates })}
+              </p>
+            )}
+            {preScanResult.transfers > 0 && (
+              <p className="text-xs text-cream-500">
+                {t('import.transfersSkipped', { count: preScanResult.transfers })}
+              </p>
+            )}
+          </div>
+
+          {preScanResult.toImport.length === 0 ? (
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-cream-500">{t('import.nothingToImport')}</p>
+              <button onClick={onReset} className="btn-secondary flex items-center gap-2">
+                <RefreshCw size={16} /> {t('import.importAnother')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button onClick={handleStartImport} className="btn-primary flex items-center gap-2">
+                <Play size={16} /> {t('import.startImport')}
+              </button>
+              <button onClick={onReset} className="btn-ghost text-xs">
+                {t('common.cancel')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── IMPORTING PHASE ─────────────────────────────── */}
       {importing && (
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="w-12 h-12 border-3 border-accent border-t-transparent rounded-full animate-spin" />
@@ -135,7 +250,7 @@ export default function StepImport({ transactions, importResult, setImportResult
               />
             </div>
             <p className="text-xs text-cream-400 text-center mt-1">
-              {progress}% ({Math.round(progress / 100 * transactions.length)}/{transactions.length})
+              {progress}% ({Math.round(progress / 100 * (preScanResult?.toImport?.length || transactions.length))}/{preScanResult?.toImport?.length || transactions.length})
             </p>
           </div>
           <button
@@ -147,6 +262,7 @@ export default function StepImport({ transactions, importResult, setImportResult
         </div>
       )}
 
+      {/* ─── RESULTS PHASE ───────────────────────────────── */}
       {importResult && !importing && (
         <div className="flex flex-col items-center gap-4 py-8">
           {importResult.errors === 0 && !importResult.cancelled ? (
@@ -205,6 +321,28 @@ export default function StepImport({ transactions, importResult, setImportResult
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Recurring detection banner */}
+          {recurringPatterns && recurringPatterns.length > 0 && (
+            <div className="w-full max-w-md p-3 rounded-xl bg-accent-50 dark:bg-accent-500/10 border border-accent/20">
+              <div className="flex items-center gap-2 mb-1.5">
+                <RotateCcw size={14} className="text-accent" />
+                <p className="text-sm font-medium">
+                  {t('import.recurringFound', { count: recurringPatterns.length })}
+                </p>
+              </div>
+              <p className="text-xs text-cream-500 mb-2">
+                {recurringPatterns.slice(0, 3).map((p) => p.merchant).join(', ')}
+                {recurringPatterns.length > 3 && ` +${recurringPatterns.length - 3}`}
+              </p>
+              <button
+                onClick={() => navigate('/recurring')}
+                className="btn-secondary text-xs"
+              >
+                {t('import.viewRecurring')}
+              </button>
             </div>
           )}
 

@@ -326,5 +326,51 @@ export async function importData(data) {
 }
 
 export async function clearData() {
+  const apiUrl = await getApiUrl();
+  if (isApiMode(apiUrl) && getAuthToken()) {
+    try {
+      await apiFetch(apiUrl, '/api/data/clear', { method: 'DELETE' });
+    } catch (err) {
+      console.error('Failed to clear server data:', err);
+      throw new Error('Failed to clear server data: ' + err.message);
+    }
+  }
   return storage.clearAllData();
+}
+
+export async function deleteAllTransactions() {
+  const apiUrl = await getApiUrl();
+  if (isApiMode(apiUrl) && getAuthToken()) {
+    await apiFetch(apiUrl, '/api/transactions/all', { method: 'DELETE' });
+  }
+  await storage.clearStore('transactions');
+}
+
+export async function undoImportBatch(batchId) {
+  const apiUrl = await getApiUrl();
+  if (isApiMode(apiUrl) && getAuthToken()) {
+    const result = await apiFetch(apiUrl, `/api/transactions/batch/${batchId}`, { method: 'DELETE' });
+    await storage.clearStore('transactions');
+    return result;
+  }
+  const allTx = await storage.getAll('transactions');
+  const batchTx = allTx.filter((t) => t.importBatch === batchId);
+  for (const tx of batchTx) await storage.remove('transactions', tx.id);
+  return { deleted: batchTx.length };
+}
+
+export async function getLastImportBatch() {
+  const apiUrl = await getApiUrl();
+  let txList;
+  if (isApiMode(apiUrl) && getAuthToken()) {
+    txList = await apiFetch(apiUrl, '/api/transactions?limit=500');
+  } else {
+    txList = await storage.getAll('transactions');
+  }
+  const withBatch = (Array.isArray(txList) ? txList : []).filter((t) => t.importBatch);
+  if (withBatch.length === 0) return null;
+  withBatch.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const latestBatchId = withBatch[0].importBatch;
+  const batchTx = withBatch.filter((t) => t.importBatch === latestBatchId);
+  return { batchId: latestBatchId, count: batchTx.length, source: batchTx[0]?.source, createdAt: batchTx[0]?.createdAt };
 }

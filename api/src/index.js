@@ -242,6 +242,45 @@ router.delete('/api/auth/account', async (ctx) => {
   return json({ success: true });
 });
 
+// ─── Clear All User Data (keep account) ───────────────────
+router.delete('/api/data/clear', async (ctx) => {
+  const userId = ctx.user.id;
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'loans', 'loan_payments', 'challenges', 'receipts'];
+  for (const table of tables) {
+    await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
+  }
+  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
+  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
+  await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId).run();
+  await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
+  await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId).run();
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'clear_all_data', {}));
+  return json({ success: true });
+});
+
+// ─── Delete All Transactions ──────────────────────────────
+router.delete('/api/transactions/all', async (ctx) => {
+  const userId = ctx.user.id;
+  const now = new Date().toISOString();
+  await ctx.env.DB.prepare(
+    `UPDATE transactions SET deletedAt = ? WHERE userId = ? AND (deletedAt IS NULL OR deletedAt = '')`
+  ).bind(now, userId).run();
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'delete_all_transactions', {}));
+  return json({ success: true });
+});
+
+// ─── Delete Import Batch ──────────────────────────────────
+router.delete('/api/transactions/batch/:batchId', async (ctx) => {
+  const { batchId } = ctx.params;
+  const userId = ctx.user.id;
+  const now = new Date().toISOString();
+  const result = await ctx.env.DB.prepare(
+    `UPDATE transactions SET deletedAt = ? WHERE userId = ? AND importBatch = ? AND (deletedAt IS NULL OR deletedAt = '')`
+  ).bind(now, userId, batchId).run();
+  ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'undo_import', { batchId, count: result.meta?.changes || 0 }));
+  return json({ success: true, deleted: result.meta?.changes || 0 });
+});
+
 // ─── Feedback (Bug Reports & Suggestions) ─────────────────
 router.post('/api/feedback', async (ctx) => {
   const { type, title, description, screenshot, page } = ctx.body;

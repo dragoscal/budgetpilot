@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   source TEXT DEFAULT 'manual',
   items TEXT DEFAULT '[]',
   splitFrom TEXT,
+  importBatch TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   deletedAt TEXT,

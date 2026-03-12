@@ -6,7 +6,7 @@ import { useHideAmounts } from '../contexts/SettingsContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getAllSettings } from '../lib/storage';
-import { exportData, importData, clearData, settings as settingsApi } from '../lib/api';
+import { exportData, importData, clearData, deleteAllTransactions, settings as settingsApi } from '../lib/api';
 import { deleteAccount, changePassword } from '../lib/auth';
 import { hasEncryptionKey, pushEncryptedKeys } from '../lib/crypto';
 import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants';
@@ -17,6 +17,8 @@ import { Settings as SettingsIcon, Moon, Sun, Key, Database, Download, Upload, T
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
 import { CATEGORIES } from '../lib/constants';
 import HelpButton from '../components/HelpButton';
+import { APP_VERSION, CHANGELOG } from '../lib/changelog';
+import { Sparkles, History, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -62,6 +64,7 @@ export default function SettingsPage() {
   const [newRuleCategory, setNewRuleCategory] = useState('groceries');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
+  const [showChangelog, setShowChangelog] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -248,7 +251,17 @@ export default function SettingsPage() {
       setShowClear(false);
       setClearConfirm('');
     } catch (err) {
-      toast.error(t('settings.failedClear'));
+      toast.error(err.message || t('settings.failedClear'));
+    }
+  };
+
+  const handleDeleteAllTransactions = async () => {
+    if (!confirm(t('settings.deleteAllTxConfirm'))) return;
+    try {
+      await deleteAllTransactions();
+      toast.success(t('settings.allTxDeleted'));
+    } catch (err) {
+      toast.error(err.message || t('settings.failedClear'));
     }
   };
 
@@ -257,6 +270,55 @@ export default function SettingsPage() {
       <div className="flex items-center gap-2">
         <h1 className="page-title">{t('settings.title')}</h1>
         <HelpButton section="settings" />
+      </div>
+
+      {/* Version & Changelog */}
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History size={14} className="text-accent" />
+            <h3 className="section-title mb-0">{t('settings.versionTitle')}</h3>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300">
+            v{APP_VERSION}
+          </span>
+        </div>
+        <button
+          onClick={() => setShowChangelog(!showChangelog)}
+          className="mt-2 flex items-center gap-1.5 text-xs text-accent-600 hover:text-accent-700 dark:text-accent-400 font-medium"
+        >
+          {showChangelog ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {showChangelog ? t('settings.hideChangelog') : t('settings.viewChangelog')}
+        </button>
+        {showChangelog && (
+          <div className="mt-3 space-y-5 max-h-[50vh] overflow-y-auto">
+            {CHANGELOG.map((entry) => (
+              <div key={entry.version}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cream-200 text-cream-700 dark:bg-dark-border dark:text-cream-300">
+                    v{entry.version}
+                  </span>
+                  <span className="text-[10px] text-cream-400">{entry.date}</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {entry.items.map((item, i) => (
+                    <li key={i} className="flex items-center gap-2.5 p-2 rounded-lg bg-cream-50 dark:bg-dark-border/50 text-xs">
+                      <Sparkles size={12} className="text-cream-400 shrink-0" />
+                      <span className="flex-1">{t(item.textKey)}</span>
+                      <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide ${
+                        item.type === 'feature' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
+                          : item.type === 'fix' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400'
+                      }`}>
+                        {t(`changelog.${item.type}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Display */}
@@ -565,7 +627,10 @@ export default function SettingsPage() {
             </button>
             <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
           </div>
-          <div className="border-t border-cream-200 dark:border-dark-border pt-3">
+          <div className="border-t border-cream-200 dark:border-dark-border pt-3 space-y-2">
+            <button onClick={handleDeleteAllTransactions} className="btn-ghost text-xs flex items-center gap-2 text-warning border-warning/30 hover:bg-warning/10">
+              <Trash2 size={14} /> {t('settings.deleteAllTx')}
+            </button>
             {!showClear ? (
               <button onClick={() => setShowClear(true)} className="btn-danger text-xs flex items-center gap-2">
                 <Trash2 size={14} /> {t('settings.clearAllData')}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { transactions as txApi } from '../lib/api';
+import { transactions as txApi, undoImportBatch, getLastImportBatch } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -15,7 +15,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
 import { checkDuplicate } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X, User, Home } from 'lucide-react';
+import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
@@ -42,8 +42,13 @@ export default function Transactions() {
   const [selected, setSelected] = useState(new Set());
   const [showAllTags, setShowAllTags] = useState(false);
   const [rates, setRates] = useState(null);
+  const [lastBatch, setLastBatch] = useState(null);
 
-  useEffect(() => { loadTransactions(); getCachedRates().then(setRates); }, [effectiveUserId]);
+  useEffect(() => {
+    loadTransactions();
+    getCachedRates().then(setRates);
+    getLastImportBatch().then(setLastBatch).catch(() => {});
+  }, [effectiveUserId]);
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -202,6 +207,27 @@ export default function Transactions() {
     });
   };
 
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelected(new Set(paginated.map((tx) => tx.id)));
+    } else {
+      setSelected(new Set());
+    }
+  };
+
+  const handleUndoLastImport = async () => {
+    if (!lastBatch) return;
+    if (!confirm(t('transactions.undoImportConfirm', { count: lastBatch.count }))) return;
+    try {
+      await undoImportBatch(lastBatch.batchId);
+      setLastBatch(null);
+      await loadTransactions();
+      toast.success(t('transactions.undoImportSuccess', { count: lastBatch.count }));
+    } catch (err) {
+      toast.error(t('transactions.undoImportFailed'));
+    }
+  };
+
   const [showBatchCategory, setShowBatchCategory] = useState(false);
 
   const handleBatchCategorize = async (newCategory) => {
@@ -272,6 +298,11 @@ export default function Transactions() {
                 <Trash2 size={14} /> {t('transactions.bulkDelete', { count: selected.size })}
               </button>
             </>
+          )}
+          {lastBatch && (
+            <button onClick={handleUndoLastImport} className="btn-ghost text-xs flex items-center gap-1 text-warning">
+              <Undo2 size={14} /> {t('transactions.undoImport', { count: lastBatch.count })}
+            </button>
           )}
           <button onClick={exportCSV} className="btn-ghost text-xs flex items-center gap-1">
             <Download size={14} /> {t('transactions.exportCsv')}
@@ -425,6 +456,23 @@ export default function Transactions() {
           <div>{[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}</div>
         ) : paginated.length > 0 ? (
           <>
+            {/* Select All header */}
+            <div className="flex items-center gap-3 px-4 py-2 border-b border-cream-100 dark:border-dark-border bg-cream-50/50 dark:bg-dark-border/30">
+              <input
+                type="checkbox"
+                checked={paginated.length > 0 && selected.size === paginated.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = selected.size > 0 && selected.size < paginated.length;
+                }}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                className="w-4 h-4 rounded border-cream-300 dark:border-dark-border text-accent focus:ring-accent/30"
+              />
+              <span className="text-xs text-cream-500">
+                {selected.size > 0
+                  ? t('transactions.selectedCount', { count: selected.size })
+                  : t('transactions.selectAll')}
+              </span>
+            </div>
             <div className="divide-y divide-cream-100 dark:divide-dark-border">
               {paginated.map((tx) => (
                 <TransactionRow

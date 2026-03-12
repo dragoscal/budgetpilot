@@ -173,6 +173,96 @@ export async function checkTransferPair(newTx, userId) {
 }
 
 
+// ─── BATCH DUPLICATE CHECK (Pre-scan) ────────────────────
+// Loads existing transactions ONCE, then checks all incoming transactions against them.
+// Much faster than calling checkDuplicate() per-item (avoids N+1 DB reads).
+
+export async function batchCheckDuplicates(newTransactions, userId) {
+  const filter = userId ? { userId } : {};
+  const existing = await getAll('transactions', filter);
+
+  // Build lookup indexes for fast matching
+  const byDateAmount = {};   // 'date|amount' → [tx, ...]
+  const byMerchantAmount = {}; // 'merchant|amount' → [tx, ...]
+
+  for (const tx of existing) {
+    if (tx.deletedAt) continue;
+    const da = `${tx.date}|${Math.round(tx.amount * 100)}`;
+    if (!byDateAmount[da]) byDateAmount[da] = [];
+    byDateAmount[da].push(tx);
+
+    if (tx.merchant) {
+      const ma = `${tx.merchant.toLowerCase().trim()}|${Math.round(tx.amount * 100)}`;
+      if (!byMerchantAmount[ma]) byMerchantAmount[ma] = [];
+      byMerchantAmount[ma].push(tx);
+    }
+  }
+
+  const results = [];
+
+  for (const newTx of newTransactions) {
+    const amtKey = Math.round(newTx.amount * 100);
+    const daKey = `${newTx.date}|${amtKey}`;
+    const merchantNorm = newTx.merchant?.toLowerCase().trim() || '';
+
+    let isDuplicate = false;
+    let isTransferPair = false;
+    let reason = '';
+
+    // 1. Exact match: same date + amount + merchant → 0.95 confidence duplicate
+    const dateAmountMatches = byDateAmount[daKey] || [];
+    for (const ex of dateAmountMatches) {
+      const exMerchant = ex.merchant?.toLowerCase().trim() || '';
+      if (merchantNorm && exMerchant === merchantNorm) {
+        isDuplicate = true;
+        reason = 'Same merchant, amount, and date';
+        break;
+      }
+    }
+
+    // 2. Same date + amount (no merchant match) → 0.7 confidence
+    if (!isDuplicate && dateAmountMatches.length > 0) {
+      isDuplicate = true;
+      reason = 'Same amount and date';
+    }
+
+    // 3. Same merchant + amount within ±1 day
+    if (!isDuplicate && merchantNorm) {
+      const maKey = `${merchantNorm}|${amtKey}`;
+      const merchantMatches = byMerchantAmount[maKey] || [];
+      for (const ex of merchantMatches) {
+        const dayDiff = Math.abs(new Date(ex.date) - new Date(newTx.date)) / (1000 * 60 * 60 * 24);
+        if (dayDiff <= 1) {
+          isDuplicate = true;
+          reason = 'Same merchant and amount within 1 day';
+          break;
+        }
+      }
+    }
+
+    // 4. Transfer pair check
+    if (!isDuplicate && (newTx.type === 'transfer' || newTx.category === 'transfer')) {
+      const txDate = new Date(newTx.date);
+      const windowMs = 3 * 24 * 60 * 60 * 1000;
+      for (const ex of existing) {
+        if (ex.deletedAt) continue;
+        if (Math.abs(ex.amount - newTx.amount) >= 0.01) continue;
+        if (Math.abs(new Date(ex.date) - txDate) > windowMs) continue;
+        if (ex.type === 'transfer' || ex.category === 'transfer') {
+          isTransferPair = true;
+          reason = 'Transfer pair already exists';
+          break;
+        }
+      }
+    }
+
+    results.push({ transaction: newTx, isDuplicate, isTransferPair, reason });
+  }
+
+  return results;
+}
+
+
 // ─── CATEGORY LEARNING ────────────────────────────────────
 // Learn from user's manual category assignments to improve auto-categorization
 
