@@ -1,6 +1,6 @@
 import { getCategoryById, formatCurrency, getFrequencyById, calcMonthlyEquivalent, calcAnnualEquivalent } from '../lib/helpers';
 import { useTranslation } from '../contexts/LanguageContext';
-import { Edit3, Trash2, Pause, Play } from 'lucide-react';
+import { Edit3, Trash2, Pause, Play, Landmark, Bell } from 'lucide-react';
 
 export default function RecurringRow({ item, onEdit, onDelete, onToggle }) {
   const { t } = useTranslation();
@@ -41,6 +41,15 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle }) {
           <p className={`text-sm font-medium truncate ${item.active === false ? 'line-through text-cream-500' : ''}`}>
             {item.name}
           </p>
+          {item.autoDebit ? (
+            <span className="px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-medium flex items-center gap-0.5">
+              <Landmark size={10} /> {t('recurring.autoLabel')}
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning text-[10px] font-medium flex items-center gap-0.5">
+              <Bell size={10} /> {t('recurring.manualLabel')}
+            </span>
+          )}
           {isNear && (
             <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning text-[10px] font-medium">
               {daysUntil === 0 ? t('recurring.todayLabel') : t('recurring.inDays', { count: daysUntil })}

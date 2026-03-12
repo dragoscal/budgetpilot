@@ -614,6 +614,10 @@ const ro = {
   'recurring.inDays': 'Peste {count}z',
   'recurring.resume': 'Reia',
   'recurring.pause': 'Pauză',
+  'recurring.autoDebit': 'Debit automat',
+  'recurring.autoDebitDesc': 'Se debitează automat din contul bancar',
+  'recurring.autoLabel': 'Auto',
+  'recurring.manualLabel': 'Manual',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',
@@ -622,6 +626,8 @@ const ro = {
   'calendar.income': 'Venituri',
   'calendar.expenses': 'Cheltuieli',
   'calendar.billsDue': 'Facturi scadente',
+  'calendar.autoDebitDue': 'Debit automat scadent',
+  'calendar.manualBillDue': 'Factură manuală scadentă',
   'calendar.transactionsTitle': 'Tranzacții',
   'calendar.mon': 'Lun',
   'calendar.tue': 'Mar',
@@ -2034,6 +2040,8 @@ const ro = {
   'changelog.v130undo': 'Anulare ultimul import — revertește ușor un lot de tranzacții importate',
   'changelog.v130selectall': 'Selectează tot și acțiuni în masă îmbunătățite pe pagina Tranzacții',
   'changelog.v130recurring': 'Detectare plăți recurente după import — găsește automat abonamentele',
+  'changelog.v131autodebit': 'Comutator debit automat la plăți recurente — vizibil pe Calendar',
+  'changelog.v131incomebug': 'Categorizarea automată la venituri nu mai suprascrie selecția manuală',
 
   // ─── Ghid / Ajutor ─────────────────────────────────────────
   'guide.title': 'Ghid',

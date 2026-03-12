@@ -614,6 +614,10 @@ const en = {
   'recurring.inDays': 'In {count}d',
   'recurring.resume': 'Resume',
   'recurring.pause': 'Pause',
+  'recurring.autoDebit': 'Auto-debit',
+  'recurring.autoDebitDesc': 'Automatically debited from bank account',
+  'recurring.autoLabel': 'Auto',
+  'recurring.manualLabel': 'Manual',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',
@@ -622,6 +626,8 @@ const en = {
   'calendar.income': 'Income',
   'calendar.expenses': 'Expenses',
   'calendar.billsDue': 'Bills due',
+  'calendar.autoDebitDue': 'Auto-debit due',
+  'calendar.manualBillDue': 'Manual bill due',
   'calendar.transactionsTitle': 'Transactions',
   'calendar.mon': 'Mon',
   'calendar.tue': 'Tue',
@@ -2034,6 +2040,8 @@ const en = {
   'changelog.v130undo': 'Undo last import — easily revert an imported batch of transactions',
   'changelog.v130selectall': 'Select all checkbox & improved bulk actions on the Transactions page',
   'changelog.v130recurring': 'Recurring payment detection after import — automatically finds subscriptions',
+  'changelog.v131autodebit': 'Auto-debit toggle for recurring payments — visible on Calendar',
+  'changelog.v131incomebug': 'Fixed income auto-categorization overriding manual category selection',
 
   // ─── Guide / Help ──────────────────────────────────────────
   'guide.title': 'Guide',

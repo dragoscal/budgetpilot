@@ -1,0 +1,1 @@
+ALTER TABLE recurring ADD COLUMN autoDebit INTEGER DEFAULT 0;

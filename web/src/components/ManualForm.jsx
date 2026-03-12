@@ -77,9 +77,9 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [merchant]);
 
-  // Auto-detect category when merchant changes
+  // Auto-detect category when merchant changes (skip for income — income has its own category)
   useEffect(() => {
-    if (!merchant || initial.id) return;
+    if (!merchant || initial.id || type === 'income' || categoryAutoSet) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       const inferred = await inferCategorySmart(merchant);
@@ -90,7 +90,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       }
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [merchant, initial.id, categoryAutoSet]);
+  }, [merchant, initial.id, categoryAutoSet, type]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const handleCategoryChange = (catId, subId) => {
     setCategory(catId);
     setSubcategory(subId || null);
-    setCategoryAutoSet(false);
+    setCategoryAutoSet(true);  // Mark as user-selected to prevent auto-override
   };
 
   // Compute exclude list based on type

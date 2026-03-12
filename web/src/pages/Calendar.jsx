@@ -10,7 +10,7 @@ import TransactionRow from '../components/TransactionRow';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday, startOfWeek } from 'date-fns';
 import HelpButton from '../components/HelpButton';
-import { TrendingDown, TrendingUp, Zap, Flame, Star } from 'lucide-react';
+import { TrendingDown, TrendingUp, Zap, Flame, Star, Landmark, Bell } from 'lucide-react';
 
 // Category color palette
 const CAT_COLORS = {
@@ -67,11 +67,13 @@ export default function CalendarPage() {
       const dayNum = day.getDate();
       const dayTx = transactions.filter((t) => t.date === key);
       const dayBills = recurringItems.filter((r) => (r.billingDay || 1) === dayNum);
+      const autoDebitBills = dayBills.filter((r) => r.autoDebit);
+      const manualBills = dayBills.filter((r) => !r.autoDebit);
       const expenses = dayTx.filter((t) => t.type === 'expense');
       const expenseTotal = sumAmountsMultiCurrency(expenses, currency, rates);
       const incomeTotal = sumAmountsMultiCurrency(dayTx.filter((t) => t.type === 'income'), currency, rates);
       const categories = [...new Set(expenses.map((t) => t.category))];
-      map[key] = { day, dayNum, transactions: dayTx, bills: dayBills, expenseTotal, incomeTotal, count: dayTx.length, categories };
+      map[key] = { day, dayNum, transactions: dayTx, bills: dayBills, autoDebitBills, manualBills, expenseTotal, incomeTotal, count: dayTx.length, categories };
     }
     return map;
   }, [days, transactions, recurringItems, currency, rates]);
@@ -250,7 +252,8 @@ export default function CalendarPage() {
                         {data.dayNum}
                       </span>
                       <div className="flex items-center gap-0.5">
-                        {hasBills && <span className="w-1.5 h-1.5 rounded-full bg-warning" />}
+                        {data.autoDebitBills.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                        {data.manualBills.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-warning" />}
                         {isNoSpend && <span className="text-[9px] text-success font-medium">✓</span>}
                       </div>
                     </div>
@@ -303,7 +306,10 @@ export default function CalendarPage() {
             <div className="w-3 h-3 rounded bg-success/10 flex items-center justify-center text-[7px] text-success">✓</div> {t('calendar.noSpend')}
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="w-1.5 h-1.5 rounded-full bg-warning" /> {t('calendar.billsDue')}
+            <div className="w-1.5 h-1.5 rounded-full bg-accent" /> {t('calendar.autoDebitDue')}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
+            <div className="w-1.5 h-1.5 rounded-full bg-warning" /> {t('calendar.manualBillDue')}
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
             <div className="flex gap-[3px]">
@@ -361,11 +367,19 @@ export default function CalendarPage() {
                 <h4 className="section-title">{t('calendar.billsDue')}</h4>
                 {selectedDayData.bills.map((b) => {
                   const cat = getCategoryById(b.category);
+                  const isAuto = !!b.autoDebit;
                   return (
                     <div key={b.id} className="flex items-center justify-between py-2 text-sm">
                       <span className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+                        {isAuto ? (
+                          <Landmark size={12} className="text-accent" />
+                        ) : (
+                          <Bell size={12} className="text-warning" />
+                        )}
                         <span>{cat.icon} {b.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${isAuto ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'}`}>
+                          {isAuto ? t('recurring.autoLabel') : t('recurring.manualLabel')}
+                        </span>
                       </span>
                       <span className="money font-medium">{formatCurrency(b.amount, b.currency || currency)}</span>
                     </div>

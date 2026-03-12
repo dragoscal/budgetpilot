@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS recurring (
   endDate TEXT,
   active INTEGER DEFAULT 1,
   autoDetected INTEGER DEFAULT 0,
+  autoDebit INTEGER DEFAULT 0,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   FOREIGN KEY (userId) REFERENCES users(id)

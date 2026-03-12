@@ -12,7 +12,7 @@ import RecurringRow from '../components/RecurringRow';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp } from 'lucide-react';
+import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp, Landmark, Bell } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 
 export default function Recurring() {
@@ -30,7 +30,7 @@ export default function Recurring() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [rates, setRates] = useState(null);
 
-  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '' };
+  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false };
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
@@ -80,6 +80,7 @@ export default function Recurring() {
         billingDay: Number(form.billingDay) || 1,
         frequency: form.frequency || 'monthly',
         endDate: form.endDate || null,
+        autoDebit: form.autoDebit ? 1 : 0,
         active: true,
         userId: effectiveUserId,
       };
@@ -126,6 +127,7 @@ export default function Recurring() {
       billingDay: (item.billingDay || 1).toString(),
       frequency: item.frequency || 'monthly',
       endDate: item.endDate || '',
+      autoDebit: !!item.autoDebit,
     });
     setShowForm(true);
   };
@@ -383,6 +385,27 @@ export default function Recurring() {
           <div>
             <label className="label">{t('recurring.endDate')}</label>
             <input type="date" className="input" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-2">
+              <Landmark size={16} className="text-cream-500" />
+              <div>
+                <p className="text-sm font-medium">{t('recurring.autoDebit')}</p>
+                <p className="text-[11px] text-cream-400">{t('recurring.autoDebitDesc')}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, autoDebit: !f.autoDebit }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                form.autoDebit ? 'bg-accent' : 'bg-cream-300 dark:bg-dark-border'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                form.autoDebit ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
 
           <button onClick={handleSave} className="btn-primary w-full">{editItem ? t('budgets.update') : t('common.add')}</button>
