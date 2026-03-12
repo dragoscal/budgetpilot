@@ -169,6 +169,20 @@ export default function AddTransaction() {
       const saved = [];
       for (const tx of toSave) {
         const { _duplicate, _dismissed, ...clean } = tx;
+        // Add paidBy info to description if present
+        if (clean.paidBy) {
+          clean.description = clean.description
+            ? `${clean.description} (${t('quickAdd.paidByLabel')} ${clean.paidBy})`
+            : `${t('quickAdd.paidByLabel')} ${clean.paidBy}`;
+          clean.tags = [...(clean.tags || []), clean.paidBy.toLowerCase()];
+        }
+        // For debt entries, mark with a tag and adjust description
+        if (clean.isDebt && clean.debtTo) {
+          clean.description = clean.description
+            ? `${clean.description} (${t('quickAdd.debtLabel')} ${clean.debtTo})`
+            : `${t('quickAdd.debtLabel')} ${clean.debtTo}`;
+          clean.tags = [...(clean.tags || []), 'debt', clean.debtTo.toLowerCase()];
+        }
         await txApi.create(clean);
         if (clean.merchant) learnCategory(clean.merchant, clean.category, clean.subcategory || null);
         saved.push(clean);

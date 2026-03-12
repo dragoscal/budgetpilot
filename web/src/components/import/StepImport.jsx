@@ -49,8 +49,10 @@ export default function StepImport({ transactions, importResult, setImportResult
     setScanPhase('scanning');
     try {
       const results = await batchCheckDuplicates(transactions);
-      const toImport = results.filter((r) => !r.isDuplicate && !r.isTransferPair);
-      const dupeCount = results.filter((r) => r.isDuplicate).length;
+      // Only auto-skip high-confidence duplicates (≥0.8) — e.g. exact merchant+date+amount match
+      // Lower-confidence matches (same amount+date but different merchant) are imported normally
+      const toImport = results.filter((r) => !r.isTransferPair && !(r.isDuplicate && r.confidence >= 0.8));
+      const dupeCount = results.filter((r) => r.isDuplicate && r.confidence >= 0.8).length;
       const transferCount = results.filter((r) => r.isTransferPair).length;
 
       setPreScanResult({

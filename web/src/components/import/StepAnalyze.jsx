@@ -12,6 +12,14 @@ export default function StepAnalyze({ rawGrid, aiAnalysis, setAiAnalysis, extrac
   const [error, setError] = useState(null);
   const analyzingRef = useRef(false); // debounce guard
 
+  // Warn before leaving page during analysis
+  useEffect(() => {
+    if (!analyzing) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [analyzing]);
+
   const runAnalysis = useCallback(async () => {
     if (!rawGrid || rawGrid.length === 0) return;
     if (analyzingRef.current) return; // prevent double-click
@@ -94,6 +102,12 @@ export default function StepAnalyze({ rawGrid, aiAnalysis, setAiAnalysis, extrac
           <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-cream-500">{t('import.analyzing')}</p>
           <p className="text-xs text-cream-400">{t('import.analyzingHint')}</p>
+          <div className="mt-2 p-3 rounded-lg bg-warning/5 border border-warning/20 max-w-sm">
+            <p className="text-[11px] text-warning text-center">
+              <AlertTriangle size={12} className="inline mr-1" />
+              {t('import.doNotLeave')}
+            </p>
+          </div>
         </div>
       )}
 

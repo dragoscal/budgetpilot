@@ -14,8 +14,8 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
-import { checkDuplicate } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown } from 'lucide-react';
+import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
+import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, Search, AlertCircle, ArrowRight } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
 
 const PAGE_SIZE = 30;
@@ -45,6 +45,54 @@ export default function Transactions() {
   const [rates, setRates] = useState(null);
   const [lastBatch, setLastBatch] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [auditResult, setAuditResult] = useState(null);
+  const [auditing, setAuditing] = useState(false);
+
+  const handleAudit = async () => {
+    setAuditing(true);
+    try {
+      const result = await auditTransactions(effectiveUserId);
+      setAuditResult(result);
+    } catch (err) {
+      toast.error(t('transactions.auditFailed'));
+    } finally {
+      setAuditing(false);
+    }
+  };
+
+  const handleApplyCategorySuggestion = async (suggestion) => {
+    try {
+      const tx = allTx.find(t => t.id === suggestion.transactionId);
+      if (!tx) return;
+      await txApi.update(tx.id, { ...tx, category: suggestion.suggestedCategory });
+      setAllTx((prev) => prev.map((t) => t.id === tx.id ? { ...t, category: suggestion.suggestedCategory } : t));
+      setAuditResult((prev) => ({
+        ...prev,
+        categorySuggestions: prev.categorySuggestions.filter(s => s.transactionId !== suggestion.transactionId),
+      }));
+      toast.success(t('transactions.categoryUpdated'));
+    } catch (err) {
+      toast.error(t('common.error'));
+    }
+  };
+
+  const handleDeleteDuplicate = async (txId) => {
+    try {
+      await txApi.remove(txId);
+      setAllTx((prev) => prev.filter((t) => t.id !== txId));
+      // Update audit results
+      setAuditResult((prev) => ({
+        ...prev,
+        duplicates: prev.duplicates.map(g => ({
+          ...g,
+          transactions: g.transactions.filter(t => t.id !== txId),
+        })).filter(g => g.transactions.length > 1),
+      }));
+      toast.success(t('transactions.deleted', { name: '' }));
+    } catch (err) {
+      toast.error(t('common.error'));
+    }
+  };
 
   useEffect(() => {
     loadTransactions();
@@ -316,6 +364,10 @@ export default function Transactions() {
               <Undo2 size={14} /> {t('transactions.undoImport', { count: lastBatch.count })}
             </button>
           )}
+          <button onClick={handleAudit} disabled={auditing || loading} className="btn-ghost text-xs flex items-center gap-1">
+            {auditing ? <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <Search size={14} />}
+            {t('transactions.audit')}
+          </button>
           <button onClick={exportCSV} className="btn-ghost text-xs flex items-center gap-1">
             <Download size={14} /> {t('transactions.exportCsv')}
           </button>
@@ -349,6 +401,93 @@ export default function Transactions() {
           </div>
         )}
       </div>
+
+      {/* Audit Results */}
+      {auditResult && (
+        <div className="card !p-4 space-y-4 border-2 border-accent/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search size={16} className="text-accent" />
+              <h3 className="text-sm font-semibold">{t('transactions.auditResults')}</h3>
+              <span className="text-xs text-cream-400">({auditResult.totalScanned} {t('transactions.scanned')})</span>
+            </div>
+            <button onClick={() => setAuditResult(null)} className="p-1 rounded hover:bg-cream-100 dark:hover:bg-dark-border">
+              <X size={14} className="text-cream-400" />
+            </button>
+          </div>
+
+          {auditResult.duplicates.length === 0 && auditResult.categorySuggestions.length === 0 ? (
+            <p className="text-sm text-success flex items-center gap-2">
+              <CheckSquare size={16} /> {t('transactions.auditClean')}
+            </p>
+          ) : (
+            <>
+              {/* Duplicates */}
+              {auditResult.duplicates.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-danger mb-2 flex items-center gap-1.5">
+                    <AlertCircle size={14} />
+                    {t('transactions.auditDuplicates', { count: auditResult.duplicates.length })}
+                  </p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {auditResult.duplicates.map((group, gi) => (
+                      <div key={gi} className="p-2.5 rounded-lg bg-danger/5 border border-danger/10 space-y-1.5">
+                        <p className="text-[10px] text-cream-500">{group.reason}</p>
+                        {group.transactions.map((tx, ti) => (
+                          <div key={tx.id} className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium truncate">{tx.merchant || '—'}</span>
+                              <span className="money text-cream-500 shrink-0">{tx.amount?.toFixed(2)} {tx.currency}</span>
+                              <span className="text-cream-400 shrink-0">{tx.date}</span>
+                              <span className="text-[10px] text-cream-400">({tx.source})</span>
+                            </div>
+                            {ti > 0 && (
+                              <button
+                                onClick={() => handleDeleteDuplicate(tx.id)}
+                                className="shrink-0 px-2 py-0.5 text-[10px] text-danger bg-danger/10 rounded hover:bg-danger/20"
+                              >
+                                {t('common.delete')}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category suggestions */}
+              {auditResult.categorySuggestions.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-accent mb-2 flex items-center gap-1.5">
+                    <Tag size={14} />
+                    {t('transactions.auditCategories', { count: auditResult.categorySuggestions.length })}
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {auditResult.categorySuggestions.map((s) => (
+                      <div key={s.transactionId} className="flex items-center justify-between gap-2 text-xs p-2 rounded-lg bg-accent/5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate">{s.merchant}</span>
+                          <span className="text-cream-400">{s.currentCategory}</span>
+                          <ArrowRight size={10} className="text-cream-400 shrink-0" />
+                          <span className="font-medium text-accent">{s.suggestedCategory}</span>
+                        </div>
+                        <button
+                          onClick={() => handleApplyCategorySuggestion(s)}
+                          className="shrink-0 px-2 py-0.5 text-[10px] text-accent bg-accent/10 rounded hover:bg-accent/20"
+                        >
+                          {t('transactions.applyCategory')}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Summary */}
       <div className="flex gap-4 text-sm">

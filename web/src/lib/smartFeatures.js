@@ -207,26 +207,35 @@ export async function batchCheckDuplicates(newTransactions, userId) {
 
     let isDuplicate = false;
     let isTransferPair = false;
+    let confidence = 0;
     let reason = '';
 
-    // 1. Exact match: same date + amount + merchant → 0.95 confidence duplicate
+    // 1. Exact match: same date + amount + merchant → 0.95 confidence
     const dateAmountMatches = byDateAmount[daKey] || [];
     for (const ex of dateAmountMatches) {
       const exMerchant = ex.merchant?.toLowerCase().trim() || '';
       if (merchantNorm && exMerchant === merchantNorm) {
         isDuplicate = true;
+        confidence = 0.95;
         reason = 'Same merchant, amount, and date';
         break;
       }
     }
 
-    // 2. Same date + amount (no merchant match) → 0.7 confidence
+    // 2. Same date + amount WITHOUT merchant match
+    // Only flag if both entries lack a merchant (generic/unidentified transactions)
+    // Different merchants on the same day for the same amount = different transactions, NOT duplicates
     if (!isDuplicate && dateAmountMatches.length > 0) {
-      isDuplicate = true;
-      reason = 'Same amount and date';
+      const hasMatchWithNoMerchant = dateAmountMatches.some(ex => !ex.merchant?.trim());
+      if (!merchantNorm && hasMatchWithNoMerchant) {
+        isDuplicate = true;
+        confidence = 0.7;
+        reason = 'Same amount and date (no merchant)';
+      }
+      // Otherwise: different merchants = not a duplicate
     }
 
-    // 3. Same merchant + amount within ±1 day
+    // 3. Same merchant + amount within ±1 day → 0.85 confidence
     if (!isDuplicate && merchantNorm) {
       const maKey = `${merchantNorm}|${amtKey}`;
       const merchantMatches = byMerchantAmount[maKey] || [];
@@ -234,6 +243,7 @@ export async function batchCheckDuplicates(newTransactions, userId) {
         const dayDiff = Math.abs(new Date(ex.date) - new Date(newTx.date)) / (1000 * 60 * 60 * 24);
         if (dayDiff <= 1) {
           isDuplicate = true;
+          confidence = 0.85;
           reason = 'Same merchant and amount within 1 day';
           break;
         }
@@ -256,7 +266,7 @@ export async function batchCheckDuplicates(newTransactions, userId) {
       }
     }
 
-    results.push({ transaction: newTx, isDuplicate, isTransferPair, reason });
+    results.push({ transaction: newTx, isDuplicate, isTransferPair, confidence, reason });
   }
 
   return results;
@@ -490,6 +500,94 @@ export function splitTransaction(original, splits) {
     splitFrom: original.id,
     createdAt: new Date().toISOString(),
   }));
+}
+
+
+// ─── TRANSACTION AUDIT ──────────────────────────────────
+// Scan all transactions for potential issues: duplicates, category suggestions, etc.
+
+export async function auditTransactions(userId) {
+  const filter = userId ? { userId } : {};
+  const transactions = await getAll('transactions', filter);
+  if (transactions.length < 2) return { duplicates: [], categorySuggestions: [], totalScanned: transactions.length };
+
+  const learned = await getLearnedCategories();
+  const duplicates = [];
+  const categorySuggestions = [];
+
+  // Build index by date+amount for fast duplicate finding
+  const byDateAmount = {};
+  for (const tx of transactions) {
+    if (tx.deletedAt) continue;
+    const key = `${tx.date}|${Math.round(tx.amount * 100)}`;
+    if (!byDateAmount[key]) byDateAmount[key] = [];
+    byDateAmount[key].push(tx);
+  }
+
+  // Find duplicate groups (same date + amount + similar merchant)
+  const seenDupeGroups = new Set();
+  for (const [key, group] of Object.entries(byDateAmount)) {
+    if (group.length < 2) continue;
+    // Check for merchant-based duplicates within the group
+    const merchantGroups = {};
+    for (const tx of group) {
+      const m = (tx.merchant || '').toLowerCase().trim() || '_none_';
+      if (!merchantGroups[m]) merchantGroups[m] = [];
+      merchantGroups[m].push(tx);
+    }
+    for (const [merchant, txns] of Object.entries(merchantGroups)) {
+      if (txns.length < 2) continue;
+      const groupId = txns.map(t => t.id).sort().join('|');
+      if (seenDupeGroups.has(groupId)) continue;
+      seenDupeGroups.add(groupId);
+      duplicates.push({
+        reason: merchant === '_none_' ? 'Same date and amount' : `Same merchant "${txns[0].merchant}", date, and amount`,
+        confidence: merchant === '_none_' ? 0.6 : 0.9,
+        transactions: txns.map(t => ({
+          id: t.id, merchant: t.merchant, amount: t.amount,
+          currency: t.currency, date: t.date, category: t.category, source: t.source,
+        })),
+      });
+    }
+  }
+
+  // Category suggestions based on learned patterns
+  for (const tx of transactions) {
+    if (tx.deletedAt || !tx.merchant) continue;
+    const merchantLower = tx.merchant.toLowerCase().trim();
+    if (!learned[merchantLower]) continue;
+    const entries = Object.entries(learned[merchantLower]);
+    if (entries.length === 0) continue;
+
+    // Helper to extract count from learned entry
+    const getCount = (entry) => {
+      if (typeof entry === 'number') return entry;
+      if (typeof entry === 'object' && entry !== null) return entry.count || 0;
+      return 0;
+    };
+
+    entries.sort((a, b) => getCount(b[1]) - getCount(a[1]));
+    const topCategory = entries[0][0];
+    const topCount = getCount(entries[0][1]);
+    if (topCount >= 2 && topCategory !== tx.category) {
+      categorySuggestions.push({
+        transactionId: tx.id,
+        merchant: tx.merchant,
+        date: tx.date,
+        amount: tx.amount,
+        currency: tx.currency,
+        currentCategory: tx.category,
+        suggestedCategory: topCategory,
+        confidence: Math.min(0.95, 0.5 + topCount * 0.1),
+      });
+    }
+  }
+
+  return {
+    duplicates: duplicates.sort((a, b) => b.confidence - a.confidence),
+    categorySuggestions: categorySuggestions.slice(0, 50), // limit to 50
+    totalScanned: transactions.filter(t => !t.deletedAt).length,
+  };
 }
 
 

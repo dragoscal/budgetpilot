@@ -136,6 +136,15 @@ SUBCATEGORIES (use when clear from context):
 ${Object.entries(SUBCATEGORIES).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
 Examples: "coffee at starbucks" → dining, dining:cafe; "uber ride" → transport, transport:rideshare; "gym membership" → health, health:gym
 
+FAMILY MEMBER DETECTION:
+If the input starts with or contains a person's NAME (Romanian names like Ioana, Andrei, Maria, Titi, Ana, Mihai, etc.) followed by amount+description, that person PAID this expense. Set "paidBy" to the person's name.
+Examples: "Ioana 100 lei paine" → paidBy: "Ioana", merchant: "Paine", amount: 100; "Andrei 50 lei benzina" → paidBy: "Andrei"
+
+DEBT/LOAN DETECTION (Romanian: "datorie", "imprumut", "datorez", "mi-a dat", "i-am dat"):
+If input contains debt keywords + a person name + amount, it's a debt entry. Set "isDebt": true and "debtTo": person name.
+Examples: "datorie titi 100 ron mancare kfc" → isDebt: true, debtTo: "Titi", merchant: "KFC", category: "dining"
+"imprumut ana 500 lei" → isDebt: true, debtTo: "Ana"
+
 Return JSON:
 {
   "transactions": [{
@@ -147,7 +156,10 @@ Return JSON:
     "date": "YYYY-MM-DD",
     "type": "expense",
     "description": "Brief note",
-    "confidence": 0.9
+    "confidence": 0.9,
+    "paidBy": null,
+    "isDebt": false,
+    "debtTo": null
   }]
 }`;
 
@@ -906,6 +918,10 @@ function normalizeNLPResult(result, userId = 'local', originalText = '') {
     items: [],
     notes: '',
     tags: [],
+    // Family member / debt tracking from NLP
+    paidBy: t.paidBy || null,
+    isDebt: !!t.isDebt,
+    debtTo: t.debtTo || null,
     userId,
     createdAt: new Date().toISOString(),
   }));

@@ -10,8 +10,8 @@ const EXAMPLES = [
   'netflix 55 lei',
   'salary 8000 lei',
   '150 lei dinner #friends',
-  'rent 2000 lei',
-  '25 eur coffee #business',
+  'Ioana 80 lei paine',
+  'datorie Titi 100 lei KFC',
 ];
 
 export default function QuickAdd({ onResult, onError, initialValue = '' }) {

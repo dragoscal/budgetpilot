@@ -1,7 +1,6 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import ToastContainer from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -14,13 +13,18 @@ import BackgroundJobNotifier from './components/BackgroundJobNotifier';
 import QuickAddFAB from './components/QuickAddFAB';
 import { RefreshCw, AlertTriangle, Home } from 'lucide-react';
 
-// ─── Lazy import with robust retry (handles chunk failures after deploy) ───
+// ─── EAGER imports for core pages (instant navigation, no Suspense) ────
+// These 3 pages are visited on >90% of sessions — no lazy loading needed.
+import Dashboard from './pages/Dashboard';
+import AddTransaction from './pages/AddTransaction';
+import Transactions from './pages/Transactions';
+
+// ─── Lazy import with retry (handles stale chunks after deploy) ────────
 function lazyRetry(importFn, retries = 3) {
   return lazy(() => {
     const attempt = (retriesLeft) =>
       importFn().catch((err) => {
         if (retriesLeft <= 0) {
-          // All retries exhausted — try a full page reload once
           const reloaded = sessionStorage.getItem('chunk_reload');
           if (!reloaded) {
             sessionStorage.setItem('chunk_reload', '1');
@@ -43,14 +47,11 @@ if (sessionStorage.getItem('chunk_reload')) {
   sessionStorage.removeItem('chunk_reload');
 }
 
-// ─── Lazy-loaded pages (code splitting) ──────────────────
+// ─── LAZY imports for secondary pages (code splitting) ─────────────────
 const Login = lazyRetry(() => import('./pages/Login'));
 const Register = lazyRetry(() => import('./pages/Register'));
 const Onboarding = lazyRetry(() => import('./pages/Onboarding'));
 
-const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
-const AddTransaction = lazyRetry(() => import('./pages/AddTransaction'));
-const Transactions = lazyRetry(() => import('./pages/Transactions'));
 const Budgets = lazyRetry(() => import('./pages/Budgets'));
 const Goals = lazyRetry(() => import('./pages/Goals'));
 const Recurring = lazyRetry(() => import('./pages/Recurring'));
@@ -80,11 +81,25 @@ function ScrollToTop() {
   return null;
 }
 
-// ─── App layout with INNER Suspense ───
-// Suspense is INSIDE AppLayout so the sidebar stays visible while page chunks load.
-// This prevents the "black screen" flash that happened when Suspense was outside.
-function AppLayout({ children }) {
+// ─── LAYOUT ROUTE: Sidebar stays mounted, only <Outlet /> changes ──────
+// This is the correct React Router v6 pattern for persistent layouts.
+// The sidebar renders ONCE and is never unmounted during navigation.
+// Only the page content (inside Outlet) swaps when the user clicks a link.
+function ProtectedLayout() {
+  const { user, loading } = useAuth();
   const { pathname } = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cream-100 dark:bg-dark-bg flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-cream-900 border-t-transparent rounded-full animate-spin dark:border-cream-100 dark:border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.onboardingComplete) return <Navigate to="/onboarding" replace />;
+
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:px-4 focus:py-2 focus:bg-accent-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">
@@ -92,10 +107,12 @@ function AppLayout({ children }) {
       </a>
       <Sidebar />
       <main id="main-content" className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">
-        <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8 animate-fadeUp">
+        <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8">
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<SkeletonPage />}>
-              {children}
+              <div className="animate-fadeUp" key={pathname}>
+                <Outlet />
+              </div>
             </Suspense>
           </ErrorBoundary>
         </div>
@@ -174,41 +191,43 @@ export default function App() {
       <BackgroundJobNotifier />
       <QuickAddFAB />
 
-      {/* Outer Suspense: only catches auth pages (Login/Register/Onboarding).
-          App pages have their own Suspense INSIDE AppLayout so sidebar stays visible. */}
       <ErrorBoundary>
       <Suspense fallback={<AuthFallback />}>
         <Routes>
-          {/* Public routes — these use the outer Suspense */}
+          {/* Public routes — use the outer Suspense with AuthFallback */}
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
           <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />
 
-          {/* Protected routes — each has Suspense INSIDE AppLayout */}
-          <Route path="/" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
-          <Route path="/add" element={<ProtectedRoute><AppLayout><AddTransaction /></AppLayout></ProtectedRoute>} />
-          <Route path="/transactions" element={<ProtectedRoute><AppLayout><Transactions /></AppLayout></ProtectedRoute>} />
-          <Route path="/budgets" element={<ProtectedRoute><AppLayout><Budgets /></AppLayout></ProtectedRoute>} />
-          <Route path="/goals" element={<ProtectedRoute><AppLayout><Goals /></AppLayout></ProtectedRoute>} />
-          <Route path="/recurring" element={<ProtectedRoute><AppLayout><Recurring /></AppLayout></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><AppLayout><CalendarPage /></AppLayout></ProtectedRoute>} />
-          <Route path="/cashflow" element={<ProtectedRoute><AppLayout><CashFlow /></AppLayout></ProtectedRoute>} />
-          <Route path="/networth" element={<ProtectedRoute><AppLayout><NetWorth /></AppLayout></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><AppLayout><Analytics /></AppLayout></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
-          <Route path="/people" element={<ProtectedRoute><AppLayout><People /></AppLayout></ProtectedRoute>} />
-          <Route path="/wishlist" element={<ProtectedRoute><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
-          <Route path="/review" element={<ProtectedRoute><AppLayout><MonthlyReview /></AppLayout></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AppLayout><Admin /></AppLayout></ProtectedRoute>} />
-          <Route path="/feedback" element={<ProtectedRoute><AppLayout><Feedback /></AppLayout></ProtectedRoute>} />
-          <Route path="/loans" element={<ProtectedRoute><AppLayout><Loans /></AppLayout></ProtectedRoute>} />
-          <Route path="/family" element={<ProtectedRoute><AppLayout><Family /></AppLayout></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
-          <Route path="/challenges" element={<ProtectedRoute><AppLayout><Challenges /></AppLayout></ProtectedRoute>} />
-          <Route path="/receipts" element={<ProtectedRoute><AppLayout><ReceiptGallery /></AppLayout></ProtectedRoute>} />
-          <Route path="/import-budget" element={<ProtectedRoute><AppLayout><ImportBudget /></AppLayout></ProtectedRoute>} />
-          <Route path="/guide" element={<ProtectedRoute><AppLayout><Guide /></AppLayout></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><AppLayout><NotificationHistory /></AppLayout></ProtectedRoute>} />
+          {/* Protected layout route — Sidebar renders ONCE, stays mounted.
+              Only <Outlet /> swaps on navigation → no black screen, instant nav. */}
+          <Route element={<ProtectedLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="add" element={<AddTransaction />} />
+            <Route path="transactions" element={<Transactions />} />
+            <Route path="budgets" element={<Budgets />} />
+            <Route path="goals" element={<Goals />} />
+            <Route path="recurring" element={<Recurring />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="cashflow" element={<CashFlow />} />
+            <Route path="networth" element={<NetWorth />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="people" element={<People />} />
+            <Route path="wishlist" element={<Wishlist />} />
+            <Route path="review" element={<MonthlyReview />} />
+            <Route path="admin" element={<Admin />} />
+            <Route path="feedback" element={<Feedback />} />
+            <Route path="loans" element={<Loans />} />
+            <Route path="family" element={<Family />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="challenges" element={<Challenges />} />
+            <Route path="receipts" element={<ReceiptGallery />} />
+            <Route path="import-budget" element={<ImportBudget />} />
+            <Route path="guide" element={<Guide />} />
+            <Route path="notifications" element={<NotificationHistory />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
