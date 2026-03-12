@@ -12,7 +12,7 @@ import {
 import {
   Shield, Users, Activity, AlertTriangle, Zap, RefreshCw,
   KeyRound, Ban, CheckCircle, Trash2, UserX, UserCheck, Bot, DollarSign,
-  MessageSquare, Bug, Lightbulb, ChevronDown, ChevronUp,
+  MessageSquare, Bug, Lightbulb, ChevronDown, ChevronUp, Loader2, Image,
 } from 'lucide-react';
 
 const ACTION_LABEL_KEYS = {
@@ -654,6 +654,8 @@ function FeedbackTab({ data, counts, onUpdate }) {
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [noteInput, setNoteInput] = useState('');
+  const [screenshotCache, setScreenshotCache] = useState({});
+  const [loadingScreenshot, setLoadingScreenshot] = useState(null);
 
   const typeIcon = { bug: Bug, suggestion: Lightbulb, other: MessageSquare };
   const typeColor = { bug: 'text-danger', suggestion: 'text-warning', other: 'text-info' };
@@ -753,17 +755,49 @@ function FeedbackTab({ data, counts, onUpdate }) {
                     <p className="text-sm text-cream-700 dark:text-cream-400 whitespace-pre-wrap">{fb.description}</p>
                   )}
 
-                  {fb.screenshot && (
-                    <div className="rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border">
-                      <img
-                        src={fb.screenshot}
-                        alt={t('admin.bugScreenshot')}
-                        className="w-full max-h-64 object-contain bg-cream-50 dark:bg-dark-bg cursor-pointer"
-                        onClick={() => window.open(fb.screenshot, '_blank')}
-                        title={t('admin.clickToViewFull')}
-                      />
-                    </div>
-                  )}
+                  {(fb.hasScreenshot || fb.screenshot) && (() => {
+                    const cached = screenshotCache[fb.id];
+                    if (cached) {
+                      return (
+                        <div className="rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border">
+                          <img
+                            src={cached}
+                            alt={t('admin.bugScreenshot')}
+                            className="w-full max-h-64 object-contain bg-cream-50 dark:bg-dark-bg cursor-pointer"
+                            onClick={() => window.open(cached, '_blank')}
+                            title={t('admin.clickToViewFull')}
+                          />
+                        </div>
+                      );
+                    }
+                    if (loadingScreenshot === fb.id) {
+                      return (
+                        <div className="flex items-center gap-2 p-4 rounded-xl border border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg">
+                          <Loader2 size={16} className="animate-spin text-cream-400" />
+                          <span className="text-xs text-cream-500">{t('common.loading')}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setLoadingScreenshot(fb.id);
+                          try {
+                            const data = await adminApi.getScreenshot(fb.id);
+                            if (data) setScreenshotCache(prev => ({ ...prev, [fb.id]: data }));
+                          } catch (err) {
+                            toast.error(err.message);
+                          } finally {
+                            setLoadingScreenshot(null);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-xs text-cream-600"
+                      >
+                        <Image size={14} /> {t('admin.loadScreenshot')}
+                      </button>
+                    );
+                  })()}
 
                   {fb.adminNote && (
                     <div className="p-2.5 rounded-lg bg-info/5 border border-info/20">

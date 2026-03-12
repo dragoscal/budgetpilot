@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
-import { generateId, formatDateISO, validateTransaction } from '../lib/helpers';
+import { generateId, formatDateISO, validateTransaction, parseLocalNumber } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { getAll } from '../lib/storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -126,7 +126,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!amount || Number(amount) <= 0) return;
+    if (!amount || parseLocalNumber(amount) <= 0) return;
 
     // Learn the category for this merchant
     if (merchant.trim()) {
@@ -151,7 +151,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       id: initial.id || generateId(),
       type,
       merchant: merchant.trim(),
-      amount: Number(amount),
+      amount: parseLocalNumber(amount),
       currency,
       category,
       subcategory: subcategory || null,
@@ -332,7 +332,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
 
         <div>
           <label className="label">{t('manualForm.amount')}</label>
-          <input type="number" step="0.01" min="0" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" required />
+          <input type="text" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" required />
         </div>
         <div>
           <label className="label">{t('manualForm.currency')}</label>

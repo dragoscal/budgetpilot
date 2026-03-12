@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
 import { loans as loansApi, loanPayments as lpApi } from '../lib/api';
-import { formatCurrency, generateId, formatDate, formatDateISO } from '../lib/helpers';
+import { formatCurrency, generateId, formatDate, formatDateISO, parseLocalNumber } from '../lib/helpers';
 import { LOAN_TYPES, LOAN_STATUSES, CURRENCIES } from '../lib/constants';
 import {
   Plus, Building2, Percent, Calendar, TrendingDown, DollarSign,
@@ -17,8 +17,8 @@ import DebtPayoffSimulator from '../components/DebtPayoffSimulator';
 const EMPTY_FORM = {
   name: '', type: 'personal', lender: '', principalAmount: '',
   remainingBalance: '', interestRate: '', interestType: 'fixed',
-  monthlyPayment: '', currency: 'RON', startDate: formatDateISO(new Date()),
-  endDate: '', paymentDay: '1', notes: '',
+  interestPeriod: 'annual', monthlyPayment: '', currency: 'RON',
+  startDate: formatDateISO(new Date()), endDate: '', paymentDay: '1', notes: '',
 };
 
 const EMPTY_PAYMENT = { amount: '', principalPortion: '', interestPortion: '', date: formatDateISO(new Date()), note: '' };
@@ -72,22 +72,23 @@ export default function Loans() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error(t('loans.nameRequired'));
-    if (!form.principalAmount || Number(form.principalAmount) <= 0) return toast.error(t('loans.amountRequired'));
+    if (!form.principalAmount || parseLocalNumber(form.principalAmount) <= 0) return toast.error(t('loans.amountRequired'));
 
     setSaving(true);
     try {
       const now = new Date().toISOString();
-      const remaining = form.remainingBalance ? Number(form.remainingBalance) : Number(form.principalAmount);
+      const remaining = form.remainingBalance ? parseLocalNumber(form.remainingBalance) : parseLocalNumber(form.principalAmount);
       const loan = {
         id: editingId || generateId(),
         name: form.name.trim(),
         type: form.type,
         lender: form.lender.trim() || null,
-        principalAmount: Number(form.principalAmount),
+        principalAmount: parseLocalNumber(form.principalAmount),
         remainingBalance: remaining,
-        interestRate: Number(form.interestRate) || 0,
+        interestRate: parseLocalNumber(form.interestRate) || 0,
         interestType: form.interestType,
-        monthlyPayment: Number(form.monthlyPayment) || 0,
+        interestPeriod: form.interestPeriod || 'annual',
+        monthlyPayment: parseLocalNumber(form.monthlyPayment) || 0,
         currency: form.currency,
         startDate: form.startDate,
         endDate: form.endDate || null,
@@ -127,6 +128,7 @@ export default function Loans() {
       remainingBalance: String(loan.remainingBalance),
       interestRate: String(loan.interestRate || ''),
       interestType: loan.interestType || 'fixed',
+      interestPeriod: loan.interestPeriod || 'annual',
       monthlyPayment: String(loan.monthlyPayment || ''),
       currency: loan.currency,
       startDate: loan.startDate,
@@ -167,12 +169,12 @@ export default function Loans() {
   // ─── PAYMENT CRUD ──────────────────────────────────────
   const handlePaymentSubmit = async (e, loanId) => {
     e.preventDefault();
-    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) return toast.error(t('loans.enterPaymentAmount'));
+    if (!paymentForm.amount || parseLocalNumber(paymentForm.amount) <= 0) return toast.error(t('loans.enterPaymentAmount'));
 
     const loan = loansList.find((l) => l.id === loanId);
-    const amount = Number(paymentForm.amount);
-    const principal = Number(paymentForm.principalPortion) || 0;
-    const interest = Number(paymentForm.interestPortion) || 0;
+    const amount = parseLocalNumber(paymentForm.amount);
+    const principal = parseLocalNumber(paymentForm.principalPortion) || 0;
+    const interest = parseLocalNumber(paymentForm.interestPortion) || 0;
     const effectivePrincipal = principal || (interest ? amount - interest : amount);
 
     // Prevent overpaying beyond remaining balance
@@ -264,8 +266,15 @@ export default function Loans() {
 
   const calcRemainingMonths = (loan) => {
     if (!loan.monthlyPayment || loan.monthlyPayment <= 0 || loan.remainingBalance <= 0) return null;
-    // Rough estimate: remaining / monthly (ignoring interest for simplicity)
-    return Math.ceil(loan.remainingBalance / loan.monthlyPayment);
+    const monthlyRate = loan.interestRate > 0
+      ? ((loan.interestPeriod === 'monthly' ? loan.interestRate : loan.interestRate / 12) / 100)
+      : 0;
+    if (monthlyRate === 0) return Math.ceil(loan.remainingBalance / loan.monthlyPayment);
+    // Amortization formula: n = -ln(1 - r*B/P) / ln(1+r)
+    const ratio = (monthlyRate * loan.remainingBalance) / loan.monthlyPayment;
+    if (ratio >= 1) return null; // Payment doesn't cover interest
+    const n = -Math.log(1 - ratio) / Math.log(1 + monthlyRate);
+    return Math.ceil(n);
   };
 
   const calcTotalInterest = (loan) => {
@@ -411,23 +420,23 @@ export default function Loans() {
                 {t('loans.principalAmount')} <span className="text-danger">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 value={form.principalAmount}
                 onChange={(e) => setForm((f) => ({ ...f, principalAmount: e.target.value }))}
                 placeholder="100000"
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
-                min="0" step="0.01" inputMode="decimal" required
+                inputMode="decimal" required
               />
             </div>
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.remainingBalance')}</label>
               <input
-                type="number"
+                type="text"
                 value={form.remainingBalance}
                 onChange={(e) => setForm((f) => ({ ...f, remainingBalance: e.target.value }))}
                 placeholder={t('loans.remainingPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
-                min="0" step="0.01" inputMode="decimal"
+                inputMode="decimal"
               />
             </div>
             <div>
@@ -448,14 +457,40 @@ export default function Loans() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.interestRate')}</label>
-              <input
-                type="number"
-                value={form.interestRate}
-                onChange={(e) => setForm((f) => ({ ...f, interestRate: e.target.value }))}
-                placeholder="e.g. 5.5"
-                className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
-                min="0" max="100" step="0.01" inputMode="decimal"
-              />
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={form.interestRate}
+                  onChange={(e) => setForm((f) => ({ ...f, interestRate: e.target.value }))}
+                  placeholder="e.g. 5.5"
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
+                  inputMode="decimal"
+                />
+                <div className="flex rounded-xl overflow-hidden border border-cream-200 dark:border-dark-border text-[10px] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, interestPeriod: 'annual' }))}
+                    className={`px-2 py-1.5 font-medium transition-colors ${
+                      form.interestPeriod === 'annual'
+                        ? 'bg-accent text-white'
+                        : 'bg-white dark:bg-dark-card text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                    }`}
+                  >
+                    {t('loans.perYear')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, interestPeriod: 'monthly' }))}
+                    className={`px-2 py-1.5 font-medium transition-colors ${
+                      form.interestPeriod === 'monthly'
+                        ? 'bg-accent text-white'
+                        : 'bg-white dark:bg-dark-card text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                    }`}
+                  >
+                    {t('loans.perMonth')}
+                  </button>
+                </div>
+              </div>
             </div>
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.interestType')}</label>
@@ -471,12 +506,12 @@ export default function Loans() {
             <div>
               <label className="text-xs font-medium text-cream-500 mb-1 block">{t('loans.monthlyPayment')}</label>
               <input
-                type="number"
+                type="text"
                 value={form.monthlyPayment}
                 onChange={(e) => setForm((f) => ({ ...f, monthlyPayment: e.target.value }))}
                 placeholder={t('loans.monthlyPaymentPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm"
-                min="0" step="0.01" inputMode="decimal"
+                inputMode="decimal"
               />
             </div>
           </div>
@@ -608,7 +643,7 @@ export default function Loans() {
                     )}
                     {loan.interestRate > 0 && (
                       <span className="text-xs text-cream-500 flex items-center gap-1">
-                        <Percent size={10} /> {loan.interestRate}% {loan.interestType === 'fixed' ? t('loans.fixed') : t('loans.variable')}
+                        <Percent size={10} /> {loan.interestRate}% {loan.interestPeriod === 'monthly' ? t('loans.perMonth') : t('loans.perYear')} · {loan.interestType === 'fixed' ? t('loans.fixed') : t('loans.variable')}
                       </span>
                     )}
                     {loan.monthlyPayment > 0 && (
@@ -730,34 +765,34 @@ export default function Loans() {
                         <div>
                           <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.totalAmount')} *</label>
                           <input
-                            type="number"
+                            type="text"
                             value={paymentForm.amount}
                             onChange={(e) => setPaymentForm((f) => ({ ...f, amount: e.target.value }))}
                             placeholder={loan.monthlyPayment ? String(loan.monthlyPayment) : '0'}
                             className="w-full px-2 py-1.5 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-xs"
-                            min="0" step="0.01" inputMode="decimal" required autoFocus
+                            inputMode="decimal" required autoFocus
                           />
                         </div>
                         <div>
                           <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.principalPart')}</label>
                           <input
-                            type="number"
+                            type="text"
                             value={paymentForm.principalPortion}
                             onChange={(e) => setPaymentForm((f) => ({ ...f, principalPortion: e.target.value }))}
                             placeholder="Auto"
                             className="w-full px-2 py-1.5 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-xs"
-                            min="0" step="0.01" inputMode="decimal"
+                            inputMode="decimal"
                           />
                         </div>
                         <div>
                           <label className="text-[10px] text-cream-400 block mb-0.5">{t('loans.interestPart')}</label>
                           <input
-                            type="number"
+                            type="text"
                             value={paymentForm.interestPortion}
                             onChange={(e) => setPaymentForm((f) => ({ ...f, interestPortion: e.target.value }))}
                             placeholder="Auto"
                             className="w-full px-2 py-1.5 rounded-lg border border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card text-xs"
-                            min="0" step="0.01" inputMode="decimal"
+                            inputMode="decimal"
                           />
                         </div>
                         <div>
@@ -782,7 +817,7 @@ export default function Loans() {
                       </div>
                       {/* Quick amount buttons */}
                       {loan.monthlyPayment > 0 && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] text-cream-400">{t('loans.quick')}:</span>
                           <button
                             type="button"
@@ -790,6 +825,20 @@ export default function Loans() {
                             className="text-[10px] px-2 py-0.5 rounded bg-info/10 text-info hover:bg-info/20"
                           >
                             {t('common.monthly')} ({formatCurrency(loan.monthlyPayment, loan.currency)})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentForm((f) => ({ ...f, amount: String(loan.monthlyPayment * 2) }))}
+                            className="text-[10px] px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20"
+                          >
+                            {t('loans.extraPayment')} ({formatCurrency(loan.monthlyPayment * 2, loan.currency)})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentForm((f) => ({ ...f, amount: '' }))}
+                            className="text-[10px] px-2 py-0.5 rounded bg-cream-100 text-cream-600 hover:bg-cream-200 dark:bg-dark-border dark:text-cream-400 dark:hover:bg-dark-border/80"
+                          >
+                            {t('loans.customAmount')}
                           </button>
                           <button
                             type="button"

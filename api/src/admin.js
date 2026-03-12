@@ -346,7 +346,10 @@ export function registerAdminRoutes(router) {
     const offset = parseInt(offsetStr) || 0;
 
     let query = `
-      SELECT f.*, u.name as userName, u.email as userEmail
+      SELECT f.id, f.userId, f.type, f.title, f.description, f.status, f.adminNote,
+             f.page, f.userAgent, f.createdAt, f.updatedAt,
+             (f.screenshot IS NOT NULL AND f.screenshot != '') as hasScreenshot,
+             u.name as userName, u.email as userEmail
       FROM feedback f
       LEFT JOIN users u ON f.userId = u.id
       WHERE 1=1
@@ -365,6 +368,17 @@ export function registerAdminRoutes(router) {
     `).all();
 
     return json({ data: result.results || [], counts: counts.results || [], meta: { limit, offset } });
+  });
+
+  // ─── Feedback: get screenshot on demand ──────────────
+  router.get('/api/admin/feedback/:id/screenshot', async (ctx) => {
+    const denied = requireAdmin(ctx);
+    if (denied) return denied;
+
+    const { id } = ctx.params;
+    const row = await ctx.env.DB.prepare('SELECT screenshot FROM feedback WHERE id = ?').bind(id).first();
+    if (!row) return json({ error: 'Not found' }, 404);
+    return json({ data: row.screenshot || null });
   });
 
   // ─── Feedback: admin update status / add note ────────

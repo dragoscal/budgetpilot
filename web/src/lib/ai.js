@@ -108,9 +108,16 @@ ROMANIAN UTILITY BILLS ("Listă de întreținere" / "Cheltuieli întreținere"):
 - The "Total general" at the bottom is the transaction total
 - These are ALWAYS a single "housing" transaction — do NOT split into multiple transactions
 
+DISCOUNT HANDLING:
+- If a receipt shows discounts (reducere, discount, cupon, promoție, card fidelitate, -X.XX LEI), include them as items with NEGATIVE prices
+- Discount item name MUST start with "Reducere:" or "Discount:" prefix (e.g., "Reducere: Card fidelitate", "Discount: Promoție 2+1")
+- price field: use NEGATIVE number for discounts (e.g., -2.50)
+- The transaction total (amount) should be the NET amount AFTER all discounts are applied
+- Category: same as the discounted product if identifiable, otherwise "other"
+
 SPLITTING RULES:
 - If a receipt has items from DIFFERENT categories (e.g., groceries + personal care + pet food), create SEPARATE transactions for each category group
-- Each transaction's amount = sum of its items
+- Each transaction's amount = sum of its items (including negative discount items)
 - If all items are the same category, keep as ONE transaction
 - Restaurant receipts: always one transaction (dining category)
 - Gas station: fuel = transport, shop items = groceries/personal

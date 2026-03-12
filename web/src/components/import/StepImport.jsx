@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useToast } from '../../contexts/ToastContext';
 import { transactions as txApi } from '../../lib/api';
-import { checkDuplicate, learnCategory } from '../../lib/smartFeatures';
+import { checkDuplicate, checkTransferPair, learnCategory } from '../../lib/smartFeatures';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -50,6 +50,19 @@ export default function StepImport({ transactions, importResult, setImportResult
         if (dupes && dupes.length > 0 && dupes[0].confidence >= 0.8) {
           skipped++;
           consecutiveErrors = 0; // Reset on successful check
+        } else if (tx.source === 'bank_statement' && (tx.type === 'transfer' || tx.category === 'transfer')) {
+          // Check for transfer pairs (bank statement imports)
+          const pair = await checkTransferPair(tx);
+          if (pair) {
+            skipped++;
+            consecutiveErrors = 0;
+          } else {
+            const { _personName, _monthName, _monthNumber, ...clean } = tx;
+            await txApi.create(clean);
+            if (tx.merchant && tx.category) learnCategory(tx.merchant, tx.category, tx.subcategory);
+            saved++;
+            consecutiveErrors = 0;
+          }
         } else {
           // Clean display-only fields before saving
           const { _personName, _monthName, _monthNumber, ...clean } = tx;

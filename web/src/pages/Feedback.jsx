@@ -72,7 +72,7 @@ export default function Feedback() {
       toast.error(t('feedback.imageTooLarge'));
       return;
     }
-    const compressed = await compressImage(file);
+    const compressed = await compressImage(file, 800, 0.5);
     setScreenshot(compressed);
     setScreenshotName(file.name);
   };

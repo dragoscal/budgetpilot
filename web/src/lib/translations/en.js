@@ -288,6 +288,9 @@ const en = {
   'addTransaction.tapToEdit': 'Tap to edit',
   'addTransaction.unknown': 'Unknown',
   'addTransaction.possibleDuplicate': 'Possible duplicate',
+  'addTransaction.transfersDetected': '{count} transfer(s) between accounts detected',
+  'addTransaction.skipTransfers': 'Skip transfers',
+  'addTransaction.transferBadge': 'Transfer',
   'addTransaction.skip': 'Skip',
   'addTransaction.keep': 'Keep',
   'addTransaction.itemsFlagged': '{count} item(s) flagged for review',
@@ -933,6 +936,10 @@ const en = {
   'loans.quick': 'Quick',
   'loans.payOff': 'Pay off',
   'loans.paymentHistory': 'Payment History',
+  'loans.perYear': '/yr',
+  'loans.perMonth': '/mo',
+  'loans.extraPayment': 'Extra payment',
+  'loans.customAmount': 'Custom',
 
   // ─── Wishlist ────────────────────────────────────────
   'wishlist.title': 'Wishlist',
@@ -1644,6 +1651,7 @@ const en = {
   'admin.feedbackDeleted': 'Feedback deleted',
   'admin.onPage': 'on {page}',
   'admin.bugScreenshot': 'Bug screenshot',
+  'admin.loadScreenshot': 'Load screenshot',
   'admin.clickToViewFull': 'Click to view full size',
   'admin.adminNote': 'Admin note',
   'admin.from': 'From',

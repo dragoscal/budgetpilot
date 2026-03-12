@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
-import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal } from '../lib/helpers';
+import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
@@ -18,6 +18,7 @@ import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
   Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet, CheckCircle2,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -35,6 +36,7 @@ export default function AddTransaction() {
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [pendingSave, setPendingSave] = useState(null);
   const [expandedItems, setExpandedItems] = useState({});
+  const [skipTransfers, setSkipTransfers] = useState(false);
 
   // Inline editing state
   const [editingField, setEditingField] = useState(null); // { txIdx, field, itemIdx? }
@@ -299,13 +301,15 @@ export default function AddTransaction() {
 
     if (itemIdx !== undefined) {
       // Editing an item field
-      const val = field === 'price' || field === 'qty' ? Number(editValue) || 0 : editValue;
+      const val = field === 'price' ? parseLocalNumber(editValue) || 0
+        : field === 'qty' ? Number(editValue) || 0
+        : editValue;
       updatePendingItem(txIdx, itemIdx, { [field]: val });
       // Recalculate transaction total from items
       recalcTxTotal(txIdx);
     } else {
       // Editing a transaction field
-      const val = field === 'amount' ? Number(editValue) || 0 : editValue;
+      const val = field === 'amount' ? parseLocalNumber(editValue) || 0 : editValue;
       updatePending(txIdx, { [field]: val });
     }
 
@@ -414,9 +418,9 @@ export default function AddTransaction() {
         if (i !== txIdx) return t;
         const item = {
           name: newItem.name,
-          price: Number(newItem.price) || 0,
+          price: parseLocalNumber(newItem.price) || 0,
           qty: Number(newItem.qty) || 1,
-          unitPrice: Number(newItem.price) || 0,
+          unitPrice: parseLocalNumber(newItem.price) || 0,
           category: newItem.category,
           confidence: 1,
           needsReview: false,
@@ -475,7 +479,8 @@ export default function AddTransaction() {
   // ─── RENDER INLINE EDIT ────────────────────────────────
   const renderEditableText = (txIdx, field, value, className = '', itemIdx = undefined) => {
     if (isEditing(txIdx, field, itemIdx)) {
-      const type = field === 'amount' || field === 'price' || field === 'qty' ? 'number' : field === 'date' ? 'date' : 'text';
+      const type = field === 'qty' ? 'number' : field === 'date' ? 'date' : 'text';
+      const isAmountField = field === 'amount' || field === 'price';
       return (
         <input
           ref={editRef}
@@ -486,7 +491,7 @@ export default function AddTransaction() {
           onKeyDown={handleEditKeyDown}
           className={`bg-white dark:bg-dark-card border-2 border-indigo-400 dark:border-indigo-500 rounded-lg px-2 py-1 outline-none shadow-sm ${className}`}
           step={type === 'number' ? '0.01' : undefined}
-          inputMode={type === 'number' ? 'decimal' : undefined}
+          inputMode={isAmountField || type === 'number' ? 'decimal' : undefined}
         />
       );
     }
@@ -696,6 +701,40 @@ export default function AddTransaction() {
             <Pencil size={10} /> {t('addTransaction.tapToEditHint')}
           </p>
 
+          {/* Transfer detection banner */}
+          {(() => {
+            const transferCount = pendingResults.filter(tx => !tx._dismissed && (tx.type === 'transfer' || tx.category === 'transfer')).length;
+            if (transferCount === 0) return null;
+            return (
+              <div className="flex items-center justify-between p-3 mb-3 rounded-xl bg-info/5 border border-info/20">
+                <div className="flex items-center gap-2">
+                  <ArrowLeftRight size={14} className="text-info shrink-0" />
+                  <span className="text-xs text-cream-600 dark:text-cream-400">
+                    {(t('addTransaction.transfersDetected') || '{count} transfer(s) between accounts detected').replace('{count}', transferCount)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setSkipTransfers(!skipTransfers);
+                    // Auto-dismiss/restore transfer transactions
+                    setPendingResults(prev => prev.map(tx =>
+                      (tx.type === 'transfer' || tx.category === 'transfer')
+                        ? { ...tx, _dismissed: !skipTransfers }
+                        : tx
+                    ));
+                  }}
+                  className={`text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors ${
+                    skipTransfers
+                      ? 'bg-info text-white'
+                      : 'bg-info/10 text-info hover:bg-info/20'
+                  }`}
+                >
+                  {t('addTransaction.skipTransfers') || 'Skip transfers'}
+                </button>
+              </div>
+            );
+          })()}
+
           <div className="space-y-3">
             {pendingResults.map((tx, idx) => {
               if (tx._dismissed) return null;
@@ -723,8 +762,13 @@ export default function AddTransaction() {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-lg shrink-0">{cat.icon}</span>
                       <div className="min-w-0">
-                        <div className="text-sm font-medium">
+                        <div className="text-sm font-medium flex items-center gap-1.5">
                           {renderEditableText(idx, 'merchant', tx.merchant || t('addTransaction.unknown'))}
+                          {(tx.type === 'transfer' || tx.category === 'transfer') && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-info/10 text-info font-medium shrink-0">
+                              <ArrowLeftRight size={9} /> {t('addTransaction.transferBadge') || 'Transfer'}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-cream-500">
                           {renderEditableText(idx, 'date', tx.date, 'text-xs')}
@@ -904,12 +948,11 @@ export default function AddTransaction() {
                                 onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); if (e.key === 'Escape') setAddingItem(null); }}
                               />
                               <input
-                                type="number"
+                                type="text"
                                 value={newItem.price}
                                 onChange={(e) => setNewItem(n => ({ ...n, price: e.target.value }))}
                                 placeholder={t('addTransaction.price')}
                                 className="w-16 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
-                                step="0.01"
                                 inputMode="decimal"
                                 onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); }}
                               />

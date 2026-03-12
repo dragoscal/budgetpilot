@@ -288,6 +288,9 @@ const ro = {
   'addTransaction.tapToEdit': 'Atinge pentru a edita',
   'addTransaction.unknown': 'Necunoscut',
   'addTransaction.possibleDuplicate': 'Posibil duplicat',
+  'addTransaction.transfersDetected': '{count} transfer(uri) între conturi detectate',
+  'addTransaction.skipTransfers': 'Omite transferurile',
+  'addTransaction.transferBadge': 'Transfer',
   'addTransaction.skip': 'Omite',
   'addTransaction.keep': 'Păstrează',
   'addTransaction.itemsFlagged': '{count} articol(e) necesită verificare',
@@ -933,6 +936,10 @@ const ro = {
   'loans.quick': 'Rapid',
   'loans.payOff': 'Achită',
   'loans.paymentHistory': 'Istoric plăți',
+  'loans.perYear': '/an',
+  'loans.perMonth': '/lună',
+  'loans.extraPayment': 'Plată extra',
+  'loans.customAmount': 'Personalizat',
 
   // ─── Lista de dorințe ────────────────────────────────
   'wishlist.title': 'Lista de dorințe',
@@ -1644,6 +1651,7 @@ const ro = {
   'admin.feedbackDeleted': 'Feedback șters',
   'admin.onPage': 'pe {page}',
   'admin.bugScreenshot': 'Captură de ecran bug',
+  'admin.loadScreenshot': 'Încarcă captura de ecran',
   'admin.clickToViewFull': 'Clic pentru dimensiune completă',
   'admin.adminNote': 'Notă admin',
   'admin.from': 'De la',

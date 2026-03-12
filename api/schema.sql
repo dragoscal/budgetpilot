@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS loans (
   remainingBalance REAL NOT NULL,
   interestRate REAL DEFAULT 0,
   interestType TEXT DEFAULT 'fixed',
+  interestPeriod TEXT DEFAULT 'annual',
   monthlyPayment REAL DEFAULT 0,
   currency TEXT DEFAULT 'RON',
   startDate TEXT NOT NULL,

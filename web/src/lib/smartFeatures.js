@@ -147,6 +147,32 @@ export async function checkDuplicate(newTx, userId) {
 }
 
 
+// ─── TRANSFER PAIR DETECTION ──────────────────────────────
+// Detect if a bank statement transfer already has a matching pair in existing transactions
+
+export async function checkTransferPair(newTx, userId) {
+  if (newTx.type !== 'transfer' && newTx.category !== 'transfer') return null;
+  const filter = userId ? { userId } : {};
+  const transactions = await getAll('transactions', filter);
+
+  const txDate = new Date(newTx.date);
+  const windowMs = 3 * 24 * 60 * 60 * 1000; // ±3 days
+
+  for (const existing of transactions) {
+    if (existing.id === newTx.id) continue;
+    const sameAmount = Math.abs(existing.amount - newTx.amount) < 0.01;
+    if (!sameAmount) continue;
+    const d = new Date(existing.date);
+    if (Math.abs(d - txDate) > windowMs) continue;
+    // Same amount, close date, and existing is also a transfer
+    if (existing.type === 'transfer' || existing.category === 'transfer') {
+      return { transaction: existing, reason: 'transfer_pair' };
+    }
+  }
+  return null;
+}
+
+
 // ─── CATEGORY LEARNING ────────────────────────────────────
 // Learn from user's manual category assignments to improve auto-categorization
 

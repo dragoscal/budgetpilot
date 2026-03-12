@@ -289,6 +289,33 @@ export function validateTransaction(tx) {
   return { valid: errors.length === 0, errors };
 }
 
+// ─── NUMBER PARSING ─────────────────────────────────────
+
+/**
+ * Parse a number from user input that may use comma or dot as decimal separator.
+ * European locales (RO, DE, FR) type "12,50" instead of "12.50".
+ * Handles:  "12,50" → 12.5,  "1.234,56" → 1234.56,  "1,234.56" → 1234.56
+ */
+export function parseLocalNumber(str) {
+  if (typeof str === 'number') return str;
+  if (!str || typeof str !== 'string') return NaN;
+  let s = str.trim();
+  // Remove currency symbols/letters
+  s = s.replace(/[^\d.,-]/g, '');
+  if (!s) return NaN;
+  if (s.includes(',') && s.includes('.')) {
+    // Detect EU "1.234,56" vs US "1,234.56" by last separator position
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  return Number(s);
+}
+
 // ─── SETTLEMENT HELPERS ─────────────────────────────────
 
 /**

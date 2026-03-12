@@ -33,7 +33,7 @@ const TABLE_COLUMNS = {
   debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
   debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),
   wishlist: new Set(['id','userId','name','estimatedPrice','currency','category','priority','url','notes','purchased','purchasedDate','createdAt','updatedAt']),
-  loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
+  loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','interestPeriod','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
   loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
   families: new Set(['id','name','createdBy','emoji','createdAt','updatedAt']),
   family_members: new Set(['id','familyId','userId','role','isVirtual','displayName','emoji','joinedAt','createdAt','updatedAt']),
