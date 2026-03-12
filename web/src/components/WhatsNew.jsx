@@ -7,9 +7,10 @@ import {
   Sparkles, Calendar, Users, Flame, BarChart3, Handshake,
   UserPlus, FileSpreadsheet, Zap, Shield, Link,
   History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark,
+  Bell, XCircle,
 } from 'lucide-react';
 
-const ICONS = { Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark };
+const ICONS = { Sparkles, Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark, Bell, XCircle };
 
 const TYPE_STYLES = {
   feature:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',

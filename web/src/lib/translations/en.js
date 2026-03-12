@@ -2080,6 +2080,13 @@ const en = {
   'changelog.v130recurring': 'Recurring payment detection after import — automatically finds subscriptions',
   'changelog.v131autodebit': 'Auto-debit toggle for recurring payments — visible on Calendar',
   'changelog.v131incomebug': 'Fixed income auto-categorization overriding manual category selection',
+  'changelog.v132calendar': 'Google Calendar-inspired redesign — month/week views, spending heatmap, streaks',
+  'changelog.v140welcome': 'Welcome card for new users with quick-start actions and setup progress',
+  'changelog.v140manualBills': 'Manual bill confirmation — confirm payments directly from Dashboard',
+  'changelog.v140autoBills': 'Auto-debit detail card — see each bill before recording transactions',
+  'changelog.v140cancelSub': 'Cancel & reactivate subscriptions with full history tracking',
+  'changelog.v140payStats': 'Payment stats per recurring item — total spent, payment count, last date',
+  'changelog.v140calBadge': 'Paid/Pending badges on Calendar bill rows',
 
   // ─── Guide / Help ──────────────────────────────────────────
   'guide.title': 'Guide',

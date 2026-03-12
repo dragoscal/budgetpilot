@@ -2080,6 +2080,13 @@ const ro = {
   'changelog.v130recurring': 'Detectare plăți recurente după import — găsește automat abonamentele',
   'changelog.v131autodebit': 'Comutator debit automat la plăți recurente — vizibil pe Calendar',
   'changelog.v131incomebug': 'Categorizarea automată la venituri nu mai suprascrie selecția manuală',
+  'changelog.v132calendar': 'Calendar redesenat inspirat de Google Calendar — vizualizare lună/săptămână, heatmap, streak-uri',
+  'changelog.v140welcome': 'Card de bun venit pentru utilizatori noi cu acțiuni rapide și progres',
+  'changelog.v140manualBills': 'Confirmare facturi manuale — confirmă plățile direct din Dashboard',
+  'changelog.v140autoBills': 'Card detaliat auto-debit — vezi fiecare factură înainte de înregistrare',
+  'changelog.v140cancelSub': 'Anulare și reactivare abonamente cu istoric complet',
+  'changelog.v140payStats': 'Statistici plăți per element recurent — total cheltuit, număr plăți, ultima dată',
+  'changelog.v140calBadge': 'Etichete Plătit/În așteptare pe facturile din Calendar',
 
   // ─── Ghid / Ajutor ─────────────────────────────────────────
   'guide.title': 'Ghid',
