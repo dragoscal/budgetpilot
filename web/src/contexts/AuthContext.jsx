@@ -11,6 +11,17 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const migrationRan = useRef(false);
 
+  // Listen for 401 auth-expired events from apiFetch to auto-logout
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      resetCacheReady();
+      clearUserData().catch(() => {});
+    };
+    window.addEventListener('auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('auth-expired', handleAuthExpired);
+  }, []);
+
   useEffect(() => {
     auth.getCurrentUser().then((u) => {
       setUser(u);
@@ -23,6 +34,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Run userId migration once when user logs in with a real backend account
+  // (handles the app-reload case where user was already logged in)
   useEffect(() => {
     if (user?.id && user.id !== 'local' && !migrationRan.current) {
       migrationRan.current = true;
@@ -36,10 +48,15 @@ export function AuthProvider({ children }) {
     const u = await auth.login(credentials);
     setUser(u);
     if (u?.id) {
-      migrateLocalToUser(u.id).catch((e) =>
-        console.warn('Post-login migration error:', e)
-      );
-      // Pull all server data to local cache
+      // Mark migration as done so the useEffect doesn't duplicate it
+      migrationRan.current = true;
+      // Await migration before pulling cache to prevent race condition
+      try {
+        await migrateLocalToUser(u.id);
+      } catch (e) {
+        console.warn('Post-login migration error:', e);
+      }
+      // Pull all server data to local cache (after migration completes)
       pullAllDataToCache().catch((e) =>
         console.warn('Post-login cache pull error:', e)
       );
@@ -51,9 +68,12 @@ export function AuthProvider({ children }) {
     const u = await auth.register(data);
     setUser(u);
     if (u?.id) {
-      migrateLocalToUser(u.id).catch((e) =>
-        console.warn('Post-register migration error:', e)
-      );
+      migrationRan.current = true;
+      try {
+        await migrateLocalToUser(u.id);
+      } catch (e) {
+        console.warn('Post-register migration error:', e);
+      }
       pullAllDataToCache().catch((e) =>
         console.warn('Post-register cache pull error:', e)
       );
@@ -64,6 +84,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     auth.logout();
     setUser(null);
+    migrationRan.current = false;
     // Reset cache readiness so next login re-populates from server
     resetCacheReady();
     // Clear local data cache but preserve settings (API URL, AI keys, theme, etc.)

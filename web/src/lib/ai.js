@@ -848,13 +848,18 @@ function normalizeReceiptResult(result, userId = 'local') {
 
     // Amount validation: prefer items sum when items exist, fallback to AI amount
     const aiAmount = Math.abs(Number(t.amount)) || 0;
-    // price = line total as printed on receipt (already qty × unit price)
-    // Only multiply by qty if item has a unitPrice that differs from price (meaning price IS the unit price)
+    // Calculate items total:
+    // - If qty > 1 and unitPrice exists, total = unitPrice × qty
+    // - If qty > 1 and no unitPrice, total = price × qty (price might be the unit price)
+    // - If qty === 1 or missing, total = price (line total as-is)
     const itemsTotal = items.reduce((s, i) => {
-      if (i.unitPrice && i.unitPrice !== i.price && i.qty > 1) {
-        return s + (i.unitPrice * i.qty);
+      const qty = i.qty || 1;
+      if (qty > 1) {
+        // Use unitPrice if available, otherwise assume price is the unit price
+        const unitPrice = i.unitPrice || i.price;
+        return s + (unitPrice * qty);
       }
-      return s + i.price;
+      return s + (i.price || 0);
     }, 0);
     const receiptTotal = Math.abs(Number(receipt.total)) || 0;
 

@@ -51,7 +51,7 @@ export default function Recurring() {
         if (loadVersion.current !== version) return;
         setItems(data);
         setAllTransactions(txData);
-        const patterns = await detectRecurringPatterns();
+        const patterns = await detectRecurringPatterns(effectiveUserId);
         if (loadVersion.current !== version) return;
         setSuggestions(patterns);
         getCachedRates().then(setRates).catch(() => {});

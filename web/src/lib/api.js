@@ -55,6 +55,14 @@ async function apiFetch(apiUrl, path, options = {}) {
   const res = await fetch(`${apiUrl}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    // Handle 401 Unauthorized — token expired or invalid
+    if (res.status === 401) {
+      sessionStorage.removeItem('bp_token');
+      localStorage.removeItem('bp_token');
+      // Dispatch event so AuthContext can react and log out the user
+      window.dispatchEvent(new CustomEvent('auth-expired'));
+      throw new Error('Session expired. Please log in again.');
+    }
     const error = await res.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(error.error || `API error ${res.status}`);
   }
@@ -397,7 +405,10 @@ export async function undoImportBatch(batchId) {
   const apiUrl = await getApiUrl();
   if (isApiMode(apiUrl) && getAuthToken()) {
     const result = await apiFetch(apiUrl, `/api/transactions/batch/${batchId}`, { method: 'DELETE' });
-    await storage.clearStore('transactions');
+    // Remove only the batch transactions from cache instead of clearing entire store
+    const allTx = await storage.getAll('transactions');
+    const batchTx = allTx.filter((t) => t.importBatch === batchId);
+    for (const tx of batchTx) await storage.remove('transactions', tx.id);
     return result;
   }
   const allTx = await storage.getAll('transactions');

@@ -347,8 +347,14 @@ export default function Dashboard() {
   // Spending velocity: compare current pace to last month
   const velocity = useMemo(() => {
     const now = new Date();
-    const daysElapsed = now.getDate();
-    const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    const selYear = month.getFullYear();
+    const selMonth = month.getMonth();
+    const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth();
+    // For current month: use actual days elapsed. For past months: use total days in month.
+    const daysElapsed = isCurrentMonth
+      ? now.getDate()
+      : new Date(selYear, selMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(selYear, selMonth, 0).getDate();
 
     const currentDailyRate = daysElapsed > 0 ? stats.totalSpent / daysElapsed : 0;
     const prevDailyRate = daysInPrevMonth > 0 ? stats.prevTotalSpent / daysInPrevMonth : 0;
@@ -356,7 +362,7 @@ export default function Dashboard() {
     if (prevDailyRate === 0) return null;
     const change = Math.round(((currentDailyRate - prevDailyRate) / prevDailyRate) * 100);
     return { change, faster: change > 0 };
-  }, [stats.totalSpent, stats.prevTotalSpent]);
+  }, [stats.totalSpent, stats.prevTotalSpent, month]);
 
   // Chart data — cumulative spending per day (with multi-currency conversion)
   const spendingChartData = useMemo(() => {
@@ -427,9 +433,9 @@ export default function Dashboard() {
       }
     });
 
-    // Month-over-month spending comparison (at same point in month)
-    if (stats.totalSpent > 0 && prevTransactions.length > 0) {
-      const prevExpenses = prevTransactions.filter((tx) => tx.type === 'expense');
+    // Month-over-month spending comparison (at same point in month) — uses scopedPrevTx to respect scope filter
+    if (stats.totalSpent > 0 && scopedPrevTx.length > 0) {
+      const prevExpenses = scopedPrevTx.filter((tx) => tx.type === 'expense');
       const dayOfMonth = new Date().getDate();
       const prevAtThisPoint = sumBy(
         prevExpenses.filter((tx) => new Date(tx.date).getDate() <= dayOfMonth),
@@ -444,7 +450,7 @@ export default function Dashboard() {
     }
 
     return alerts.slice(0, 3);
-  }, [budgetProgress, recurringList, stats, prevTransactions, t]);
+  }, [budgetProgress, recurringList, stats, scopedPrevTx, t]);
 
   // No-spend days count
   const noSpendDays = useMemo(() => {
@@ -572,9 +578,12 @@ export default function Dashboard() {
     setCreatingRecurring(true);
     try {
       const cur = user?.defaultCurrency || 'RON';
+      const now = new Date();
       for (const item of autoBillsDue) {
-        const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-        const billingDay = String(item.billingDay || 1).padStart(2, '0');
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        // Clamp billing day to actual days in current month to avoid invalid dates like Feb-31
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const billingDay = String(Math.min(item.billingDay || 1, daysInMonth)).padStart(2, '0');
         await txApi.create({
           id: generateId(),
           type: 'expense',
@@ -604,8 +613,11 @@ export default function Dashboard() {
   const handleConfirmManualBill = async (item) => {
     try {
       const cur = user?.defaultCurrency || 'RON';
-      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-      const billingDay = String(item.billingDay || 1).padStart(2, '0');
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      // Clamp billing day to actual days in current month to avoid invalid dates like Feb-31
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const billingDay = String(Math.min(item.billingDay || 1, daysInMonth)).padStart(2, '0');
       const finalAmount = Number(billAmounts[item.id]) || item.amount || 0;
       await txApi.create({
         id: generateId(),

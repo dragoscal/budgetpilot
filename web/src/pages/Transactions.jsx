@@ -197,9 +197,10 @@ export default function Transactions() {
       .sort((a, b) => b.count - a.count);
   }, [allTx]);
 
-  // Reset page to 1 whenever any filter changes
+  // Reset page to 1 and clear selection whenever any filter changes
   useEffect(() => {
     setPage(1);
+    setSelected(new Set());
   }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter, sort]);
 
   const filtered = useMemo(() => {

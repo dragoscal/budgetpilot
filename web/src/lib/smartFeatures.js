@@ -21,7 +21,7 @@ export async function detectRecurringPatterns(userId) {
   // Group by merchant (normalized)
   const byMerchant = {};
   for (const tx of transactions) {
-    if (tx.type !== 'expense' || !tx.merchant) continue;
+    if (tx.type !== 'expense' || !tx.merchant || !tx.date) continue;
     const key = tx.merchant.toLowerCase().trim();
     if (!byMerchant[key]) byMerchant[key] = [];
     byMerchant[key].push(tx);
@@ -65,7 +65,9 @@ export async function detectRecurringPatterns(userId) {
     // Calculate average amount and check similarity
     const amounts = txns.map(t => t.amount);
     const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-    const amountVariance = amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.15); // within 15%
+    const amountVariance = avgAmount > 0
+      ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.15)
+      : amounts.every(a => a === 0); // within 15%, guard against division by zero
 
     if (!amountVariance && amounts.length > 2) continue;
 
@@ -469,7 +471,7 @@ export async function checkBudgetAlerts(monthTransactions, userId) {
       const dailyPace = spent / daysElapsed;
       const projected = dailyPace * daysInMonth;
       if (projected > budget.amount) {
-        const dayOfExceed = Math.ceil(budget.amount / dailyPace);
+        const dayOfExceed = Math.min(daysInMonth, Math.ceil(budget.amount / dailyPace));
         alerts.push({
           category: budget.category,
           type: 'pace',
