@@ -7,10 +7,10 @@ import {
   Sparkles, Calendar, Users, Flame, BarChart3, Handshake,
   UserPlus, FileSpreadsheet, Zap, Shield, Link,
   History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark,
-  Bell, XCircle,
+  Bell, XCircle, Coins, Globe, CreditCard, Smartphone, Target,
 } from 'lucide-react';
 
-const ICONS = { Sparkles, Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark, Bell, XCircle };
+const ICONS = { Sparkles, Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark, Bell, XCircle, Coins, Globe, CreditCard, Smartphone, Target };
 
 const TYPE_STYLES = {
   feature:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',

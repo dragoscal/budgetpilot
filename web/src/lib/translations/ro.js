@@ -433,6 +433,9 @@ const ro = {
   'quickAdd.clear': 'șterge',
   'quickAdd.failedParse': 'Eroare la procesarea textului',
   'quickAdd.offlineWarning': 'Adăugarea rapidă necesită conexiune la internet pentru procesarea AI.',
+  'quickAdd.fabTooltip': 'Adaugă rapid cheltuială',
+  'quickAdd.fabTitle': 'Adaugă Rapid',
+  'quickAdd.fabHint': 'Scrie natural, apoi revizuiește înainte de salvare',
 
   // ─── Scanner bonuri ──────────────────────────────────
   'receipt.title': 'Scanează bon',
@@ -2023,6 +2026,20 @@ const ro = {
   'notifications.recurringDue': 'Facturi scadente',
   'notifications.paceAlert': 'Alertă ritm cheltuieli',
   'notifications.timeAgo': 'acum {time}',
+  'notifications.history': 'Istoric notificări',
+  'notifications.viewHistory': 'Vezi toate notificările',
+  'notifications.filterAll': 'Toate',
+  'notifications.filterUnread': 'Necitite',
+  'notifications.clearAll': 'Șterge tot',
+  'notifications.clearAllConfirm': 'Ștergi toate notificările? Acțiunea nu poate fi anulată.',
+  'notifications.allMarkedRead': 'Toate notificările au fost marcate ca citite',
+  'notifications.allCleared': 'Toate notificările au fost șterse',
+  'notifications.noUnread': 'Nicio notificare necitită',
+  'notifications.typeBudget': 'Buget',
+  'notifications.typeRecurring': 'Recurente',
+  'notifications.typeAchievement': 'Realizare',
+  'notifications.typePace': 'Cheltuieli',
+  'notifications.typeInfo': 'Info',
 
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Țintă partajare',
@@ -2087,6 +2104,14 @@ const ro = {
   'changelog.v140cancelSub': 'Anulare și reactivare abonamente cu istoric complet',
   'changelog.v140payStats': 'Statistici plăți per element recurent — total cheltuit, număr plăți, ultima dată',
   'changelog.v140calBadge': 'Etichete Plătit/În așteptare pe facturile din Calendar',
+  'changelog.v150multicurrency': 'Sumele din graficele Dashboard sunt acum convertite corect în moneda ta implicită',
+  'changelog.v150categories': 'Categoriile de pe Dashboard se afișează acum în limba selectată',
+  'changelog.v150currencyEdit': 'Selector de monedă adăugat la editarea tranzacțiilor',
+  'changelog.v150goalsCurrency': 'Selector de monedă adăugat la crearea obiectivelor',
+  'changelog.v150mobileActions': 'Rânduri de tranzacții mai curate pe mobil — butoanele sunt discrete până la atingere',
+  'changelog.v150quickAddGlobal': 'Adaugă rapid accesibil din orice pagină prin butonul flotant',
+  'changelog.v150notifications': 'Notificări îmbunătățite cu pagină de istoric complet și filtre pe tip',
+  'changelog.v150importSafe': 'Importul de extras avertizează acum înainte de navigare pentru a preveni pierderea datelor',
 
   // ─── Ghid / Ajutor ─────────────────────────────────────────
   'guide.title': 'Ghid',
@@ -2356,6 +2381,7 @@ const ro = {
   'import.collapseAll': 'Restrânge tot',
   'import.noTransactions': 'Nicio tranzacție de importat. Mergi înapoi și verifică mapările.',
   'import.tooManyErrors': 'Oprit după prea multe erori consecutive. Serverul poate fi inaccesibil.',
+  'import.largeImportWarning': 'Extras mare — te rugăm să păstrezi pagina deschisă până la finalizarea importului.',
   'import.importCancelled': 'Import anulat.',
   'import.importCancelledTitle': 'Import anulat',
   'import.showErrors': 'Afișează detalii erori',

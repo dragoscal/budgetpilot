@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { CATEGORIES } from '../lib/constants';
+import { CATEGORIES, CURRENCIES } from '../lib/constants';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
@@ -69,10 +69,16 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
           <label className="label">{t('transactions.merchant')}</label>
           <input className="input" value={form.merchant || ''} onChange={e => setForm(f => ({...f, merchant: e.target.value}))} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="label">{t('transactions.amount')}</label>
             <input className="input" type="number" step="0.01" value={form.amount || ''} onChange={e => setForm(f => ({...f, amount: e.target.value}))} />
+          </div>
+          <div>
+            <label className="label">{t('common.currency')}</label>
+            <select className="input" value={form.currency || 'RON'} onChange={e => setForm(f => ({...f, currency: e.target.value}))}>
+              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>)}
+            </select>
           </div>
           <div>
             <label className="label">{t('transactions.type')}</label>

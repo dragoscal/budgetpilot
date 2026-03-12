@@ -10,6 +10,7 @@ import InstallPrompt from './components/InstallPrompt';
 import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
 import FeedbackFAB from './components/FeedbackFAB';
+import QuickAddFAB from './components/QuickAddFAB';
 import WhatsNew from './components/WhatsNew';
 import BackgroundJobNotifier from './components/BackgroundJobNotifier';
 
@@ -69,6 +70,7 @@ const Challenges = lazyRetry(() => import('./pages/Challenges'));
 const ReceiptGallery = lazyRetry(() => import('./pages/Receipts'));
 const Guide = lazyRetry(() => import('./pages/Guide'));
 const ImportBudget = lazyRetry(() => import('./pages/ImportBudget'));
+const NotificationHistory = lazyRetry(() => import('./pages/NotificationHistory'));
 const NotFound = lazyRetry(() => import('./pages/NotFound'));
 
 function ScrollToTop() {
@@ -96,6 +98,7 @@ function AppLayout({ children }) {
         </div>
       </main>
       <FeedbackFAB />
+      <QuickAddFAB />
     </div>
   );
 }
@@ -164,6 +167,7 @@ export default function App() {
           <Route path="/receipts" element={<ProtectedRoute><AppLayout><ReceiptGallery /></AppLayout></ProtectedRoute>} />
           <Route path="/import-budget" element={<ProtectedRoute><AppLayout><ImportBudget /></AppLayout></ProtectedRoute>} />
           <Route path="/guide" element={<ProtectedRoute><AppLayout><Guide /></AppLayout></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><AppLayout><NotificationHistory /></AppLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

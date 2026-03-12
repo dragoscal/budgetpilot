@@ -88,7 +88,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
           </span>
         )}
       </div>
-      <div className="flex items-center gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex items-center gap-0.5 sm:gap-1 opacity-30 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         {onSplit && !isSplit && (
           <button onClick={() => onSplit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')}>
             <Split size={13} />

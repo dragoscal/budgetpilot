@@ -433,6 +433,9 @@ const en = {
   'quickAdd.clear': 'clear',
   'quickAdd.failedParse': 'Failed to parse input',
   'quickAdd.offlineWarning': 'Quick add requires an internet connection for AI parsing.',
+  'quickAdd.fabTooltip': 'Quick add expense',
+  'quickAdd.fabTitle': 'Quick Add',
+  'quickAdd.fabHint': 'Type naturally, then review before saving',
 
   // ─── Receipt Scanner ─────────────────────────────────
   'receipt.title': 'Scan Receipt',
@@ -2023,6 +2026,20 @@ const en = {
   'notifications.recurringDue': 'Bills Due',
   'notifications.paceAlert': 'Spending Pace Alert',
   'notifications.timeAgo': '{time} ago',
+  'notifications.history': 'Notification History',
+  'notifications.viewHistory': 'View all notifications',
+  'notifications.filterAll': 'All',
+  'notifications.filterUnread': 'Unread',
+  'notifications.clearAll': 'Clear all',
+  'notifications.clearAllConfirm': 'Delete all notifications? This cannot be undone.',
+  'notifications.allMarkedRead': 'All notifications marked as read',
+  'notifications.allCleared': 'All notifications cleared',
+  'notifications.noUnread': 'No unread notifications',
+  'notifications.typeBudget': 'Budget',
+  'notifications.typeRecurring': 'Recurring',
+  'notifications.typeAchievement': 'Achievement',
+  'notifications.typePace': 'Spending',
+  'notifications.typeInfo': 'Info',
 
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Share Target',
@@ -2087,6 +2104,14 @@ const en = {
   'changelog.v140cancelSub': 'Cancel & reactivate subscriptions with full history tracking',
   'changelog.v140payStats': 'Payment stats per recurring item — total spent, payment count, last date',
   'changelog.v140calBadge': 'Paid/Pending badges on Calendar bill rows',
+  'changelog.v150multicurrency': 'Fixed multi-currency amounts in Dashboard charts — amounts now correctly converted',
+  'changelog.v150categories': 'Dashboard categories now display in your selected language',
+  'changelog.v150currencyEdit': 'Currency selector added to transaction edit modal',
+  'changelog.v150goalsCurrency': 'Currency selector added when creating goals',
+  'changelog.v150mobileActions': 'Cleaner transaction rows on mobile — action buttons are subtle until tapped',
+  'changelog.v150quickAddGlobal': 'Quick Add accessible from any page via floating button',
+  'changelog.v150notifications': 'Improved notifications with full history page and type filters',
+  'changelog.v150importSafe': 'Statement import now warns before navigating away to prevent data loss',
 
   // ─── Guide / Help ──────────────────────────────────────────
   'guide.title': 'Guide',
@@ -2356,6 +2381,7 @@ const en = {
   'import.collapseAll': 'Collapse all',
   'import.noTransactions': 'No transactions to import. Go back and check your mappings.',
   'import.tooManyErrors': 'Stopped after too many consecutive errors. Server may be unreachable.',
+  'import.largeImportWarning': 'Large statement — please keep this page open until import completes.',
   'import.importCancelled': 'Import cancelled.',
   'import.importCancelledTitle': 'Import Cancelled',
   'import.showErrors': 'Show error details',

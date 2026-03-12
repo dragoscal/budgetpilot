@@ -54,3 +54,16 @@ export async function clearOldNotifications(daysOld = 30) {
   }
   await tx.done;
 }
+
+export async function getAllNotifications() {
+  const db = await getDB();
+  const all = await db.getAll('notifications');
+  return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function clearAllNotifications() {
+  const db = await getDB();
+  const tx = db.transaction('notifications', 'readwrite');
+  await tx.store.clear();
+  await tx.done;
+}

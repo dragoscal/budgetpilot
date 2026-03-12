@@ -32,6 +32,14 @@ export default function StepImport({ transactions, importResult, setImportResult
     runPreScan();
   }, []);
 
+  // Warn before leaving page during import
+  useEffect(() => {
+    if (!importing) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [importing]);
+
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
   }, []);
@@ -225,13 +233,21 @@ export default function StepImport({ transactions, importResult, setImportResult
               </button>
             </div>
           ) : (
-            <div className="flex gap-3">
-              <button onClick={handleStartImport} className="btn-primary flex items-center gap-2">
-                <Play size={16} /> {t('import.startImport')}
-              </button>
-              <button onClick={onReset} className="btn-ghost text-xs">
-                {t('common.cancel')}
-              </button>
+            <div className="flex flex-col items-center gap-3">
+              {preScanResult.toImport.length > 50 && (
+                <p className="text-xs text-warning flex items-center gap-1.5 bg-warning/10 px-3 py-2 rounded-lg">
+                  <AlertTriangle size={14} className="shrink-0" />
+                  {t('import.largeImportWarning')}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={handleStartImport} className="btn-primary flex items-center gap-2">
+                  <Play size={16} /> {t('import.startImport')}
+                </button>
+                <button onClick={onReset} className="btn-ghost text-xs">
+                  {t('common.cancel')}
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -351,8 +351,9 @@ export default function Dashboard() {
     return { change, faster: change > 0 };
   }, [stats.totalSpent, stats.prevTotalSpent]);
 
-  // Chart data — cumulative spending per day
+  // Chart data — cumulative spending per day (with multi-currency conversion)
   const spendingChartData = useMemo(() => {
+    const cur = user?.defaultCurrency || 'RON';
     const start = startOfMonth(month);
     const end = endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
@@ -361,38 +362,39 @@ export default function Dashboard() {
     let cumulative = 0;
     return days.map((day) => {
       const dayStr = format(day, 'yyyy-MM-dd');
-      const daySpend = sumBy(expenses.filter((t) => t.date === dayStr), 'amount');
+      const dayExpenses = expenses.filter((t) => t.date === dayStr);
+      const daySpend = dayExpenses.length > 0 ? Math.round(sumAmountsMultiCurrency(dayExpenses, cur, rates) * 100) / 100 : 0;
       cumulative += daySpend;
       return { date: format(day, 'dd'), daily: daySpend, cumulative };
     });
-  }, [scopedTx, month]);
+  }, [scopedTx, month, rates, user]);
 
-  // Category pie chart data
+  // Category pie chart data (translated names + multi-currency conversion)
   const categoryData = useMemo(() => {
+    const cur = user?.defaultCurrency || 'RON';
     const expenses = scopedTx.filter((t) => t.type === 'expense');
     const grouped = groupBy(expenses, 'category');
     return Object.entries(grouped)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
-        return { name: cat.name, value: sumBy(txs, 'amount'), color: cat.color, icon: cat.icon };
+        return { name: t('categories.' + catId), value: Math.round(sumAmountsMultiCurrency(txs, cur, rates) * 100) / 100, color: cat.color, icon: cat.icon };
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [scopedTx]);
+  }, [scopedTx, rates, user, t]);
 
-  // Budget progress — sorted by most critical
+  // Budget progress — sorted by most critical (with multi-currency conversion)
   const budgetProgress = useMemo(() => {
+    const cur = user?.defaultCurrency || 'RON';
     return budgetsList
       .map((b) => {
-        const spent = sumBy(
-          scopedTx.filter((t) => t.type === 'expense' && t.category === b.category),
-          'amount'
-        );
+        const catExpenses = scopedTx.filter((t) => t.type === 'expense' && t.category === b.category);
+        const spent = catExpenses.length > 0 ? Math.round(sumAmountsMultiCurrency(catExpenses, cur, rates) * 100) / 100 : 0;
         return { ...b, spent, pct: percentOf(spent, b.amount) };
       })
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 5);
-  }, [budgetsList, scopedTx]);
+  }, [budgetsList, scopedTx, rates, user]);
 
   // Smart alerts
   const smartAlerts = useMemo(() => {

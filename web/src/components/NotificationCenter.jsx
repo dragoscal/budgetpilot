@@ -22,6 +22,15 @@ const TYPE_COLORS = {
   info: 'text-cream-500',
 };
 
+const TYPE_BG = {
+  budget_warning: 'bg-warning/5',
+  budget_exceeded: 'bg-danger/5',
+  recurring_due: 'bg-info/5',
+  achievement: 'bg-success/5',
+  pace_alert: 'bg-warning/5',
+  info: '',
+};
+
 function timeAgo(dateStr, t) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -43,7 +52,7 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
 
   const loadNotifications = useCallback(async () => {
     try {
-      const notifs = await getNotifications(30);
+      const notifs = await getNotifications(50);
       setNotifications(notifs);
       const count = await getUnreadCount();
       setUnreadCount(count);
@@ -150,16 +159,19 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
                 {notifications.map((notif) => {
                   const IconComp = TYPE_ICONS[notif.type] || Info;
                   const colorClass = TYPE_COLORS[notif.type] || 'text-cream-500';
+                  const bgClass = TYPE_BG[notif.type] || '';
 
                   return (
                     <button
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-cream-50 dark:hover:bg-cream-800/30 transition-colors ${
-                        !notif.read ? 'bg-accent-50/30 dark:bg-accent-900/10' : ''
+                        !notif.read ? `${bgClass || 'bg-accent-50/30 dark:bg-accent-900/10'}` : ''
                       }`}
                     >
-                      <IconComp size={16} className={`shrink-0 mt-0.5 ${colorClass}`} />
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${bgClass || 'bg-cream-100 dark:bg-dark-border'}`}>
+                        <IconComp size={14} className={colorClass} />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className={`text-xs font-medium truncate ${!notif.read ? 'text-cream-900 dark:text-cream-100' : 'text-cream-600 dark:text-cream-400'}`}>
@@ -178,6 +190,18 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
               </div>
             )}
           </div>
+
+          {/* View all link */}
+          {notifications.length > 0 && (
+            <div className="border-t border-cream-200 dark:border-dark-border px-4 py-2.5 shrink-0">
+              <button
+                onClick={() => { navigate('/notifications'); setOpen(false); }}
+                className="w-full text-center text-xs text-accent-600 dark:text-accent-400 hover:underline font-medium"
+              >
+                {t('notifications.viewHistory')}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

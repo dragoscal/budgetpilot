@@ -4,7 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
-import { GOAL_TYPES } from '../lib/constants';
+import { GOAL_TYPES, CURRENCIES } from '../lib/constants';
 import { generateId, formatCurrency } from '../lib/helpers';
 import GoalCard from '../components/GoalCard';
 import Modal from '../components/Modal';
@@ -160,7 +160,15 @@ export default function Goals() {
             <div><label className="label">{t('goals.targetAmount')}</label><input type="number" className="input" value={form.targetAmount} onChange={(e) => setForm((f) => ({ ...f, targetAmount: e.target.value }))} placeholder="0" inputMode="decimal" /></div>
             <div><label className="label">{t('goals.currentAmount')}</label><input type="number" className="input" value={form.currentAmount} onChange={(e) => setForm((f) => ({ ...f, currentAmount: e.target.value }))} placeholder="0" inputMode="decimal" /></div>
           </div>
-          <div><label className="label">{t('goals.deadline')}</label><input type="date" className="input" value={form.targetDate} onChange={(e) => setForm((f) => ({ ...f, targetDate: e.target.value }))} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">{t('common.currency')}</label>
+              <select className="input" value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>)}
+              </select>
+            </div>
+            <div><label className="label">{t('goals.deadline')}</label><input type="date" className="input" value={form.targetDate} onChange={(e) => setForm((f) => ({ ...f, targetDate: e.target.value }))} /></div>
+          </div>
           {form.type === 'pay_down' && (
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">{t('goals.interestRate')}</label><input type="number" className="input" value={form.interestRate} onChange={(e) => setForm((f) => ({ ...f, interestRate: e.target.value }))} step="0.1" /></div>
