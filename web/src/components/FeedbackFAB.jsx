@@ -19,8 +19,7 @@ export default function FeedbackFAB() {
   const modalRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Don't show FAB on the dedicated feedback page
-  if (location.pathname === '/feedback') return null;
+  const hidden = location.pathname === '/feedback';
 
   const TYPES = [
     { id: 'bug', label: t('feedback.bugReport'), icon: Bug, color: 'text-danger', bg: 'bg-danger/10' },
@@ -63,6 +62,9 @@ export default function FeedbackFAB() {
       document.removeEventListener('touchstart', handler);
     };
   }, [open]);
+
+  // Don't show FAB on the dedicated feedback page (after hooks to preserve hook order)
+  if (hidden) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

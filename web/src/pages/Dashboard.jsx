@@ -524,10 +524,10 @@ export default function Dashboard() {
     return { key: 'dashboard.healthPoor', color: 'text-danger', bg: 'bg-danger/10', ring: 'ring-danger/30', strokeColor: '#e11d48' };
   }, [healthScore]);
 
-  // Month comparison text
+  // Month comparison text (uses scoped prev transactions to match stats)
   const monthComparison = useMemo(() => {
-    if (prevTransactions.length === 0 || stats.totalSpent === 0) return null;
-    const prevExpenses = prevTransactions.filter((t) => t.type === 'expense');
+    if (scopedPrevTx.length === 0 || stats.totalSpent === 0) return null;
+    const prevExpenses = scopedPrevTx.filter((t) => t.type === 'expense');
     const dayOfMonth = new Date().getDate();
     const prevAtThisPoint = sumBy(
       prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
@@ -540,7 +540,7 @@ export default function Dashboard() {
       direction: diff > 0 ? 'more' : 'less',
       isGood: diff <= 0,
     };
-  }, [stats, prevTransactions]);
+  }, [stats, scopedPrevTx]);
 
   const recentTx = useMemo(() => sortByDate(scopedTx).slice(0, 6), [scopedTx]);
 

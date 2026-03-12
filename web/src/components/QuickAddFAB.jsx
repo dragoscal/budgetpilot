@@ -15,8 +15,7 @@ export default function QuickAddFAB() {
   const modalRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Don't show on certain pages
-  if (HIDDEN_PATHS.includes(location.pathname)) return null;
+  const hidden = HIDDEN_PATHS.includes(location.pathname);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -56,6 +55,9 @@ export default function QuickAddFAB() {
       document.removeEventListener('touchstart', handler);
     };
   }, [open]);
+
+  // Don't show on certain pages (after all hooks to preserve hook order)
+  if (hidden) return null;
 
   const handleSubmit = () => {
     if (!text.trim()) return;

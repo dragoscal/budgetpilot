@@ -160,7 +160,7 @@ function createCrud(storeName) {
       }
 
       const apiUrl = await getApiUrl();
-      if (isApiMode(apiUrl)) {
+      if (isApiMode(apiUrl) && getAuthToken()) {
         if (!navigator.onLine) throw new Error('You are offline. Cannot save right now.');
         const serverData = { ...updated };
         if (serverData.userId === 'local') delete serverData.userId;
@@ -172,21 +172,21 @@ function createCrud(storeName) {
         await storage.update(storeName, updated);
         return updated;
       }
-      // Local-only mode
+      // Local-only mode (or no auth token)
       await storage.update(storeName, updated);
       return updated;
     },
 
     async remove(id) {
       const apiUrl = await getApiUrl();
-      if (isApiMode(apiUrl)) {
+      if (isApiMode(apiUrl) && getAuthToken()) {
         if (!navigator.onLine) throw new Error('You are offline. Cannot delete right now.');
         await apiFetch(apiUrl, `/api/${apiTable}/${id}`, { method: 'DELETE' });
         // Server succeeded — remove from local cache
         await storage.remove(storeName, id);
         return;
       }
-      // Local-only mode
+      // Local-only mode (or no auth token)
       await storage.remove(storeName, id);
     },
   };

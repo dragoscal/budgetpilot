@@ -1,10 +1,19 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '1.9.0';
+export const APP_VERSION = '1.9.1';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '1.9.1',
+    date: '2026-03-12',
+    items: [
+      { icon: 'Zap',               textKey: 'changelog.v191fabHooksFix',      type: 'fix' },
+      { icon: 'Shield',            textKey: 'changelog.v191apiAuthFallback',   type: 'fix' },
+      { icon: 'BarChart2',         textKey: 'changelog.v191dashboardScope',    type: 'fix' },
+    ],
+  },
   {
     version: '1.9.0',
     date: '2026-03-12',
