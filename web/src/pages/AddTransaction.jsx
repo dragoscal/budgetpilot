@@ -13,6 +13,7 @@ import ManualForm from '../components/ManualForm';
 import CategoryPicker from '../components/CategoryPicker';
 import BankStatementUpload from '../components/BankStatementUpload';
 import CSVImport from '../components/CSVImport';
+import { getActiveJob } from '../lib/backgroundJobs';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
@@ -69,6 +70,9 @@ export default function AddTransaction() {
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
       const pending = pendingRef.current;
+      // Skip if a background job is handling the save (bank statement processing)
+      const bgJob = getActiveJob();
+      if (bgJob && bgJob.status === 'processing' && !bgJob.handled) return;
       if (pending && pending.length > 0) {
         const meta = receiptMetaRef.current;
         const merchant = pending[0]?.merchant || 'Draft';

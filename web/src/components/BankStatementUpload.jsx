@@ -1,9 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, FileText, X, Loader2, Building2, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
-import { processBankStatement } from '../lib/ai';
 import { formatCurrency } from '../lib/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import {
+  startBankStatementJob,
+  markJobHandled,
+  cancelJob,
+  getActiveJob,
+} from '../lib/backgroundJobs';
 
 export default function BankStatementUpload({ onResult, onError }) {
   const { t } = useTranslation();
@@ -15,17 +20,78 @@ export default function BankStatementUpload({ onResult, onError }) {
   const [progress, setProgress] = useState(0);
   const [bankInfo, setBankInfo] = useState(null);
   const fileRef = useRef(null);
-  const abortRef = useRef(null);
+  const mountedRef = useRef(true);
 
-  // Abort any in-flight AI request when component unmounts (user navigates away)
+  // On mount: check if there's an active background job (user came back mid-processing)
   useEffect(() => {
+    mountedRef.current = true;
+    const job = getActiveJob();
+    if (job && job.status === 'processing' && !job.handled) {
+      // Resume showing progress for the in-flight job
+      setFileName(job.fileName);
+      setProcessing(true);
+      setProgress(25);
+      setStatus(t('addTransaction.aiAnalyzing'));
+
+      // Attach to the existing promise
+      job.promise
+        .then((results) => {
+          if (!mountedRef.current) return; // Component unmounted again
+          markJobHandled();
+          handleResults(results, job.fileName);
+        })
+        .catch((err) => {
+          if (!mountedRef.current) return;
+          if (err.name === 'AbortError') return;
+          onError?.(err.message || t('addTransaction.failedProcess'));
+          setStatus('');
+        })
+        .finally(() => {
+          if (!mountedRef.current) return;
+          setProcessing(false);
+          setProgress(0);
+        });
+    }
+
+    // On unmount: DON'T abort — let background system handle completion
     return () => {
-      if (abortRef.current) {
-        abortRef.current.abort();
-        abortRef.current = null;
-      }
+      mountedRef.current = false;
+      // The backgroundJobs module will handle the result if still processing
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleResults = useCallback((results, fName) => {
+    setProgress(90);
+    setStatus(t('addTransaction.preparingTx'));
+
+    if (results.bankInfo) {
+      setBankInfo(results.bankInfo);
+    }
+
+    setProgress(100);
+    setStatus(t('common.done'));
+
+    const enrichedResult = {
+      transactions: results.transactions,
+      receipt: {
+        store: (results.bankInfo?.bankName && results.bankInfo.bankName !== 'Unknown Bank')
+          ? results.bankInfo.bankName
+          : t('addTransaction.bankStatement'),
+        date: results.bankInfo?.period?.from
+          ? `${results.bankInfo.period.from} to ${results.bankInfo.period.to}`
+          : t('addTransaction.unknownPeriod'),
+        currency: results.bankInfo?.currency || 'RON',
+      },
+      warnings: results.warnings || [],
+      summary: results.summary || `${results.transactions.length} ${t('addTransaction.txExtracted')}`,
+      hasItemsToReview: results.hasItemsToReview,
+      _bankStatement: true,
+      _bankInfo: results.bankInfo,
+    };
+
+    onResult?.(enrichedResult);
+    setTimeout(() => setStatus(''), 1500);
+  }, [onResult, t]);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -60,49 +126,28 @@ export default function BankStatementUpload({ onResult, onError }) {
         setProgress(25);
         setStatus(t('addTransaction.aiAnalyzing'));
 
-        // Create AbortController so we can cancel if user navigates away
-        const controller = new AbortController();
-        abortRef.current = controller;
+        // Start via background job system (survives navigation)
+        const { promise } = startBankStatementJob(base64Data, {
+          userId: effectiveUserId,
+          fileName: file.name,
+        });
 
-        const results = await processBankStatement(base64Data, { userId: effectiveUserId, signal: controller.signal });
+        const results = await promise;
 
-        setProgress(90);
-        setStatus(t('addTransaction.preparingTx'));
-
-        if (results.bankInfo) {
-          setBankInfo(results.bankInfo);
-        }
-
-        setProgress(100);
-        setStatus(t('common.done'));
-
-        const enrichedResult = {
-          transactions: results.transactions,
-          receipt: {
-            store: (results.bankInfo?.bankName && results.bankInfo.bankName !== 'Unknown Bank') ? results.bankInfo.bankName : t('addTransaction.bankStatement'),
-            date: results.bankInfo?.period?.from
-              ? `${results.bankInfo.period.from} to ${results.bankInfo.period.to}`
-              : t('addTransaction.unknownPeriod'),
-            currency: results.bankInfo?.currency || 'RON',
-          },
-          warnings: results.warnings || [],
-          summary: results.summary || `${results.transactions.length} ${t('addTransaction.txExtracted')}`,
-          hasItemsToReview: results.hasItemsToReview,
-          _bankStatement: true,
-          _bankInfo: results.bankInfo,
-        };
-
-        onResult?.(enrichedResult);
-        setTimeout(() => setStatus(''), 1500);
+        // If still mounted, handle inline
+        if (!mountedRef.current) return;
+        markJobHandled();
+        handleResults(results, file.name);
       } catch (err) {
-        // Don't show error if we aborted intentionally (user navigated away)
+        if (!mountedRef.current) return;
         if (err.name === 'AbortError') return;
         onError?.(err.message || t('addTransaction.failedProcess'));
         setStatus('');
       } finally {
-        abortRef.current = null;
-        setProcessing(false);
-        setProgress(0);
+        if (mountedRef.current) {
+          setProcessing(false);
+          setProgress(0);
+        }
       }
     };
 
@@ -114,7 +159,7 @@ export default function BankStatementUpload({ onResult, onError }) {
     };
 
     reader.readAsDataURL(file);
-  }, [onResult, onError, t]);
+  }, [onResult, onError, t, effectiveUserId, handleResults]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -123,18 +168,15 @@ export default function BankStatementUpload({ onResult, onError }) {
     if (file) handleFile(file);
   };
 
-  const cancelProcessing = () => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
+  const handleCancel = () => {
+    cancelJob();
     setProcessing(false);
     setProgress(0);
     setStatus('');
   };
 
   const clear = () => {
-    cancelProcessing();
+    handleCancel();
     setFileName(null);
     setBankInfo(null);
     if (fileRef.current) fileRef.current.value = '';
@@ -216,10 +258,13 @@ export default function BankStatementUpload({ onResult, onError }) {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">{status}</p>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+              {status}
+              <span className="text-cream-400 ml-2">{t('addTransaction.canNavigateAway') || 'You can leave this page — processing will continue'}</span>
+            </p>
           </div>
           <button
-            onClick={cancelProcessing}
+            onClick={handleCancel}
             className="p-1.5 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800/30 text-indigo-400 hover:text-indigo-600 transition-colors shrink-0"
             title={t('common.cancel')}
           >
@@ -240,7 +285,7 @@ export default function BankStatementUpload({ onResult, onError }) {
 
       <button
         onClick={() => {
-          if (processing) cancelProcessing();
+          if (processing) handleCancel();
           fileRef.current?.click();
         }}
         className="btn-secondary w-full flex items-center justify-center gap-2"
