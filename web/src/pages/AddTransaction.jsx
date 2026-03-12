@@ -200,7 +200,7 @@ export default function AddTransaction() {
   };
 
   const handleManualSubmit = async (tx) => {
-    const dupes = await checkDuplicate(tx);
+    const dupes = await checkDuplicate(tx, effectiveUserId);
     if (dupes.length > 0 && dupes[0].confidence >= 0.6) {
       setDuplicateWarning(dupes[0]);
       setPendingSave(tx);

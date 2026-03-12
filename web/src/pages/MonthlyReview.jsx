@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -21,9 +21,12 @@ export default function MonthlyReview() {
   const [recurringItems, setRecurring] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rates, setRates] = useState(null);
+  const loadVersion = useRef(0);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     (async () => {
       setLoading(true);
       try {
@@ -33,6 +36,7 @@ export default function MonthlyReview() {
           goalsApi.getAll({ userId: effectiveUserId }),
           recurringApi.getAll({ userId: effectiveUserId }),
         ]);
+        if (version !== loadVersion.current) return; // stale
         const start = startOfMonth(month);
         const end = endOfMonth(month);
         const prevStart = startOfMonth(subMonths(month, 1));
@@ -45,7 +49,7 @@ export default function MonthlyReview() {
         setRecurring(rec.filter((r) => r.active !== false));
         getCachedRates().then(setRates).catch(() => {});
       } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      finally { if (version === loadVersion.current) setLoading(false); }
     })();
   }, [month, effectiveUserId]);
 

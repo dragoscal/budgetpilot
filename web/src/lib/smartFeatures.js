@@ -8,7 +8,7 @@
  */
 
 import { getAll, getSetting, setSetting } from './storage';
-import { MERCHANT_CATEGORY_MAP } from './constants';
+import { MERCHANT_CATEGORY_MAP, KEYWORD_SUBCATEGORY_MAP } from './constants';
 
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
@@ -372,9 +372,12 @@ export async function inferCategorySmart(merchant) {
     }
   }
 
-  // 3. Check hardcoded keyword map
+  // 3. Check hardcoded keyword map (with subcategory support)
   for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
-    if (lower.includes(key)) return { category: cat, subcategory: null };
+    if (lower.includes(key)) {
+      const subcat = KEYWORD_SUBCATEGORY_MAP[key] || null;
+      return { category: cat, subcategory: subcat };
+    }
   }
 
   return { category: 'other', subcategory: null };

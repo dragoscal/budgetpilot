@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { transactions as txApi, recurring as recurringApi } from '../../lib/api';
 import { checkDuplicate, checkTransferPair, learnCategory, detectRecurringPatterns, batchCheckDuplicates } from '../../lib/smartFeatures';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +12,7 @@ const MAX_CONSECUTIVE_ERRORS = 5;
 export default function StepImport({ transactions, importResult, setImportResult, onReset }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [importing, setImporting] = useState(false);
@@ -48,7 +50,7 @@ export default function StepImport({ transactions, importResult, setImportResult
   const runPreScan = async () => {
     setScanPhase('scanning');
     try {
-      const results = await batchCheckDuplicates(transactions);
+      const results = await batchCheckDuplicates(transactions, effectiveUserId);
       // Only auto-skip high-confidence duplicates (≥0.8) — e.g. exact merchant+date+amount match
       // Lower-confidence matches (same amount+date but different merchant) are imported normally
       const toImport = results.filter((r) => !r.isTransferPair && !(r.isDuplicate && r.confidence >= 0.8));
@@ -98,12 +100,12 @@ export default function StepImport({ transactions, importResult, setImportResult
       const tx = txList[i];
       try {
         // Safety net: per-item duplicate check (in case DB changed since pre-scan)
-        const dupes = await checkDuplicate(tx);
+        const dupes = await checkDuplicate(tx, effectiveUserId);
         if (dupes && dupes.length > 0 && dupes[0].confidence >= 0.8) {
           skipped++;
           consecutiveErrors = 0;
         } else if (tx.source === 'bank_statement' && (tx.type === 'transfer' || tx.category === 'transfer')) {
-          const pair = await checkTransferPair(tx);
+          const pair = await checkTransferPair(tx, effectiveUserId);
           if (pair) {
             skipped++;
             consecutiveErrors = 0;
@@ -171,8 +173,8 @@ export default function StepImport({ transactions, importResult, setImportResult
     if (result.saved > 0) {
       try {
         const [existingRecurring, patterns] = await Promise.all([
-          recurringApi.getAll(),
-          detectRecurringPatterns(),
+          recurringApi.getAll({ userId: effectiveUserId }),
+          detectRecurringPatterns(effectiveUserId),
         ]);
         const existingMerchants = new Set(
           (Array.isArray(existingRecurring) ? existingRecurring : [])

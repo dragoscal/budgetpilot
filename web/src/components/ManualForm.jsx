@@ -68,7 +68,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
     if (merchant.length < 1) { setSuggestions([]); return; }
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const results = await getMerchantSuggestions(merchant);
+      const results = await getMerchantSuggestions(merchant, effectiveUserId);
       if (!cancelled) {
         setSuggestions(results);
         setShowSuggestions(results.length > 0);

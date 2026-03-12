@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getAll } from '../lib/storage';
 import { transactions as txApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,22 +21,28 @@ export default function ReceiptGallery() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [dateFilter, setDateFilter] = useState('all');
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadData(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    loadData();
+  }, [effectiveUserId]);
 
   const loadData = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [rcpts, tx] = await Promise.all([
         getAll('receipts'),
         txApi.getAll({ userId: effectiveUserId }),
       ]);
+      if (version !== loadVersion.current) return; // stale
       // Sort newest first
       rcpts.sort((a, b) => (b.processedAt || b.createdAt || '').localeCompare(a.processedAt || a.createdAt || ''));
       setReceipts(rcpts);
       setTransactions(tx);
     } catch { toast.error(t('receipts.failedLoad')); }
-    finally { setLoading(false); }
+    finally { if (version === loadVersion.current) setLoading(false); }
   };
 
   // Filter receipts

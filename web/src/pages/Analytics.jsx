@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -25,9 +25,12 @@ export default function Analytics() {
   const [rates, setRates] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [scopeFilter, setScopeFilter] = useState('all');
+  const loadVersion = useRef(0);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     (async () => {
       setLoading(true);
       try {
@@ -36,11 +39,12 @@ export default function Analytics() {
           budgetsApi.getAll({ userId: effectiveUserId }),
           getCachedRates(),
         ]);
+        if (version !== loadVersion.current) return; // stale
         setAllTx(tx);
         setBudgets(budgets);
         setRates(ratesData);
       } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      finally { if (version === loadVersion.current) setLoading(false); }
     })();
   }, [effectiveUserId]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -22,9 +22,12 @@ export default function CashFlow() {
   const [forecast, setForecast] = useState(null);
   const [forecastDays, setForecastDays] = useState(90);
   const [rates, setRates] = useState(null);
+  const loadVersion = useRef(0);
   const currency = user?.defaultCurrency || 'RON';
 
   useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     (async () => {
       setLoading(true);
       try {
@@ -33,14 +36,16 @@ export default function CashFlow() {
           recurringApi.getAll({ userId: effectiveUserId }),
           getCachedRates(),
         ]);
+        if (version !== loadVersion.current) return; // stale
         setAllTx(tx);
         setRecurring(rec.filter((r) => r.active !== false));
         setRates(ratesData);
         // Load forecast
         const fc = await forecastCashFlow({ userId: effectiveUserId, days: forecastDays, defaultCurrency: currency });
+        if (version !== loadVersion.current) return; // stale
         setForecast(fc);
       } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      finally { if (version === loadVersion.current) setLoading(false); }
     })();
   }, [forecastDays, effectiveUserId]);
 

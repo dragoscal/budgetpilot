@@ -6,10 +6,14 @@ import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
 import { learnCategory } from '../lib/smartFeatures';
 import { User, Home } from 'lucide-react';
+import CategoryPicker from './CategoryPicker';
+import TagInput from './TagInput';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TransactionEditModal({ transaction, open, onClose, onSave }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const [form, setForm] = useState({});
 
   useEffect(() => {
@@ -19,36 +23,41 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
         amount: transaction.amount || 0,
         currency: transaction.currency || 'RON',
         category: transaction.category || 'other',
+        subcategory: transaction.subcategory || null,
         type: transaction.type || 'expense',
         date: transaction.date || todayLocal(),
         description: transaction.description || '',
+        tags: transaction.tags || [],
         scope: transaction.scope || 'personal',
       });
     }
   }, [transaction]);
 
   const handleSave = () => {
-    if (!form.merchant.trim() || !form.amount) return;
+    if (!form.amount) return;
 
     const categoryChanged = transaction && form.category !== transaction.category;
+    const subcategoryChanged = transaction && form.subcategory !== transaction.subcategory;
     const merchantExists = form.merchant && form.merchant.trim().length > 0;
 
     onSave({
       ...transaction,
       ...form,
       amount: Math.abs(Number(form.amount)),
+      subcategory: form.subcategory || null,
+      tags: (form.tags || []).filter(Boolean),
       updatedAt: new Date().toISOString(),
     });
 
     // Learn this categorization immediately, offer undo to cancel learning
-    if (categoryChanged && merchantExists) {
+    if ((categoryChanged || subcategoryChanged) && merchantExists) {
       const merchant = form.merchant.trim();
       const newCategory = form.category;
       const catObj = CATEGORIES.find((c) => c.id === newCategory);
       const catName = catObj ? `${catObj.icon} ${t('categories.' + newCategory)}` : newCategory;
 
-      // Learn immediately
-      learnCategory(merchant, newCategory);
+      // Learn immediately (with subcategory)
+      learnCategory(merchant, newCategory, form.subcategory || null);
 
       toast.undo(
         t('categories.alwaysCategorize', { merchant, category: catName }),
@@ -94,10 +103,15 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
           </div>
         </div>
         <div>
-          <label className="label">{t('transactions.category')}</label>
-          <select className="input" value={form.category || 'other'} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {t('categories.' + c.id)}</option>)}
-          </select>
+          <CategoryPicker
+            label={t('transactions.category')}
+            value={form.category || 'other'}
+            subcategoryValue={form.subcategory || null}
+            onChange={(catId, subId) => setForm(f => ({...f, category: catId, subcategory: subId || null}))}
+            exclude={form.type === 'income' ? CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id)
+                   : form.type === 'transfer' ? CATEGORIES.filter(c => c.id !== 'transfer').map(c => c.id)
+                   : ['income', 'transfer']}
+          />
         </div>
         <div>
           <label className="label">{t('transactions.date')}</label>
@@ -105,7 +119,10 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
         </div>
         <div>
           <label className="label">{t('transactions.description')}</label>
-          <input className="input" value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
+          <input className="input" value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} placeholder={t('manualForm.optionalNote')} />
+        </div>
+        <div>
+          <TagInput tags={form.tags || []} onChange={(tags) => setForm(f => ({...f, tags}))} userId={effectiveUserId} />
         </div>
         {transaction?.originalText && (
           <div>

@@ -1,10 +1,24 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '1.8.4';
+export const APP_VERSION = '1.9.0';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '1.9.0',
+    date: '2026-03-12',
+    items: [
+      { icon: 'MessageSquare',     textKey: 'changelog.v190nlpProductMerchant', type: 'fix' },
+      { icon: 'Tag',               textKey: 'changelog.v190subcategoryEdit',    type: 'feature' },
+      { icon: 'Layers',            textKey: 'changelog.v190categoryPicker',     type: 'feature' },
+      { icon: 'Hash',              textKey: 'changelog.v190tagEditor',          type: 'feature' },
+      { icon: 'Globe',             textKey: 'changelog.v190romanianKeywords',   type: 'feature' },
+      { icon: 'Zap',               textKey: 'changelog.v190pageLoadingGuards',  type: 'fix' },
+      { icon: 'Users',             textKey: 'changelog.v190userIdConsistency',  type: 'fix' },
+      { icon: 'Database',          textKey: 'changelog.v190tableMapFix',        type: 'fix' },
+    ],
+  },
   {
     version: '1.8.4',
     date: '2026-03-12',

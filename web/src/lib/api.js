@@ -7,6 +7,7 @@ const TABLE_MAP = {
   loanPayments: 'loan_payments',
   familyMembers: 'family_members',
   sharedExpenses: 'shared_expenses',
+  settlementHistory: 'settlement_history',
 };
 
 // Reverse: API table names → IndexedDB store names

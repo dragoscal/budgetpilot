@@ -167,18 +167,29 @@ export const MERCHANT_CATEGORY_MAP = {
   // Food delivery (longer keys MUST come before shorter to match first)
   'bolt food': 'dining', 'uber eats': 'dining',
   glovo: 'dining', tazz: 'dining', wolt: 'dining', foodpanda: 'dining',
-  // Groceries
+  // Groceries — stores
   lidl: 'groceries', kaufland: 'groceries', carrefour: 'groceries',
   'mega image': 'groceries', megaimage: 'groceries', auchan: 'groceries',
   profi: 'groceries', penny: 'groceries', cora: 'groceries', selgros: 'groceries',
+  // Groceries — Romanian food products (no merchant, just a product)
+  paine: 'groceries', painea: 'groceries', franzela: 'groceries', covrigi: 'groceries', corn: 'groceries',
+  lapte: 'groceries', iaurt: 'groceries', branza: 'groceries', smantana: 'groceries', unt: 'groceries', oua: 'groceries',
+  carne: 'groceries', pui: 'groceries', porc: 'groceries', vita: 'groceries', peste: 'groceries', salam: 'groceries',
+  legume: 'groceries', fructe: 'groceries', rosii: 'groceries', cartofi: 'groceries', ceapa: 'groceries', morcovi: 'groceries',
+  orez: 'groceries', paste: 'groceries', faina: 'groceries', zahar: 'groceries', ulei: 'groceries', sare: 'groceries',
+  apa: 'groceries', suc: 'groceries', bere: 'groceries', vin: 'groceries',
+  cumparaturi: 'groceries', mancare: 'groceries', alimente: 'groceries',
   // Transport (rideshare + fuel)
   bolt: 'transport', uber: 'transport', taxi: 'transport', 'free now': 'transport',
   omv: 'transport', petrom: 'transport', rompetrol: 'transport', mol: 'transport', lukoil: 'transport',
+  benzina: 'transport', motorina: 'transport', combustibil: 'transport', carburant: 'transport',
+  parcare: 'transport', metrou: 'transport', autobuz: 'transport', tramvai: 'transport',
   // Shopping
   emag: 'shopping', altex: 'shopping', dedeman: 'shopping', flanco: 'shopping',
   ikea: 'shopping', jysk: 'shopping', decathlon: 'shopping', pepco: 'shopping',
   zara: 'shopping', 'h&m': 'shopping', reserved: 'shopping',
   amazon: 'shopping', temu: 'shopping', aliexpress: 'shopping',
+  haine: 'shopping',
   // Subscriptions
   netflix: 'subscriptions', spotify: 'subscriptions', youtube: 'subscriptions',
   hbo: 'subscriptions', disney: 'subscriptions',
@@ -188,20 +199,70 @@ export const MERCHANT_CATEGORY_MAP = {
   // Entertainment/gaming
   steam: 'entertainment', blizzard: 'entertainment', xbox: 'entertainment',
   playstation: 'entertainment', nintendo: 'entertainment', epic: 'entertainment',
+  cinema: 'entertainment', film: 'entertainment',
   // Utilities
   enel: 'utilities', engie: 'utilities', digi: 'utilities', vodafone: 'utilities',
   'e.on': 'utilities', orange: 'utilities', rcs: 'utilities', telekom: 'utilities',
+  curent: 'utilities', gaz: 'utilities', internet: 'utilities', telefon: 'utilities',
   // Health
   farmacia: 'health', catena: 'health', sensiblu: 'health',
   dona: 'health', helpnet: 'health', 'ana pharm': 'health',
+  medicamente: 'health', doctor: 'health', dentist: 'health', spital: 'health',
   // Dining
   mcdonalds: 'dining', kfc: 'dining', 'burger king': 'dining',
   subway: 'dining', starbucks: 'dining', restaurant: 'dining',
   pizz: 'dining', mattina: 'dining', cuptorul: 'dining',
+  cafea: 'dining', pranz: 'dining', cina: 'dining', mic_dejun: 'dining',
   // Pets
   'maxi pet': 'pets', 'pet shop': 'pets', liprac: 'pets',
+  // Housing
+  chirie: 'housing', intretinere: 'housing',
+  // Education
+  carte: 'education', carti: 'education', curs: 'education',
   // Apple (general — subscriptions)
   apple: 'subscriptions',
+};
+
+// Keyword → subcategory map for more precise auto-categorization
+export const KEYWORD_SUBCATEGORY_MAP = {
+  // Groceries subcategories
+  paine: 'groceries:bakery', painea: 'groceries:bakery', franzela: 'groceries:bakery',
+  covrigi: 'groceries:bakery', corn: 'groceries:bakery',
+  lapte: 'groceries:dairy', iaurt: 'groceries:dairy', branza: 'groceries:dairy',
+  smantana: 'groceries:dairy', unt: 'groceries:dairy', oua: 'groceries:dairy',
+  carne: 'groceries:meat', pui: 'groceries:meat', porc: 'groceries:meat',
+  vita: 'groceries:meat', peste: 'groceries:meat', salam: 'groceries:meat',
+  legume: 'groceries:produce', fructe: 'groceries:produce', rosii: 'groceries:produce',
+  cartofi: 'groceries:produce', ceapa: 'groceries:produce', morcovi: 'groceries:produce',
+  orez: 'groceries:pantry', paste: 'groceries:pantry', faina: 'groceries:pantry',
+  zahar: 'groceries:pantry', ulei: 'groceries:pantry', sare: 'groceries:pantry',
+  suc: 'groceries:beverages', bere: 'groceries:beverages', vin: 'groceries:beverages',
+  apa: 'groceries:beverages',
+  // Transport subcategories
+  benzina: 'transport:fuel', motorina: 'transport:fuel', combustibil: 'transport:fuel',
+  carburant: 'transport:fuel', omv: 'transport:fuel', petrom: 'transport:fuel',
+  rompetrol: 'transport:fuel', mol: 'transport:fuel', lukoil: 'transport:fuel',
+  bolt: 'transport:rideshare', uber: 'transport:rideshare', taxi: 'transport:rideshare',
+  'free now': 'transport:rideshare',
+  parcare: 'transport:parking', metrou: 'transport:public',
+  autobuz: 'transport:public', tramvai: 'transport:public',
+  // Dining subcategories
+  cafea: 'dining:cafe', starbucks: 'dining:cafe',
+  mcdonalds: 'dining:fast_food', kfc: 'dining:fast_food', 'burger king': 'dining:fast_food', subway: 'dining:fast_food',
+  glovo: 'dining:delivery', tazz: 'dining:delivery', wolt: 'dining:delivery', foodpanda: 'dining:delivery',
+  'bolt food': 'dining:delivery', 'uber eats': 'dining:delivery',
+  restaurant: 'dining:restaurant', pranz: 'dining:restaurant', cina: 'dining:restaurant',
+  // Health subcategories
+  farmacia: 'health:pharmacy', catena: 'health:pharmacy', sensiblu: 'health:pharmacy',
+  dona: 'health:pharmacy', helpnet: 'health:pharmacy', medicamente: 'health:pharmacy',
+  doctor: 'health:doctor', dentist: 'health:dental', spital: 'health:doctor',
+  // Utilities subcategories
+  curent: 'utilities:electricity', enel: 'utilities:electricity',
+  gaz: 'utilities:gas', engie: 'utilities:gas',
+  internet: 'utilities:internet', digi: 'utilities:internet',
+  telefon: 'utilities:phone', vodafone: 'utilities:phone', orange: 'utilities:phone',
+  // Housing subcategories
+  chirie: 'housing:rent', intretinere: 'housing:repairs',
 };
 
 export const AI_PROVIDERS = [
