@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
 import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
@@ -76,7 +77,7 @@ export default function Reports() {
     return Object.entries(byCategory)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
-        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, total: sumAmountsMultiCurrency(txs, currency, rates), count: txs.length };
+        return { id: catId, name: getCategoryLabel(cat, t), icon: cat.icon, total: sumAmountsMultiCurrency(txs, currency, rates), count: txs.length };
       })
       .sort((a, b) => b.total - a.total);
   }, [expenses, t, currency, rates]);

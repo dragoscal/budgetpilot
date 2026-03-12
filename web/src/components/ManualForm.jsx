@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
-import { generateId, formatDateISO, validateTransaction, parseLocalNumber } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
+import { generateId, formatDateISO, validateTransaction, parseLocalNumber, getCategoryById } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { getAll } from '../lib/storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -322,13 +323,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
                   className="w-full px-3 py-2 text-left hover:bg-cream-100 dark:hover:bg-dark-border flex items-center justify-between text-sm transition-colors"
                 >
                   <span className="font-medium">{s.merchant}</span>
-                  <span className="text-xs text-cream-500">{s.count}x · {t(`categories.${s.category}`)}</span>
+                  <span className="text-xs text-cream-500">{s.count}x · {getCategoryLabel(getCategoryById(s.category), t)}</span>
                 </button>
               ))}
             </div>
           )}
           {categoryAutoSet && !initial.id && (
-            <p className="text-[10px] text-success mt-0.5">{t('manualForm.autoCategorized').replace('{category}', t(`categories.${category}`))}</p>
+            <p className="text-[10px] text-success mt-0.5">{t('manualForm.autoCategorized').replace('{category}', getCategoryLabel(getCategoryById(category), t))}</p>
           )}
         </div>
 

@@ -1,4 +1,5 @@
 import { getCategoryById, formatCurrency, percentOf } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -17,7 +18,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5">
             <span>{cat.icon}</span>
-            <span className="font-medium">{t(`categories.${cat.id}`)}</span>
+            <span className="font-medium">{getCategoryLabel(cat, t)}</span>
           </span>
           <span className="text-cream-500">{pct}%</span>
         </div>
@@ -34,7 +35,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
         <div className="flex items-center gap-2">
           <span className="text-xl">{cat.icon}</span>
           <div>
-            <p className="font-medium text-sm">{t(`categories.${cat.id}`)}</p>
+            <p className="font-medium text-sm">{getCategoryLabel(cat, t)}</p>
             <p className="text-xs text-cream-500">
               {formatCurrency(spent, currency, { hide })} / {formatCurrency(budgeted, currency, { hide })}
             </p>

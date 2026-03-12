@@ -13,13 +13,13 @@ import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants
 import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
 import { requestNotificationPermission, getNotificationPermission } from '../lib/notifications';
-import { Settings as SettingsIcon, Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
+import { Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel, addCustomCategory, updateCustomCategory, deleteCustomCategory, toggleCategoryVisibility } from '../lib/categoryManager';
 import HelpButton from '../components/HelpButton';
 import { APP_VERSION, CHANGELOG } from '../lib/changelog';
-import { Sparkles, History, ChevronDown, ChevronUp, Eye, Pencil, Grid3X3, Palette } from 'lucide-react';
+import { Sparkles, History, ChevronDown, ChevronUp, Eye, Pencil, Grid3X3 } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -1003,9 +1003,14 @@ export default function SettingsPage() {
                         <button
                           onClick={async () => {
                             if (!confirm(t('settings.deleteConfirmCategory'))) return;
-                            await deleteCustomCategory(cat.id);
-                            refreshCategories();
-                            toast.success(t('settings.categoryDeleted'));
+                            try {
+                              await deleteCustomCategory(cat.id);
+                              refreshCategories();
+                              toast.success(t('settings.categoryDeleted'));
+                            } catch (err) {
+                              console.error('Failed to delete category:', err);
+                              toast.error(t('common.error'));
+                            }
                           }}
                           className="p-1.5 rounded-lg hover:bg-danger/10 transition-colors"
                         >

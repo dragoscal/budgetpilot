@@ -990,7 +990,13 @@ function generateLocalSummary(transactions, budgets) {
 
 // ─── SPREADSHEET ANALYSIS ─────────────────────────────────
 
-const SPREADSHEET_ANALYSIS_PROMPT = `You are an expert spreadsheet parser for a Romanian budgeting app. You analyze household budget spreadsheets to detect their structure.
+function buildSpreadsheetPrompt(customCats = []) {
+  const allCatIds = [...CATEGORIES.map(c => c.id), ...customCats.map(c => c.id)];
+  const customSection = customCats.length > 0
+    ? `\n\nCUSTOM USER CATEGORIES (also map to these):\n${customCats.map(c => `- "${c.id}": ${c.name}${c.keywords?.length ? ` (keywords: ${c.keywords.join(', ')})` : ''}`).join('\n')}`
+    : '';
+
+  return `You are an expert spreadsheet parser for a Romanian budgeting app. You analyze household budget spreadsheets to detect their structure.
 
 COMMON LAYOUTS:
 1. "flat-table": Each row is one transaction/expense with columns like date, month, person, category, amount. This is the simplest and most common format.
@@ -1069,7 +1075,7 @@ MONTHLY-COLUMNS FIELD DEFINITIONS:
 - dataStartRow: First row index (0-based) with actual data
 
 CATEGORY MAPPING — Map to these app categories:
-groceries, dining, transport, shopping, health, subscriptions, utilities, entertainment, education, travel, housing, personal, gifts, insurance, pets, savings, income, transfer, other
+${allCatIds.join(', ')}${customSection}
 
 Common Romanian → English:
 cumparaturi/mancare → groceries, bautura → dining, restaurant/iesit in oras → dining, utile/utilitati → utilities, chirie → housing, facturi → utilities, haine/imbracaminte → shopping, transport/uber → transport, bilete → transport, sanatate/medic/dentist/farmacie → health, cosmetice/manichiura/tuns → personal, divertisment/party → entertainment, educatie/carti → education, cadouri → gifts, abonamente/netflix/spotify → subscriptions, economii → savings, salariu/venit → income, cafea → dining, comanda mancare → dining, chirie + facturi → housing, utile masina → transport, tigari → personal, aspirator → shopping, orange → subscriptions, consultatie → health, capadoccia → travel, oana SMM → other
@@ -1079,14 +1085,16 @@ IMPORTANT:
 - Empty cells are null
 - Numbers may be European format (1.234,56)
 - Return ONLY valid JSON, nothing else`;
+}
 
 export async function processSpreadsheetStructure(gridSample, { userId = 'local' } = {}) {
+  const customCats = await getCustomCategories();
   const result = await callAI([
     {
       role: 'user',
       content: `Analyze this spreadsheet structure. The data is rows of cells in JSON format. Detect the layout pattern, months, people, categories, and amount locations.\n\nGrid data:\n${gridSample}`,
     },
-  ], SPREADSHEET_ANALYSIS_PROMPT, 4000);
+  ], buildSpreadsheetPrompt(customCats), 4000);
 
   return result;
 }

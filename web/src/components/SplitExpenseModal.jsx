@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { sharedExpenses as sharedApi } from '../lib/api';
-import { generateId, formatCurrency } from '../lib/helpers';
+import { generateId, formatCurrency, getCategoryById } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import Modal from './Modal';
 import SplitCalculator from './SplitCalculator';
 
@@ -125,7 +126,7 @@ export default function SplitExpenseModal({ open, onClose, transaction, onSaved 
         <div className="flex items-center justify-between p-3 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border">
           <div>
             <p className="text-sm font-medium">{transaction.merchant}</p>
-            <p className="text-xs text-cream-500">{transaction.date} · {t(`categories.${transaction.category}`)}</p>
+            <p className="text-xs text-cream-500">{transaction.date} · {getCategoryLabel(getCategoryById(transaction.category), t)}</p>
           </div>
           <p className="text-lg font-heading font-bold money">
             {formatCurrency(transaction.amount, transaction.currency)}

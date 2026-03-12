@@ -3,6 +3,7 @@ import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine } from 'recharts';
@@ -208,7 +209,7 @@ export default function CashFlow() {
             <div className="space-y-2">
               {expenseByCategory.slice(0, 8).map((c) => (
                 <div key={c.id} className="flex justify-between text-sm">
-                  <span>{c.icon} {t(`categories.${c.id}`) || c.name}</span>
+                  <span>{c.icon} {getCategoryLabel(c, t)}</span>
                   <span className="money font-medium">{formatCurrency(c.total, currency)}</span>
                 </div>
               ))}

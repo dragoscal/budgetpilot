@@ -3,6 +3,7 @@ import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurr
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndicator, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -70,7 +71,7 @@ export default function MonthlyReview() {
         const cat = getCategoryById(catId);
         const spent = sumAmountsMultiCurrency(txs, currency, rates);
         const budget = budgetsList.find((b) => b.category === catId);
-        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, spent, budget: budget?.amount || 0, pct: budget ? percentOf(spent, budget.amount) : 0 };
+        return { id: catId, name: getCategoryLabel(cat, t), icon: cat.icon, spent, budget: budget?.amount || 0, pct: budget ? percentOf(spent, budget.amount) : 0 };
       })
       .sort((a, b) => b.spent - a.spent);
   }, [currentTx, budgetsList, currency, rates, t]);

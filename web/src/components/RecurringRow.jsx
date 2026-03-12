@@ -1,4 +1,5 @@
 import { getCategoryById, formatCurrency, getFrequencyById, calcMonthlyEquivalent, calcAnnualEquivalent, getRecurringPaymentStats, formatDate } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { useTranslation } from '../contexts/LanguageContext';
 import { Edit3, Trash2, Pause, Play, Landmark, Bell, XCircle, RotateCcw } from 'lucide-react';
 
@@ -97,7 +98,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
           )}
         </div>
         <p className="text-xs text-cream-500">
-          {t(`categories.${item.category}`)} · {['annual', 'semiannual', 'biannual'].includes(item.frequency)
+          {getCategoryLabel(cat, t)} · {['annual', 'semiannual', 'biannual'].includes(item.frequency)
             ? `${new Date(2026, (item.billingMonth || 1) - 1).toLocaleString(undefined, { month: 'short' })} ${billingDay}`
             : t('recurring.dayBilling', { day: billingDay })}
           {item.endDate && <span className="ml-1">· {t('recurring.ends', { date: item.endDate })}</span>}

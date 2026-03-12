@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCategoryById, getSubcategoryById, formatCurrency, formatDate, truncate, getDisplayAmount } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { TRANSACTION_SOURCES } from '../lib/constants';
 import { getById } from '../lib/storage';
 import { useHideAmounts } from '../contexts/SettingsContext';
@@ -26,7 +27,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
   const isIncome = transaction.type === 'income';
   const hide = hideProp !== undefined ? hideProp : shouldHide(transaction.type);
 
-  const catLabel = t(`categories.${cat.id}`) || cat.name;
+  const catLabel = getCategoryLabel(cat, t);
   const subcatLabel = subcat ? (t(`subcategories.${subcat.id}`) || subcat.name) : null;
 
   return (

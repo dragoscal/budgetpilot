@@ -5,6 +5,7 @@ import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
 import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getCategoryById, sortByDate, getRecurringDueToday, splitRecurringDue, generateId } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { settings as settingsApi } from '../lib/api';
 import { getCachedRates } from '../lib/exchangeRates';
 import { predictMonthlySpending, predictEndOfMonthBalance, getSpendingAnomalies } from '../lib/predictions';
@@ -416,9 +417,9 @@ export default function Dashboard() {
     // Budget alerts
     budgetProgress.forEach((b) => {
       if (b.pct >= 100) {
-        alerts.push({ type: 'danger', icon: AlertTriangle, text: t('dashboard.budgetExceeded', { name: t(`categories.${b.category}`), pct: b.pct }), link: '/budgets' });
+        alerts.push({ type: 'danger', icon: AlertTriangle, text: t('dashboard.budgetExceeded', { name: getCategoryLabel(getCategoryById(b.category), t), pct: b.pct }), link: '/budgets' });
       } else if (b.pct >= 80) {
-        alerts.push({ type: 'warning', icon: AlertTriangle, text: t('dashboard.budgetAt', { name: t(`categories.${b.category}`), pct: b.pct }), link: '/budgets' });
+        alerts.push({ type: 'warning', icon: AlertTriangle, text: t('dashboard.budgetAt', { name: getCategoryLabel(getCategoryById(b.category), t), pct: b.pct }), link: '/budgets' });
       }
     });
 
@@ -900,7 +901,7 @@ export default function Dashboard() {
                   <span className="text-lg shrink-0">{cat.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {t(`categories.${item.category}`)}</p>
+                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {getCategoryLabel(cat, t)}</p>
                   </div>
                   <div className="shrink-0">
                     {item.isVariable ? (
@@ -971,7 +972,7 @@ export default function Dashboard() {
                         <Landmark size={10} /> {t('recurring.autoLabel')}
                       </span>
                     </div>
-                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {t(`categories.${item.category}`)}</p>
+                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {getCategoryLabel(cat, t)}</p>
                   </div>
                   <p className="text-sm font-heading font-bold money shrink-0">{formatCurrency(item.amount, item.currency || currency)}</p>
                 </div>

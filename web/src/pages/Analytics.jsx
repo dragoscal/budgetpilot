@@ -5,6 +5,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf, getDisplayAmount } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -78,7 +79,7 @@ export default function Analytics() {
       const cat = getCategoryById(catId);
       const spent = sumAmountsMultiCurrency(byCategory[catId] || [], currency, rates);
       const budget = budgetsList.find((b) => b.category === catId);
-      return { name: t(`categories.${catId}`) || cat.name, spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color, catId };
+      return { name: getCategoryLabel(cat, t), spent, budget: budget?.amount || 0, icon: cat.icon, color: cat.color, catId };
     }).filter((d) => d.spent > 0 || d.budget > 0).sort((a, b) => b.spent - a.spent).slice(0, 10);
   }, [expenses, budgetsList, currency, rates]);
 

@@ -28,11 +28,12 @@ export function useCategories({ includeHidden = false } = {}) {
   const refresh = useCallback(async () => {
     try {
       invalidateCache();
+      // Load hidden FIRST — getActiveCategories depends on hidden list being cached
+      await loadHiddenCategories();
       const [cats, subs] = await Promise.all([
         includeHidden ? getAllCategories() : getActiveCategories(),
         getAllSubcategories(),
       ]);
-      await loadHiddenCategories();
       setCategories(cats);
       setSubcategories(subs);
       setHiddenIds(getHiddenCategoriesSync());

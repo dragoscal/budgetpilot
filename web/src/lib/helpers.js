@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { format, startOfMonth, endOfMonth, differenceInDays, isToday, parseISO } from 'date-fns';
-import { CURRENCIES, CATEGORIES, SUBCATEGORIES, RECURRING_FREQUENCIES } from './constants';
+import { CURRENCIES, RECURRING_FREQUENCIES } from './constants';
 import { getCategoryByIdSync, getSubcategoriesSync, getSubcategoryByIdSync } from './categoryManager';
 
 export function generateId() {

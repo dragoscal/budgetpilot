@@ -7,7 +7,7 @@ import HelpButton from '../components/HelpButton';
 import { BUDGET_TEMPLATES } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
-import { generateId, formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, getDaysRemaining } from '../lib/helpers';
+import { generateId, formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, getDaysRemaining, getCategoryById } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import BudgetBar from '../components/BudgetBar';
 import CategoryPicker from '../components/CategoryPicker';
@@ -416,7 +416,7 @@ export default function Budgets() {
           <PiggyBank size={18} className="text-warning shrink-0" />
           <div>
             <p className="text-sm font-medium text-warning">
-              {t('budgets.overBudgetEmpathetic', { category: t(`categories.${b.category}`) })}
+              {t('budgets.overBudgetEmpathetic', { category: getCategoryLabel(getCategoryById(b.category), t) })}
             </p>
             <p className="text-xs text-warning/80">{t('budgets.reallocateSuggestion')}</p>
           </div>
@@ -470,7 +470,7 @@ export default function Budgets() {
             {availableCategories.slice(0, 8).map((cat) => (
               <div key={cat.id} className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">{cat.icon}</span>
-                <span className="text-sm flex-1 truncate">{t(`categories.${cat.id}`)}</span>
+                <span className="text-sm flex-1 truncate">{getCategoryLabel(cat, t)}</span>
                 <input
                   type="number"
                   className="input w-24 text-xs"

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
@@ -1065,7 +1066,7 @@ export default function AddTransaction() {
                 <div key={tx.id || i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
                   <span className="text-lg shrink-0">{cat.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{tx.merchant || t(`categories.${tx.category}`)}</p>
+                    <p className="text-sm font-medium truncate">{tx.merchant || getCategoryLabel(cat, t)}</p>
                     <p className="text-[11px] text-cream-500">{tx.date}</p>
                   </div>
                   <span className={`text-sm font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>

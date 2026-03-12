@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { generateId, formatCurrency, getCategoryById, formatDateISO } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -263,7 +264,7 @@ export default function Challenges() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <h3 className="text-sm font-bold">{c.title}</h3>
-                      <p className="text-xs text-cream-500">{cat ? `${cat.icon} ${t(`categories.${c.category}`)}` : t('challenges.allCategories')} · {p.daysRemaining}{t('challenges.dLeft')}</p>
+                      <p className="text-xs text-cream-500">{cat ? `${cat.icon} ${getCategoryLabel(cat, t)}` : t('challenges.allCategories')} · {p.daysRemaining}{t('challenges.dLeft')}</p>
                     </div>
                     <button onClick={() => handleDelete(c.id)} className="p-1 text-cream-400 hover:text-danger"><X size={14} /></button>
                   </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, formatDate, getCategoryById } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { SkeletonPage } from '../components/LoadingSkeleton';
@@ -236,7 +237,7 @@ export default function ReceiptGallery() {
                   )}
                   {cat && (
                     <span className="flex items-center gap-1">
-                      <Tag size={12} /> {cat.icon} {t(`categories.${category}`)}
+                      <Tag size={12} /> {cat.icon} {getCategoryLabel(cat, t)}
                     </span>
                   )}
                 </div>
