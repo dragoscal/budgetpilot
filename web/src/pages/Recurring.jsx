@@ -59,7 +59,7 @@ export default function Recurring() {
   };
 
   // 3-section split: active / paused / cancelled
-  const activeItems = items.filter((i) => i.status !== 'cancelled' && i.active !== false);
+  const activeItems = items.filter((i) => i.status !== 'cancelled' && i.status !== 'paused' && i.active !== false);
   const pausedItems = items.filter((i) => i.status !== 'cancelled' && (i.active === false || i.status === 'paused'));
   const cancelledItems = items.filter((i) => i.status === 'cancelled');
 

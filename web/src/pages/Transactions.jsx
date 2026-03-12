@@ -17,6 +17,7 @@ import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
 import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
 import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, Search, AlertCircle, ArrowRight } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
+import { learnCategory } from '../lib/smartFeatures';
 
 const PAGE_SIZE = 30;
 
@@ -127,6 +128,11 @@ export default function Transactions() {
       .sort((a, b) => b.count - a.count);
   }, [allTx]);
 
+  // Reset page to 1 whenever any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, amountMin, amountMax, scopeFilter, sort]);
+
   const filtered = useMemo(() => {
     let result = [...allTx];
 
@@ -231,7 +237,7 @@ export default function Transactions() {
   const handleEdit = async (updated) => {
     try {
       // Check for duplicates (excluding the transaction being edited)
-      const dupes = await checkDuplicate(updated);
+      const dupes = await checkDuplicate(updated, effectiveUserId);
       const realDupes = dupes.filter(d => d.transaction.id !== updated.id && d.confidence >= 0.7);
       if (realDupes.length > 0) {
         const proceed = confirm(t('transactions.duplicateWarning', { merchant: realDupes[0].transaction.merchant, date: realDupes[0].transaction.date }));
@@ -389,11 +395,20 @@ export default function Transactions() {
         {showQuickAdd && (
           <div className="mt-3 pt-3 border-t border-cream-200 dark:border-dark-border">
             <QuickAdd
-              onResult={(results) => {
-                if (results && results.length > 0) {
-                  // Navigate to add transaction with pre-filled data
-                  const first = results[0];
-                  navigate(`/add?tab=quick&text=${encodeURIComponent(first.merchant || first.description || '')}`);
+              onResult={async (results) => {
+                if (!results || results.length === 0) return;
+                try {
+                  let savedCount = 0;
+                  for (const tx of results) {
+                    await txApi.create(tx);
+                    if (tx.merchant) learnCategory(tx.merchant, tx.category, tx.subcategory || null);
+                    savedCount++;
+                  }
+                  toast.success(t('addTransaction.transactionsAdded').replace('{count}', savedCount));
+                  setShowQuickAdd(false);
+                  await loadTransactions();
+                } catch (err) {
+                  toast.error(err.message || t('common.error'));
                 }
               }}
               onError={(msg) => toast.error(msg)}
