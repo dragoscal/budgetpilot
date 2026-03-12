@@ -250,6 +250,28 @@ export function FamilyProvider({ children }) {
     setMembers((prev) => prev.filter((m) => m.id !== memberId));
   }, [activeFamily]);
 
+  const linkVirtualMember = useCallback(async (virtualMemberId, realMemberId) => {
+    if (!activeFamily) return;
+    await familyApi.linkVirtualToReal(activeFamily.id, virtualMemberId, realMemberId);
+    // Remove the virtual member from local state (it was merged into the real one)
+    setMembers((prev) => {
+      const virtual = prev.find((m) => m.id === virtualMemberId);
+      return prev
+        .filter((m) => m.id !== virtualMemberId)
+        .map((m) => {
+          // Update real member with virtual's displayName/emoji if they were transferred
+          if (m.id === realMemberId && virtual) {
+            return {
+              ...m,
+              displayName: m.displayName || virtual.displayName,
+              emoji: (m.emoji === '👤' && virtual.emoji) ? virtual.emoji : m.emoji,
+            };
+          }
+          return m;
+        });
+    });
+  }, [activeFamily]);
+
   const updateMember = useCallback(async (memberId, changes) => {
     const member = members.find((m) => m.id === memberId);
     if (!member) return;
@@ -290,6 +312,7 @@ export function FamilyProvider({ children }) {
         leaveFamily,
         createVirtualMember,
         removeVirtualMember,
+        linkVirtualMember,
         updateMember,
         updateMemberIncome,
         loadFamilies,

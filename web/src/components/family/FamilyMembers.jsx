@@ -3,7 +3,7 @@ import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { Crown, Eye, UserPlus, X, Trash2, Ghost } from 'lucide-react';
+import { Crown, Eye, UserPlus, X, Trash2, Ghost, Link, ChevronDown } from 'lucide-react';
 
 const VIRTUAL_EMOJIS = ['👤', '👩', '👨', '🧑', '👧', '👦', '🧒', '👩‍🦰', '👨‍🦱', '🧔', '👵', '👴'];
 
@@ -128,9 +128,11 @@ export default function FamilyMembers() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { effectiveUserId } = useAuth();
-  const { activeFamily, members, isAdmin, updateMember, removeVirtualMember } = useFamily();
+  const { activeFamily, members, isAdmin, updateMember, removeVirtualMember, linkVirtualMember } = useFamily();
   const [showAddForm, setShowAddForm] = useState(false);
   const [removingId, setRemovingId] = useState(null);
+  const [linkingId, setLinkingId] = useState(null); // virtual member being linked
+  const [linkTargetId, setLinkTargetId] = useState(''); // selected real member to link to
 
   const handleRoleChange = async (memberId, newRole) => {
     await updateMember(memberId, { role: newRole });
@@ -146,6 +148,20 @@ export default function FamilyMembers() {
       toast.error(err.message || t('family.failedRemoveMember'));
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  const handleLinkVirtual = async (virtualMemberId) => {
+    if (!linkTargetId) return;
+    setLinkingId(virtualMemberId);
+    try {
+      await linkVirtualMember(virtualMemberId, linkTargetId);
+      toast.success(t('family.memberLinked'));
+      setLinkTargetId('');
+    } catch (err) {
+      toast.error(err.message || t('family.failedLink'));
+    } finally {
+      setLinkingId(null);
     }
   };
 
@@ -214,38 +230,103 @@ export default function FamilyMembers() {
             <Ghost size={12} />
             {t('family.virtualMembers')}
           </p>
-          {virtualMembers.map((m) => (
-            <div
-              key={m.id}
-              className="card p-3 flex items-center gap-3"
-            >
-              <div className="w-10 h-10 rounded-full bg-cream-200 dark:bg-dark-border flex items-center justify-center text-xl">
-                {m.emoji || '👤'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm truncate">{m.displayName}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-500">
-                    {t('family.virtualBadge')}
-                  </span>
-                </div>
-                <p className="text-[11px] text-cream-400">
-                  {t('family.virtualHint')}
-                </p>
-              </div>
+          {virtualMembers.map((m) => {
+            const isLinking = linkingId === m.id;
+            const showLinkPanel = linkingId === m.id && linkTargetId !== '__confirmed__';
 
-              {isAdmin && (
-                <button
-                  onClick={() => handleRemoveVirtual(m.id, m.displayName)}
-                  disabled={removingId === m.id}
-                  className="p-1.5 rounded-full hover:bg-danger/10 text-cream-400 hover:text-danger transition-colors"
-                  title={t('family.removeMember')}
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          ))}
+            return (
+              <div
+                key={m.id}
+                className="card p-3 space-y-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-cream-200 dark:bg-dark-border flex items-center justify-center text-xl">
+                    {m.emoji || '👤'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{m.displayName}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-dark-border text-cream-500">
+                        {t('family.virtualBadge')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-cream-400">
+                      {t('family.virtualHint')}
+                    </p>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="flex items-center gap-1">
+                      {/* Link to real account button */}
+                      {realMembers.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setLinkingId(linkingId === m.id ? null : m.id);
+                            setLinkTargetId('');
+                          }}
+                          disabled={isLinking}
+                          className={`p-1.5 rounded-full transition-colors ${
+                            linkingId === m.id
+                              ? 'bg-accent/10 text-accent'
+                              : 'hover:bg-accent/10 text-cream-400 hover:text-accent'
+                          }`}
+                          title={t('family.linkToAccount')}
+                        >
+                          <Link size={14} />
+                        </button>
+                      )}
+                      {/* Remove button */}
+                      <button
+                        onClick={() => handleRemoveVirtual(m.id, m.displayName)}
+                        disabled={removingId === m.id}
+                        className="p-1.5 rounded-full hover:bg-danger/10 text-cream-400 hover:text-danger transition-colors"
+                        title={t('family.removeMember')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Link-to-real-account panel */}
+                {isAdmin && linkingId === m.id && (
+                  <div className="ml-13 pl-3 border-l-2 border-accent/20 space-y-2">
+                    <p className="text-xs text-cream-500">{t('family.selectRealMember')}</p>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="input text-sm py-1.5 flex-1"
+                        value={linkTargetId}
+                        onChange={(e) => setLinkTargetId(e.target.value)}
+                      >
+                        <option value="">{t('family.chooseMember')}</option>
+                        {realMembers.map((rm) => (
+                          <option key={rm.id} value={rm.id}>
+                            {rm.emoji || '👤'} {rm.displayName || rm.userId}
+                            {rm.userId === effectiveUserId ? ` ${t('family.you')}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleLinkVirtual(m.id)}
+                        disabled={!linkTargetId || isLinking}
+                        className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+                      >
+                        <Link size={12} />
+                        {isLinking ? '...' : t('family.linkButton')}
+                      </button>
+                      <button
+                        onClick={() => { setLinkingId(null); setLinkTargetId(''); }}
+                        className="p-1 rounded-full hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-cream-400">{t('family.linkHint')}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

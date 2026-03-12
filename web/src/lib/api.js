@@ -218,6 +218,19 @@ export const familyApi = {
     // Remove from cache
     await storage.remove('familyMembers', memberId);
   },
+
+  /** Link a virtual member to a real account (merges them) */
+  async linkVirtualToReal(familyId, virtualMemberId, realMemberId) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required.');
+    const result = await apiFetch(apiUrl, `/api/families/${familyId}/members/${virtualMemberId}/link`, {
+      method: 'PUT',
+      body: JSON.stringify({ realMemberId }),
+    });
+    // Remove virtual member from local cache (it was deleted server-side)
+    await storage.remove('familyMembers', virtualMemberId);
+    return result;
+  },
 };
 
 // ─── SETTINGS ────────────────────────────────────────────

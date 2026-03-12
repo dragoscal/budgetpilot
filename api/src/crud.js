@@ -160,6 +160,57 @@ export function registerCrudRoutes(router) {
     return json({ success: true });
   });
 
+  // PUT /api/families/:familyId/members/:memberId/link — link virtual member to real account
+  router.put('/api/families/:familyId/members/:memberId/link', async (ctx) => {
+    const { familyId, memberId } = ctx.params;
+
+    // Verify requesting user is admin
+    const myMembership = await ctx.env.DB.prepare(
+      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
+    if (myMembership.role !== 'admin') return json({ error: 'Only admins can link members' }, 403);
+
+    // Get the virtual member
+    const target = await ctx.env.DB.prepare(
+      'SELECT * FROM family_members WHERE id = ? AND familyId = ?'
+    ).bind(memberId, familyId).first();
+    if (!target) return json({ error: 'Member not found' }, 404);
+    if (!target.isVirtual) return json({ error: 'Member is already a real account' }, 400);
+
+    // Find the real member to link to
+    const { realMemberId } = ctx.body;
+    if (!realMemberId) return json({ error: 'realMemberId is required' }, 400);
+
+    const realMember = await ctx.env.DB.prepare(
+      'SELECT * FROM family_members WHERE id = ? AND familyId = ?'
+    ).bind(realMemberId, familyId).first();
+    if (!realMember) return json({ error: 'Target member not found' }, 404);
+    if (realMember.isVirtual) return json({ error: 'Cannot link to another virtual member' }, 400);
+
+    // Transfer: copy displayName/emoji from virtual to real if real doesn't have them
+    const now = new Date().toISOString();
+    const updates = { updatedAt: now };
+    if (!realMember.displayName && target.displayName) {
+      updates.displayName = target.displayName;
+    }
+    if ((!realMember.emoji || realMember.emoji === '👤') && target.emoji) {
+      updates.emoji = target.emoji;
+    }
+
+    if (Object.keys(updates).length > 1) {
+      const sets = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
+      await ctx.env.DB.prepare(
+        `UPDATE family_members SET ${sets} WHERE id = ?`
+      ).bind(...Object.values(updates), realMemberId).run();
+    }
+
+    // Delete the virtual member (it's been replaced by the real one)
+    await ctx.env.DB.prepare('DELETE FROM family_members WHERE id = ?').bind(memberId).run();
+
+    return json({ success: true, linkedTo: realMemberId });
+  });
+
   // POST /api/sync/push — bulk push from client
   router.post('/api/sync/push', async (ctx) => {
     const { changes } = ctx.body; // [{ table, action, data }]

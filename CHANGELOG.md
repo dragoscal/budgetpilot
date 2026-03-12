@@ -6,6 +6,28 @@ All notable changes to BudgetPilot are documented here.
 
 ---
 
+## 2026-03-12 (v1.2.0)
+
+### Added
+- **Virtual Family Members** — Add household members (like a partner or child) who don't have their own app account. Virtual members appear in the Family Members tab and in the Import Budget people mapping dropdown. Admins can add/remove them with one click.
+- **Quick Auto-Setup in Import** — One-click button in Import Budget Step 4 that creates a family and adds all spreadsheet people as virtual members automatically.
+- **Quick-Add from Dropdown** — In Import Budget, select "Add as new member" in the people dropdown to instantly create a virtual member without leaving the import flow.
+- **Link Virtual to Real Account** — When a virtual member later creates their own app account and joins the family, admins can link the virtual member to the real account, preserving expense history.
+- **Flat-Table Spreadsheet Support** — Import Budget now supports flat-table layouts (one transaction per row with columns for date, person, category, amount) in addition to the existing pivot-table layout.
+- **Streaming Bank Statement Processing** — Bank statement PDF analysis now uses SSE streaming through the AI proxy, eliminating the 55-second Cloudflare timeout on large PDFs.
+
+### Improved
+- **Bulletproof Import Pipeline** — 9 files hardened with: FileReader timeout, empty PDF detection, AI response validation, debounce guards, low extraction rate warnings, dropped row tracking, cancel button with early exit, expandable error details, and 30+ new error messages.
+- **European Number Parsing** — Now handles space-separated thousands (1 234,56), currency symbols/suffixes, and more edge cases.
+- **Family Members Loading** — New scoped API endpoint returns ALL family members including virtual ones, fixing the issue where each user only saw themselves.
+
+### Infrastructure
+- D1 migration: `isVirtual`, `displayName`, `emoji` columns on `family_members`
+- 3 new API endpoints for scoped family member management (GET/POST/DELETE)
+- `familyApi` module in frontend for direct family-scoped API calls
+
+---
+
 ## 2026-03-10
 
 ### Fixed
