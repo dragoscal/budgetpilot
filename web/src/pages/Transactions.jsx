@@ -15,11 +15,22 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
 import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, Search, AlertCircle, ArrowRight } from 'lucide-react';
+import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
 import { learnCategory } from '../lib/smartFeatures';
+import { correlateTransactions } from '../lib/transactionCorrelation';
 
 const PAGE_SIZE = 30;
+
+function generatePageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (current > 3) pages.push('...');
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+  if (current < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+}
 
 export default function Transactions() {
   const navigate = useNavigate();
@@ -34,6 +45,8 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState('all');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [amountMin, setAmountMin] = useState('');
   const [amountMax, setAmountMax] = useState('');
   const [sort, setSort] = useState('date-desc');
@@ -48,6 +61,8 @@ export default function Transactions() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [auditResult, setAuditResult] = useState(null);
   const [auditing, setAuditing] = useState(false);
+  const [correlationResult, setCorrelationResult] = useState(null);
+  const [correlating, setCorrelating] = useState(false);
 
   const handleAudit = async () => {
     setAuditing(true);
@@ -58,6 +73,39 @@ export default function Transactions() {
       toast.error(t('transactions.auditFailed'));
     } finally {
       setAuditing(false);
+    }
+  };
+
+  const handleCorrelate = async () => {
+    setCorrelating(true);
+    try {
+      const result = correlateTransactions(allTx);
+      setCorrelationResult(result);
+    } catch (err) {
+      toast.error(t('transactions.correlationFailed'));
+    } finally {
+      setCorrelating(false);
+    }
+  };
+
+  const handleMergeCorrelation = async (match) => {
+    try {
+      // Keep the import transaction, merge description/tags from manual, delete manual
+      const merged = {
+        ...match.import,
+        description: [match.import.description, match.manual.description].filter(Boolean).join(' | '),
+        tags: [...new Set([...(match.import.tags || []), ...(match.manual.tags || [])])],
+      };
+      await txApi.update(match.import.id, merged);
+      await txApi.remove(match.manual.id);
+      setAllTx(prev => prev.filter(t => t.id !== match.manual.id).map(t => t.id === match.import.id ? merged : t));
+      setCorrelationResult(prev => ({
+        ...prev,
+        matches: prev.matches.filter(m => m.manual.id !== match.manual.id),
+      }));
+      toast.success(t('transactions.merged'));
+    } catch (err) {
+      toast.error(t('common.error'));
     }
   };
 
@@ -96,12 +144,14 @@ export default function Transactions() {
   };
 
   useEffect(() => {
+    if (!effectiveUserId) return;
     loadTransactions();
     getCachedRates().then(setRates);
     getLastImportBatch().then(setLastBatch).catch(() => {});
   }, [effectiveUserId]);
 
   const loadTransactions = async () => {
+    if (!effectiveUserId) return;
     setLoading(true);
     try {
       const data = await txApi.getAll({ userId: effectiveUserId });
@@ -131,7 +181,7 @@ export default function Transactions() {
   // Reset page to 1 whenever any filter changes
   useEffect(() => {
     setPage(1);
-  }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, amountMin, amountMax, scopeFilter, sort]);
+  }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter, sort]);
 
   const filtered = useMemo(() => {
     let result = [...allTx];
@@ -142,7 +192,10 @@ export default function Transactions() {
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
+    if (dateFilter === 'custom') {
+      if (customDateFrom) result = result.filter(t => t.date >= customDateFrom);
+      if (customDateTo) result = result.filter(t => t.date <= customDateTo);
+    } else if (dateFilter !== 'all') {
       const now = new Date();
       const cutoff = new Date();
       if (dateFilter === '7d') cutoff.setDate(now.getDate() - 7);
@@ -194,10 +247,11 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, amountMin, amountMax, scopeFilter]);
+  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter]);
 
-  const paginated = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
-  const hasMore = paginated.length < filtered.length;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = useMemo(() => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [filtered, safePage]);
 
   const totalExpenses = sumAmountsMultiCurrency(filtered.filter((t) => t.type === 'expense'), currency, rates);
   const totalIncome = sumAmountsMultiCurrency(filtered.filter((t) => t.type === 'income'), currency, rates);
@@ -374,6 +428,10 @@ export default function Transactions() {
             {auditing ? <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <Search size={14} />}
             {t('transactions.audit')}
           </button>
+          <button onClick={handleCorrelate} disabled={correlating || loading} className="btn-ghost text-xs flex items-center gap-1">
+            {correlating ? <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <Link size={14} />}
+            {t('transactions.correlate')}
+          </button>
           <button onClick={exportCSV} className="btn-ghost text-xs flex items-center gap-1">
             <Download size={14} /> {t('transactions.exportCsv')}
           </button>
@@ -431,7 +489,7 @@ export default function Transactions() {
             </button>
           </div>
 
-          {auditResult.duplicates.length === 0 && auditResult.categorySuggestions.length === 0 ? (
+          {auditResult.duplicates.length === 0 && (auditResult.categorySuggestions?.length || 0) === 0 && (auditResult.unusualAmounts?.length || 0) === 0 && (auditResult.missingRecurring?.length || 0) === 0 ? (
             <p className="text-sm text-success flex items-center gap-2">
               <CheckSquare size={16} /> {t('transactions.auditClean')}
             </p>
@@ -473,7 +531,7 @@ export default function Transactions() {
               )}
 
               {/* Category suggestions */}
-              {auditResult.categorySuggestions.length > 0 && (
+              {auditResult.categorySuggestions?.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-accent mb-2 flex items-center gap-1.5">
                     <Tag size={14} />
@@ -499,7 +557,108 @@ export default function Transactions() {
                   </div>
                 </div>
               )}
+
+              {/* Unusual amounts */}
+              {auditResult.unusualAmounts?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-warning mb-2 flex items-center gap-1.5">
+                    <AlertCircle size={14} />
+                    {t('transactions.unusualAmounts', { count: auditResult.unusualAmounts.length })}
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {auditResult.unusualAmounts.map((u) => (
+                      <div key={u.transactionId} className="flex items-center justify-between gap-2 text-xs p-2 rounded-lg bg-warning/5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate">{u.merchant || '—'}</span>
+                          <span className="money text-cream-500">{u.amount?.toFixed(2)} {u.currency}</span>
+                          <span className="text-cream-400">{u.date}</span>
+                        </div>
+                        <span className="text-[10px] text-warning font-medium shrink-0">
+                          {u.ratio}x {t('transactions.aboveMedian')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing recurring */}
+              {auditResult.missingRecurring?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-info mb-2 flex items-center gap-1.5">
+                    <AlertCircle size={14} />
+                    {t('transactions.missingRecurring', { count: auditResult.missingRecurring.length })}
+                  </p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {auditResult.missingRecurring.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-2 text-xs p-2 rounded-lg bg-info/5">
+                        <span className="font-medium truncate">{r.name}</span>
+                        <span className="money text-cream-500 shrink-0">{r.amount?.toFixed(2)} {r.currency} — {t('recurring.dayBilling', { day: r.billingDay })}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Correlation Results */}
+      {correlationResult && (
+        <div className="card !p-4 space-y-4 border-2 border-info/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Link size={16} className="text-info" />
+              <h3 className="text-sm font-semibold">{t('transactions.correlationResults')}</h3>
+              <span className="text-xs text-cream-400">({correlationResult.matches.length} {t('transactions.matchesFound')})</span>
+            </div>
+            <button onClick={() => setCorrelationResult(null)} className="p-1 rounded hover:bg-cream-100 dark:hover:bg-dark-border">
+              <X size={14} className="text-cream-400" />
+            </button>
+          </div>
+
+          {correlationResult.matches.length === 0 ? (
+            <p className="text-sm text-cream-500 flex items-center gap-2">
+              <CheckSquare size={16} className="text-success" /> {t('transactions.noCorrelations')}
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {correlationResult.matches.map((match, i) => (
+                <div key={i} className="p-3 rounded-lg bg-info/5 border border-info/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-info uppercase tracking-wider">
+                      {Math.round(match.confidence * 100)}% {t('transactions.matchConfidence')}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => handleMergeCorrelation(match)}
+                        className="px-2 py-0.5 text-[10px] font-medium text-white bg-info rounded hover:bg-info/80">
+                        {t('transactions.merge')}
+                      </button>
+                      <button onClick={() => setCorrelationResult(prev => ({
+                        ...prev,
+                        matches: prev.matches.filter((_, j) => j !== i),
+                      }))}
+                        className="px-2 py-0.5 text-[10px] text-cream-500 bg-cream-100 dark:bg-dark-border rounded hover:bg-cream-200">
+                        {t('transactions.notAMatch')}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                      <p className="text-[10px] text-cream-400 mb-1">{match.manual.source || 'manual'}</p>
+                      <p className="font-medium truncate">{match.manual.merchant || '—'}</p>
+                      <p className="money text-cream-500">{match.manual.amount?.toFixed(2)} {match.manual.currency} · {match.manual.date}</p>
+                    </div>
+                    <div className="p-2 rounded bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                      <p className="text-[10px] text-cream-400 mb-1">{t('transactions.import')}</p>
+                      <p className="font-medium truncate">{match.import.merchant || '—'}</p>
+                      <p className="money text-cream-500">{match.import.amount?.toFixed(2)} {match.import.currency} · {match.import.date}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -575,7 +734,7 @@ export default function Transactions() {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-cream-500 shrink-0">{t('transactions.period')}</span>
         <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-x-auto scrollbar-hide">
           {[
@@ -584,6 +743,7 @@ export default function Transactions() {
             { id: '7d', label: '7d' },
             { id: '30d', label: '30d' },
             { id: '90d', label: '90d' },
+            { id: 'custom', label: t('transactions.custom') },
           ].map(f => (
             <button
               key={f.id}
@@ -598,6 +758,21 @@ export default function Transactions() {
             </button>
           ))}
         </div>
+        {dateFilter === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input type="date" className="input text-xs w-auto py-1.5" value={customDateFrom}
+              onChange={(e) => setCustomDateFrom(e.target.value)} />
+            <span className="text-xs text-cream-400">→</span>
+            <input type="date" className="input text-xs w-auto py-1.5" value={customDateTo}
+              onChange={(e) => setCustomDateTo(e.target.value)} />
+            {(customDateFrom || customDateTo) && (
+              <button onClick={() => { setCustomDateFrom(''); setCustomDateTo(''); }}
+                className="p-1 rounded-full text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border transition-colors">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -679,10 +854,35 @@ export default function Transactions() {
                 />
               ))}
             </div>
-            {hasMore && (
-              <button onClick={() => setPage((p) => p + 1)} className="w-full py-3 text-sm text-cream-500 hover:text-cream-700 border-t border-cream-100 dark:border-dark-border">
-                {t('common.loadMore', { count: filtered.length - paginated.length })}
-              </button>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 py-3 border-t border-cream-100 dark:border-dark-border">
+                <button disabled={safePage <= 1} onClick={() => setPage(1)} className="pagination-btn">
+                  <ChevronsLeft size={14} />
+                </button>
+                <button disabled={safePage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="pagination-btn">
+                  <ChevronLeft size={14} />
+                </button>
+                {generatePageNumbers(safePage, totalPages).map((p, i) =>
+                  p === '...' ? (
+                    <span key={`e${i}`} className="px-1 text-cream-400 text-xs">…</span>
+                  ) : (
+                    <button key={p} onClick={() => setPage(p)}
+                      className={`pagination-btn ${p === safePage ? 'pagination-btn-active' : ''}`}>
+                      {p}
+                    </button>
+                  )
+                )}
+                <button disabled={safePage >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="pagination-btn">
+                  <ChevronRight size={14} />
+                </button>
+                <button disabled={safePage >= totalPages} onClick={() => setPage(totalPages)} className="pagination-btn">
+                  <ChevronsRight size={14} />
+                </button>
+                <span className="text-[11px] text-cream-400 ml-2">
+                  {t('transactions.pageInfo', { current: safePage, total: totalPages, count: filtered.length })}
+                </span>
+              </div>
             )}
           </>
         ) : (

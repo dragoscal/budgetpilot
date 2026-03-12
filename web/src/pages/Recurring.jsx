@@ -32,7 +32,7 @@ export default function Recurring() {
   const [rates, setRates] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null);
 
-  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'utilities', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
+  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'utilities', billingDay: '1', billingMonth: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
@@ -92,6 +92,7 @@ export default function Recurring() {
         ...form,
         amount: Number(form.amount) || 0,
         billingDay: Math.min(31, Math.max(1, Number(form.billingDay) || 1)),
+        billingMonth: Math.min(12, Math.max(1, Number(form.billingMonth) || 1)),
         frequency: form.frequency || 'monthly',
         endDate: form.endDate || null,
         autoDebit: form.autoDebit ? 1 : 0,
@@ -169,6 +170,7 @@ export default function Recurring() {
       currency: item.currency || currency,
       category: item.category,
       billingDay: (item.billingDay || 1).toString(),
+      billingMonth: (item.billingMonth || 1).toString(),
       frequency: item.frequency || 'monthly',
       endDate: item.endDate || '',
       autoDebit: !!item.autoDebit,
@@ -525,6 +527,21 @@ export default function Recurring() {
               ))}
             </select>
           </div>
+
+          {/* Billing month — shown for annual/semiannual/biannual frequencies */}
+          {['annual', 'semiannual', 'biannual'].includes(form.frequency) && (
+            <div>
+              <label className="label">{t('recurring.billingMonth')}</label>
+              <select className="input" value={form.billingMonth}
+                onChange={(e) => setForm(f => ({ ...f, billingMonth: e.target.value }))}>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={String(i + 1)}>
+                    {new Date(2026, i).toLocaleString(undefined, { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <CategoryPicker

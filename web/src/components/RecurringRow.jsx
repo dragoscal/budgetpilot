@@ -70,7 +70,9 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
           )}
         </div>
         <p className="text-xs text-cream-500">
-          {t(`categories.${item.category}`)} · {t('recurring.dayBilling', { day: billingDay })}
+          {t(`categories.${item.category}`)} · {['annual', 'semiannual', 'biannual'].includes(item.frequency)
+            ? `${new Date(2026, (item.billingMonth || 1) - 1).toLocaleString(undefined, { month: 'short' })} ${billingDay}`
+            : t('recurring.dayBilling', { day: billingDay })}
           {item.endDate && <span className="ml-1">· {t('recurring.ends', { date: item.endDate })}</span>}
         </p>
         {/* Status info */}

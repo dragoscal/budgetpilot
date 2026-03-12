@@ -178,6 +178,33 @@ textarea:-webkit-autofill {
     transform: scale(0.98);
   }
 
+  /* ─── Pagination ──────────────────────────────────────── */
+  .pagination-btn {
+    @apply w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors;
+    color: #78716c;
+  }
+  .pagination-btn:hover {
+    background: #f5f5f4;
+  }
+  .pagination-btn:disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .dark .pagination-btn {
+    color: #a8a29e;
+  }
+  .dark .pagination-btn:hover {
+    background: #292524;
+  }
+  .pagination-btn-active {
+    background: #1c1917 !important;
+    color: white !important;
+  }
+  .dark .pagination-btn-active {
+    background: #fafaf9 !important;
+    color: #1c1917 !important;
+  }
+
   /* ─── Inputs ────────────────────────────────────────── */
   .input {
     @apply w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-200;

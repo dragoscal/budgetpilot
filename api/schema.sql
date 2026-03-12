@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS recurring (
   category TEXT DEFAULT 'subscriptions',
   frequency TEXT DEFAULT 'monthly',
   billingDay INTEGER DEFAULT 1,
+  billingMonth INTEGER DEFAULT 1,
   endDate TEXT,
   active INTEGER DEFAULT 1,
   autoDetected INTEGER DEFAULT 0,

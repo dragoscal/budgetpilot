@@ -1,10 +1,24 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '1.7.1';
+export const APP_VERSION = '1.8.0';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '1.8.0',
+    date: '2026-03-12',
+    items: [
+      { icon: 'Calendar',        textKey: 'changelog.v180customDateRange',  type: 'feature' },
+      { icon: 'Hash',            textKey: 'changelog.v180pagination',       type: 'feature' },
+      { icon: 'RefreshCw',       textKey: 'changelog.v180loadingFix',       type: 'fix' },
+      { icon: 'RotateCcw',       textKey: 'changelog.v180billingMonth',     type: 'feature' },
+      { icon: 'Tag',             textKey: 'changelog.v180categoryRules',    type: 'improvement' },
+      { icon: 'Link',            textKey: 'changelog.v180correlation',      type: 'feature' },
+      { icon: 'Search',          textKey: 'changelog.v180enhancedAudit',    type: 'improvement' },
+      { icon: 'Search',          textKey: 'changelog.v180searchRules',      type: 'improvement' },
+    ],
+  },
   {
     version: '1.7.1',
     date: '2026-03-12',

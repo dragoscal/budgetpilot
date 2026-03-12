@@ -237,13 +237,23 @@ export function calcAnnualEquivalent(amount, freqId) {
  * and no transaction exists for it yet. Returns items that need auto-creation.
  */
 export function getRecurringDueToday(recurringItems, existingTransactions) {
-  const currentDay = new Date().getDate();
-  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonthNum = now.getMonth(); // 0-indexed
+  const currentMonth = `${now.getFullYear()}-${String(currentMonthNum + 1).padStart(2, '0')}`;
 
   return recurringItems.filter(item => {
     if (item.status === 'cancelled' || item.status === 'paused') return false;
     if (!item.active && item.active !== undefined) return false;
     if ((item.billingDay || 1) > currentDay) return false; // not yet due
+
+    // For annual/semiannual: check if current month matches billingMonth
+    if (['annual', 'semiannual', 'biannual'].includes(item.frequency)) {
+      const billingMonth = (item.billingMonth || 1) - 1; // convert to 0-indexed
+      if (item.frequency === 'annual' && currentMonthNum !== billingMonth) return false;
+      if (item.frequency === 'semiannual' && currentMonthNum !== billingMonth && currentMonthNum !== (billingMonth + 6) % 12) return false;
+      if (item.frequency === 'biannual' && currentMonthNum !== billingMonth) return false;
+    }
 
     // Check if already created this month (by recurringId link OR merchant match)
     const alreadyCreated = existingTransactions.some(tx =>

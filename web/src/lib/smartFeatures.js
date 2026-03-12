@@ -583,9 +583,82 @@ export async function auditTransactions(userId) {
     }
   }
 
+  // ─── UNUSUAL AMOUNTS: flag transactions > 3x category median ───
+  const unusualAmounts = [];
+  const categoryAmounts = {};
+  for (const tx of transactions) {
+    if (tx.deletedAt || tx.type !== 'expense' || !tx.category) continue;
+    if (!categoryAmounts[tx.category]) categoryAmounts[tx.category] = [];
+    categoryAmounts[tx.category].push(tx.amount);
+  }
+  for (const tx of transactions) {
+    if (tx.deletedAt || tx.type !== 'expense' || !tx.category) continue;
+    const amounts = categoryAmounts[tx.category];
+    if (!amounts || amounts.length < 5) continue; // need enough data
+    const sorted = [...amounts].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    if (median > 0 && tx.amount > median * 3) {
+      unusualAmounts.push({
+        transactionId: tx.id,
+        merchant: tx.merchant,
+        date: tx.date,
+        amount: tx.amount,
+        currency: tx.currency,
+        category: tx.category,
+        median,
+        ratio: Math.round(tx.amount / median * 10) / 10,
+      });
+    }
+  }
+
+  // ─── MISSING RECURRING: check if expected recurring transactions exist this month ───
+  const missingRecurring = [];
+  try {
+    const recurringItems = await getAll('recurring', filter);
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const activeRecurring = recurringItems.filter(r => r.active !== false && r.status !== 'cancelled' && r.status !== 'paused');
+
+    for (const item of activeRecurring) {
+      // For annual items, check billingMonth
+      if (['annual', 'semiannual', 'biannual'].includes(item.frequency)) {
+        const billingMonth = (item.billingMonth || 1) - 1;
+        if (item.frequency === 'annual' && now.getMonth() !== billingMonth) continue;
+        if (item.frequency === 'semiannual' && now.getMonth() !== billingMonth && now.getMonth() !== (billingMonth + 6) % 12) continue;
+      }
+
+      // Check if the billing day has passed
+      if ((item.billingDay || 1) > now.getDate()) continue;
+
+      // Check if a matching transaction exists this month
+      const found = transactions.some(tx =>
+        !tx.deletedAt &&
+        tx.date?.startsWith(currentMonth) &&
+        (tx.recurringId === item.id ||
+          (tx.merchant?.toLowerCase() === (item.name || item.merchant || '').toLowerCase() &&
+           Math.abs(tx.amount - item.amount) < item.amount * 0.1))
+      );
+
+      if (!found) {
+        missingRecurring.push({
+          id: item.id,
+          name: item.name,
+          amount: item.amount,
+          currency: item.currency,
+          billingDay: item.billingDay,
+          category: item.category,
+        });
+      }
+    }
+  } catch (e) {
+    // Recurring data not available — skip
+  }
+
   return {
     duplicates: duplicates.sort((a, b) => b.confidence - a.confidence),
-    categorySuggestions: categorySuggestions.slice(0, 50), // limit to 50
+    categorySuggestions: categorySuggestions.slice(0, 50),
+    unusualAmounts: unusualAmounts.sort((a, b) => b.ratio - a.ratio).slice(0, 20),
+    missingRecurring,
     totalScanned: transactions.filter(t => !t.deletedAt).length,
   };
 }

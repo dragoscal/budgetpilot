@@ -62,6 +62,9 @@ export default function SettingsPage() {
   const [categoryRules, setCategoryRules] = useState([]);
   const [newRuleMerchant, setNewRuleMerchant] = useState('');
   const [newRuleCategory, setNewRuleCategory] = useState('groceries');
+  const [rulesExpanded, setRulesExpanded] = useState(false);
+  const [editingRule, setEditingRule] = useState(null);
+  const [ruleSearch, setRuleSearch] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
   const [showChangelog, setShowChangelog] = useState(false);
@@ -853,81 +856,130 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Category Rules */}
+      {/* Category Rules — Collapsible */}
       <div className="card">
-        <h3 className="section-title flex items-center gap-2"><Tag size={14} /> {t('settings.categoryRules')}</h3>
-        <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
-          {t('settings.categoryRulesDesc')}
-        </p>
+        <button onClick={() => setRulesExpanded(!rulesExpanded)}
+          className="flex items-center justify-between w-full text-left">
+          <h3 className="section-title flex items-center gap-2 mb-0">
+            <Tag size={14} /> {t('settings.categoryRules')}
+            <span className="text-xs text-cream-400 font-normal">({categoryRules.length})</span>
+          </h3>
+          <ChevronDown size={14} className={`text-cream-400 transition-transform ${rulesExpanded ? 'rotate-180' : ''}`} />
+        </button>
 
-        {categoryRules.length > 0 ? (
-          <div className="space-y-2 mb-4">
-            {categoryRules.map((rule) => {
-              const cat = CATEGORIES.find((c) => c.id === rule.category);
-              return (
-                <div key={rule.merchant} className="flex items-center justify-between p-2 rounded-lg bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base">{cat?.icon || '📦'}</span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{rule.merchant}</p>
-                      <p className="text-xs text-cream-500">{t(`categories.${rule.category}`)} ({rule.count}x)</p>
+        {rulesExpanded && (
+          <div className="mt-4">
+            <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
+              {t('settings.categoryRulesDesc')}
+            </p>
+
+            {/* Search filter for large rule sets */}
+            {categoryRules.length > 10 && (
+              <input
+                className="input text-xs mb-3"
+                placeholder={t('settings.searchRules')}
+                value={ruleSearch}
+                onChange={(e) => setRuleSearch(e.target.value)}
+              />
+            )}
+
+            {categoryRules.length > 0 ? (
+              <div className="space-y-2 mb-4 max-h-72 overflow-y-auto">
+                {categoryRules
+                  .filter(rule => !ruleSearch || rule.merchant.toLowerCase().includes(ruleSearch.toLowerCase()))
+                  .map((rule) => {
+                  const cat = CATEGORIES.find((c) => c.id === rule.category);
+                  return (
+                    <div key={rule.merchant} className="flex items-center justify-between p-2 rounded-lg bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base">{cat?.icon || '📦'}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{rule.merchant}</p>
+                          {editingRule?.merchant === rule.merchant ? (
+                            <select
+                              className="input text-xs w-36 py-1 mt-0.5"
+                              value={editingRule.category}
+                              onChange={async (e) => {
+                                const newCat = e.target.value;
+                                await removeLearnedCategory(rule.merchant);
+                                await learnCategory(rule.merchant, newCat);
+                                const rules = await getAllLearnedCategories();
+                                setCategoryRules(rules);
+                                setEditingRule(null);
+                                toast.success(t('settings.ruleUpdated'));
+                              }}
+                              autoFocus
+                              onBlur={() => setEditingRule(null)}
+                            >
+                              {CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'transfer').map(c => (
+                                <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="text-xs text-cream-500 cursor-pointer hover:text-accent-500 transition-colors"
+                              onClick={() => setEditingRule({ merchant: rule.merchant, category: rule.category })}>
+                              {t(`categories.${rule.category}`)} ({rule.count}x) <span className="text-cream-400">— {t('settings.clickToEdit')}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await removeLearnedCategory(rule.merchant);
+                          setCategoryRules((prev) => prev.filter((r) => r.merchant !== rule.merchant));
+                          toast.success(t('common.delete'));
+                        }}
+                        className="p-1.5 rounded-full hover:bg-danger/10 text-cream-400 hover:text-danger shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      await removeLearnedCategory(rule.merchant);
-                      setCategoryRules((prev) => prev.filter((r) => r.merchant !== rule.merchant));
-                      toast.success(t('common.delete'));
-                    }}
-                    className="p-1.5 rounded-full hover:bg-danger/10 text-cream-400 hover:text-danger shrink-0"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-cream-500 mb-4">{t('settings.noRules')}</p>
-        )}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-cream-500 mb-4">{t('settings.noRules')}</p>
+            )}
 
-        {/* Add Rule */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-cream-500 mb-1 block">{t('transactions.merchant')}</label>
-            <input
-              className="input text-sm"
-              value={newRuleMerchant}
-              onChange={(e) => setNewRuleMerchant(e.target.value)}
-              placeholder={t('manualForm.merchantPlaceholderShort')}
-            />
+            {/* Add Rule */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-cream-500 mb-1 block">{t('transactions.merchant')}</label>
+                <input
+                  className="input text-sm"
+                  value={newRuleMerchant}
+                  onChange={(e) => setNewRuleMerchant(e.target.value)}
+                  placeholder={t('manualForm.merchantPlaceholderShort')}
+                />
+              </div>
+              <div className="w-36">
+                <label className="text-xs text-cream-500 mb-1 block">{t('common.category')}</label>
+                <select
+                  className="input text-sm"
+                  value={newRuleCategory}
+                  onChange={(e) => setNewRuleCategory(e.target.value)}
+                >
+                  {CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newRuleMerchant.trim()) return;
+                  await learnCategory(newRuleMerchant.trim(), newRuleCategory);
+                  const rules = await getAllLearnedCategories();
+                  setCategoryRules(rules);
+                  setNewRuleMerchant('');
+                  toast.success(t('settings.ruleAdded'));
+                }}
+                className="btn-primary text-xs flex items-center gap-1 px-3 py-2"
+              >
+                <Plus size={14} /> {t('settings.addRule')}
+              </button>
+            </div>
           </div>
-          <div className="w-36">
-            <label className="text-xs text-cream-500 mb-1 block">{t('common.category')}</label>
-            <select
-              className="input text-sm"
-              value={newRuleCategory}
-              onChange={(e) => setNewRuleCategory(e.target.value)}
-            >
-              {CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={async () => {
-              if (!newRuleMerchant.trim()) return;
-              await learnCategory(newRuleMerchant.trim(), newRuleCategory);
-              const rules = await getAllLearnedCategories();
-              setCategoryRules(rules);
-              setNewRuleMerchant('');
-              toast.success(t('settings.ruleAdded'));
-            }}
-            className="btn-primary text-xs flex items-center gap-1 px-3 py-2"
-          >
-            <Plus size={14} /> {t('settings.addRule')}
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Danger Zone — Delete Account */}
