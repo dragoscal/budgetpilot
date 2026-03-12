@@ -12,37 +12,63 @@ import OfflineBanner from './components/OfflineBanner';
 import FeedbackFAB from './components/FeedbackFAB';
 import WhatsNew from './components/WhatsNew';
 
+// ─── Lazy import with retry (handles chunk failures after deploy) ───
+function lazyRetry(importFn) {
+  return lazy(() =>
+    importFn().catch(() =>
+      // First retry after short delay (chunk may have been re-deployed)
+      new Promise(resolve => setTimeout(resolve, 1000))
+        .then(() => importFn())
+        .catch(() => {
+          // Final fallback: force reload to get new asset manifest
+          const reloaded = sessionStorage.getItem('chunk_reload');
+          if (!reloaded) {
+            sessionStorage.setItem('chunk_reload', '1');
+            window.location.reload();
+          }
+          // If already reloaded once, show the error
+          throw new Error('Failed to load page. Please refresh.');
+        })
+    )
+  );
+}
+
+// Clear chunk reload flag on successful load
+if (sessionStorage.getItem('chunk_reload')) {
+  sessionStorage.removeItem('chunk_reload');
+}
+
 // ─── Lazy-loaded pages (code splitting) ──────────────────
 // Auth pages (small, loaded on demand)
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Login = lazyRetry(() => import('./pages/Login'));
+const Register = lazyRetry(() => import('./pages/Register'));
+const Onboarding = lazyRetry(() => import('./pages/Onboarding'));
 
 // App pages
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const AddTransaction = lazy(() => import('./pages/AddTransaction'));
-const Transactions = lazy(() => import('./pages/Transactions'));
-const Budgets = lazy(() => import('./pages/Budgets'));
-const Goals = lazy(() => import('./pages/Goals'));
-const Recurring = lazy(() => import('./pages/Recurring'));
-const CalendarPage = lazy(() => import('./pages/Calendar'));
-const CashFlow = lazy(() => import('./pages/CashFlow'));
-const NetWorth = lazy(() => import('./pages/NetWorth'));
-const Analytics = lazy(() => import('./pages/Analytics'));
-const SettingsPage = lazy(() => import('./pages/Settings'));
-const People = lazy(() => import('./pages/People'));
-const Wishlist = lazy(() => import('./pages/Wishlist'));
-const MonthlyReview = lazy(() => import('./pages/MonthlyReview'));
-const Admin = lazy(() => import('./pages/Admin'));
-const Feedback = lazy(() => import('./pages/Feedback'));
-const Loans = lazy(() => import('./pages/Loans'));
-const Family = lazy(() => import('./pages/Family'));
-const Reports = lazy(() => import('./pages/Reports'));
-const Challenges = lazy(() => import('./pages/Challenges'));
-const ReceiptGallery = lazy(() => import('./pages/Receipts'));
-const Guide = lazy(() => import('./pages/Guide'));
-const ImportBudget = lazy(() => import('./pages/ImportBudget'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
+const AddTransaction = lazyRetry(() => import('./pages/AddTransaction'));
+const Transactions = lazyRetry(() => import('./pages/Transactions'));
+const Budgets = lazyRetry(() => import('./pages/Budgets'));
+const Goals = lazyRetry(() => import('./pages/Goals'));
+const Recurring = lazyRetry(() => import('./pages/Recurring'));
+const CalendarPage = lazyRetry(() => import('./pages/Calendar'));
+const CashFlow = lazyRetry(() => import('./pages/CashFlow'));
+const NetWorth = lazyRetry(() => import('./pages/NetWorth'));
+const Analytics = lazyRetry(() => import('./pages/Analytics'));
+const SettingsPage = lazyRetry(() => import('./pages/Settings'));
+const People = lazyRetry(() => import('./pages/People'));
+const Wishlist = lazyRetry(() => import('./pages/Wishlist'));
+const MonthlyReview = lazyRetry(() => import('./pages/MonthlyReview'));
+const Admin = lazyRetry(() => import('./pages/Admin'));
+const Feedback = lazyRetry(() => import('./pages/Feedback'));
+const Loans = lazyRetry(() => import('./pages/Loans'));
+const Family = lazyRetry(() => import('./pages/Family'));
+const Reports = lazyRetry(() => import('./pages/Reports'));
+const Challenges = lazyRetry(() => import('./pages/Challenges'));
+const ReceiptGallery = lazyRetry(() => import('./pages/Receipts'));
+const Guide = lazyRetry(() => import('./pages/Guide'));
+const ImportBudget = lazyRetry(() => import('./pages/ImportBudget'));
+const NotFound = lazyRetry(() => import('./pages/NotFound'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -51,6 +77,10 @@ function ScrollToTop() {
 }
 
 function AppLayout({ children }) {
+  // Key the ErrorBoundary on pathname so it resets when navigating between pages.
+  // Without this, if a page crashes, the ErrorBoundary stays stuck in error state
+  // even after navigating to a different page (React reuses the same instance).
+  const { pathname } = useLocation();
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:px-4 focus:py-2 focus:bg-accent-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">
@@ -59,7 +89,7 @@ function AppLayout({ children }) {
       <Sidebar />
       <main id="main-content" className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">
         <div className="max-w-content mx-auto px-4 md:px-8 py-4 md:py-8 animate-fadeUp">
-          <ErrorBoundary>
+          <ErrorBoundary key={pathname}>
             {children}
           </ErrorBoundary>
         </div>
