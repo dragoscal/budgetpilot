@@ -239,9 +239,11 @@ export function registerCrudRoutes(router) {
           const placeholders = columns.map(() => '?').join(', ');
           const updates = columns.filter(c => c !== 'id').map(c => `${c} = excluded.${c}`).join(', ');
 
+          // SECURITY: Only allow updating records owned by the current user
+          // Without the WHERE clause, a user could steal another user's record by guessing its ID
           await ctx.env.DB.prepare(
-            `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updates}`
-          ).bind(...columns.map(c => row[c])).run();
+            `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updates} WHERE ${table}.${userCol} = ?`
+          ).bind(...columns.map(c => row[c]), ctx.user.id).run();
         } else if (action === 'delete') {
           if (table === 'transactions') {
             await ctx.env.DB.prepare(`UPDATE transactions SET deletedAt = ? WHERE id = ? AND ${userCol} = ?`)
@@ -316,9 +318,14 @@ export function registerCrudRoutes(router) {
     return json({ data: settings });
   });
 
+  // Blacklist admin-only settings keys that users cannot self-assign
+  const ADMIN_ONLY_KEYS = new Set(['aiProxyAllowed', 'isAdmin', 'adminLevel', 'adminAccess']);
+
   router.put('/api/settings', async (ctx) => {
     const entries = Object.entries(ctx.body || {});
     for (const [key, value] of entries) {
+      // Prevent privilege escalation via settings
+      if (ADMIN_ONLY_KEYS.has(key)) continue;
       const val = typeof value === 'string' ? value : JSON.stringify(value);
       await ctx.env.DB.prepare(
         `INSERT INTO settings (userId, key, value) VALUES (?, ?, ?) ON CONFLICT(userId, key) DO UPDATE SET value = ?`

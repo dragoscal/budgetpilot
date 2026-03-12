@@ -245,15 +245,19 @@ router.delete('/api/auth/account', async (ctx) => {
 // ─── Clear All User Data (keep account) ───────────────────
 router.delete('/api/data/clear', async (ctx) => {
   const userId = ctx.user.id;
-  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'loans', 'loan_payments', 'challenges', 'receipts'];
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'settings', 'sync_log', 'loans', 'loan_payments', 'challenges', 'receipts'];
   for (const table of tables) {
     await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
   }
-  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
-  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
-  await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId).run();
+  // Clean family data: delete families user created + their shared expenses/members
+  const families = await ctx.env.DB.prepare(`SELECT id FROM families WHERE createdBy = ?`).bind(userId).all();
+  for (const fam of (families.results || [])) {
+    await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fam.id).run();
+    await ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fam.id).run();
+    await ctx.env.DB.prepare(`DELETE FROM families WHERE id = ?`).bind(fam.id).run();
+  }
+  // Remove user from families they didn't create
   await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId).run();
   ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'clear_all_data', {}));
   return json({ success: true });
 });
@@ -337,7 +341,14 @@ router.post('/api/ai/process', async (ctx) => {
   }
 
   const { messages, maxTokens, system, model } = ctx.body;
-  const usedModel = model || 'claude-sonnet-4-20250514';
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return json({ error: 'messages array is required' }, 400);
+  }
+  // Model whitelist — prevent users from using expensive models
+  const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
+  const usedModel = ALLOWED_MODELS.includes(model) ? model : 'claude-sonnet-4-20250514';
+  // Cap max tokens to prevent abuse
+  const cappedMaxTokens = Math.min(Math.max(1, maxTokens || 2000), 4096);
 
   let res;
   try {
@@ -350,7 +361,7 @@ router.post('/api/ai/process', async (ctx) => {
       },
       body: JSON.stringify({
         model: usedModel,
-        max_tokens: maxTokens || 2000,
+        max_tokens: cappedMaxTokens,
         system: system || undefined,
         messages,
         stream: true,
@@ -435,49 +446,6 @@ router.post('/api/ai/process', async (ctx) => {
 });
 
 // ─── Clear All User Data (keep account) ────────────────
-router.delete('/api/data/clear', async (ctx) => {
-  const userId = ctx.user.id;
-  const tables = [
-    'transactions', 'budgets', 'goals', 'accounts', 'recurring',
-    'people', 'debts', 'wishlist', 'settings', 'sync_log',
-    'loans', 'loan_payments', 'challenges', 'receipts',
-  ];
-  for (const table of tables) {
-    await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
-  }
-  // Clean orphaned debt_payments / loan_payments
-  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(userId).run();
-  // Clean family data where user is the creator
-  const families = await ctx.env.DB.prepare(`SELECT id FROM families WHERE createdBy = ?`).bind(userId).all();
-  for (const fam of families.results || []) {
-    await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fam.id).run();
-    await ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fam.id).run();
-    await ctx.env.DB.prepare(`DELETE FROM families WHERE id = ?`).bind(fam.id).run();
-  }
-  // Remove user from families they didn't create
-  await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
-  return json({ success: true });
-});
-
-// ─── Delete All Transactions ───────────────────────────
-router.delete('/api/transactions/all', async (ctx) => {
-  const now = new Date().toISOString();
-  const result = await ctx.env.DB.prepare(
-    `UPDATE transactions SET deletedAt = ? WHERE userId = ? AND (deletedAt IS NULL OR deletedAt = '')`
-  ).bind(now, ctx.user.id).run();
-  return json({ success: true, deleted: result.meta?.changes || 0 });
-});
-
-// ─── Delete Import Batch ───────────────────────────────
-router.delete('/api/transactions/batch/:batchId', async (ctx) => {
-  const { batchId } = ctx.params;
-  const now = new Date().toISOString();
-  const result = await ctx.env.DB.prepare(
-    `UPDATE transactions SET deletedAt = ? WHERE userId = ? AND importBatch = ? AND (deletedAt IS NULL OR deletedAt = '')`
-  ).bind(now, ctx.user.id, batchId).run();
-  return json({ success: true, deleted: result.meta?.changes || 0 });
-});
-
 // ─── Register routes (admin BEFORE crud to avoid /:table collision) ──
 registerAdminRoutes(router);
 registerCrudRoutes(router);
