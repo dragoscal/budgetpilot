@@ -3,7 +3,8 @@ import { wishlistApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { CATEGORIES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { generateId, formatCurrency, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -23,6 +24,7 @@ export default function Wishlist() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { categories } = useCategories();
 
   const PRIORITIES = PRIORITIES_CONFIG.map(p => ({ ...p, label: t(p.key) }));
   const [items, setItems] = useState([]);
@@ -173,7 +175,7 @@ export default function Wishlist() {
             <div><label className="label">{t('wishlist.estimatedPrice')}</label><input type="number" className="input" value={form.estimatedPrice} onChange={(e) => setForm((f) => ({ ...f, estimatedPrice: e.target.value }))} inputMode="decimal" /></div>
             <div><label className="label">{t('wishlist.priority')}</label><select className="input" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>{PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
           </div>
-          <div><label className="label">{t('common.category')}</label><select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>{CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>)}</select></div>
+          <div><label className="label">{t('common.category')}</label><select className="input" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>{categories.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => <option key={c.id} value={c.id}>{c.icon} {getCategoryLabel(c, t)}</option>)}</select></div>
           <div><label className="label">{t('wishlist.url')}</label><input className="input" value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://..." /></div>
           <div><label className="label">{t('common.notes')}</label><input className="input" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
           <button onClick={handleAdd} className="btn-primary w-full">{t('wishlist.addToWishlist')}</button>

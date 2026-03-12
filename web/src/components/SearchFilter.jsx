@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
-import { CATEGORIES } from '../lib/constants';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 
 function CategoryDropdown({ value, onChange }) {
   const { t } = useTranslation();
+  const { categories } = useCategories();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -17,7 +19,7 @@ function CategoryDropdown({ value, onChange }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const current = value ? CATEGORIES.find((c) => c.id === value) : null;
+  const current = value ? categories.find((c) => c.id === value) : null;
 
   return (
     <div className="relative" ref={ref}>
@@ -29,7 +31,7 @@ function CategoryDropdown({ value, onChange }) {
         {current ? (
           <>
             <span className="shrink-0">{current.icon}</span>
-            <span className="truncate text-sm">{t(`categories.${current.id}`)}</span>
+            <span className="truncate text-sm">{getCategoryLabel(current, t)}</span>
           </>
         ) : (
           <span className="text-cream-400 text-sm">{t('filter.allCategories')}</span>
@@ -49,7 +51,7 @@ function CategoryDropdown({ value, onChange }) {
             >
               <span className="text-cream-400">{t('filter.allCategories')}</span>
             </button>
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
@@ -59,7 +61,7 @@ function CategoryDropdown({ value, onChange }) {
                 }`}
               >
                 <span>{cat.icon}</span>
-                <span>{t(`categories.${cat.id}`)}</span>
+                <span>{getCategoryLabel(cat, t)}</span>
               </button>
             ))}
           </div>

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
-import { CATEGORIES } from '../lib/constants';
+
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
 import ReceiptScanner from '../components/ReceiptScanner';

@@ -9,6 +9,7 @@
 
 import { getAll, getSetting, setSetting } from './storage';
 import { MERCHANT_CATEGORY_MAP, KEYWORD_SUBCATEGORY_MAP } from './constants';
+import { getCustomCategoriesSync } from './categoryManager';
 
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
@@ -368,6 +369,27 @@ export async function inferCategorySmart(merchant) {
       entries.sort((a, b) => getCount(b[1]) - getCount(a[1]));
       if (getCount(entries[0][1]) >= 2) {
         return { category: entries[0][0], subcategory: getSubcat(entries[0][1]) };
+      }
+    }
+  }
+
+  // 2.5 Check custom category keywords (user-defined)
+  const customCats = getCustomCategoriesSync();
+  for (const cat of customCats) {
+    if (!cat.keywords?.length) continue;
+    for (const kw of cat.keywords) {
+      if (kw && lower.includes(kw.toLowerCase())) {
+        // Check subcategories for a more specific match
+        let subcat = null;
+        if (cat.subcategories?.length) {
+          for (const sub of cat.subcategories) {
+            if (sub.name && lower.includes(sub.name.toLowerCase())) {
+              subcat = sub.id;
+              break;
+            }
+          }
+        }
+        return { category: cat.id, subcategory: subcat };
       }
     }
   }

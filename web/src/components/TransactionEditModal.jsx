@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { CATEGORIES, CURRENCIES } from '../lib/constants';
+import { CURRENCIES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
@@ -13,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function TransactionEditModal({ transaction, open, onClose, onSave }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { categories } = useCategories();
   const { effectiveUserId } = useAuth();
   const [form, setForm] = useState({});
 
@@ -53,8 +56,8 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
     if ((categoryChanged || subcategoryChanged) && merchantExists) {
       const merchant = form.merchant.trim();
       const newCategory = form.category;
-      const catObj = CATEGORIES.find((c) => c.id === newCategory);
-      const catName = catObj ? `${catObj.icon} ${t('categories.' + newCategory)}` : newCategory;
+      const catObj = categories.find((c) => c.id === newCategory);
+      const catName = catObj ? `${catObj.icon} ${getCategoryLabel(catObj, t)}` : newCategory;
 
       // Learn immediately (with subcategory)
       learnCategory(merchant, newCategory, form.subcategory || null);
@@ -108,8 +111,8 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
             value={form.category || 'other'}
             subcategoryValue={form.subcategory || null}
             onChange={(catId, subId) => setForm(f => ({...f, category: catId, subcategory: subId || null}))}
-            exclude={form.type === 'income' ? CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id)
-                   : form.type === 'transfer' ? CATEGORIES.filter(c => c.id !== 'transfer').map(c => c.id)
+            exclude={form.type === 'income' ? categories.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id)
+                   : form.type === 'transfer' ? categories.filter(c => c.id !== 'transfer').map(c => c.id)
                    : ['income', 'transfer']}
           />
         </div>

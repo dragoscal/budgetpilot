@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { CATEGORIES, CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
+import { CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
 import { generateId, formatDateISO, validateTransaction, parseLocalNumber } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { getAll } from '../lib/storage';
@@ -12,6 +13,7 @@ import CategoryPicker from './CategoryPicker';
 import TagInput from './TagInput';
 
 export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
+  const { categories } = useCategories();
   const { effectiveUserId } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -120,8 +122,8 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   };
 
   // Compute exclude list based on type
-  const categoryExclude = type === 'income' ? CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id) :
-                           type === 'transfer' ? CATEGORIES.filter(c => c.id !== 'transfer').map(c => c.id) :
+  const categoryExclude = type === 'income' ? categories.filter(c => c.id !== 'income' && c.id !== 'other').map(c => c.id) :
+                           type === 'transfer' ? categories.filter(c => c.id !== 'transfer').map(c => c.id) :
                            ['income', 'transfer'];
 
   const handleSubmit = (e) => {

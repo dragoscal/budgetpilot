@@ -1,10 +1,14 @@
 import { getSetting, add, getAll } from './storage';
 import { MERCHANT_CATEGORY_MAP, CATEGORIES, SUBCATEGORIES, AI_PROVIDERS } from './constants';
+import { getCustomCategories } from './categoryManager';
 import { generateId, formatDateISO } from './helpers';
 import { extractHashtags } from './tagHelpers';
 
 // ─── ENHANCED RECEIPT SYSTEM PROMPT ───────────────────────
-const RECEIPT_SYSTEM_PROMPT = `You are an expert receipt and expense parser for a Romanian budgeting app called LUMET. You excel at reading receipts in any language (especially Romanian) and categorizing every item.
+function buildReceiptPrompt(customCats = []) {
+  const allSubs = { ...SUBCATEGORIES };
+  for (const c of customCats) { if (c.subcategories?.length) allSubs[c.id] = c.subcategories; }
+  return `You are an expert receipt and expense parser for a Romanian budgeting app called LUMET. You excel at reading receipts in any language (especially Romanian) and categorizing every item.
 
 RECEIPT PARSING RULES:
 - Romanian receipts: BON FISCAL = receipt, LEI/RON = currency, BUC = pieces, TVA = VAT, CIF = tax ID, dates DD.MM.YYYY
@@ -21,10 +25,11 @@ STORE DETECTION — Identify the store type from the receipt header:
 - Electronics: eMAG, Altex, Flanco, Media Galaxy
 
 ITEM-LEVEL CATEGORIZATION — For each item on the receipt, assign one of these categories:
-${CATEGORIES.map((c) => `- ${c.id}: ${c.name} (${c.icon})`).join('\n')}
+${[...CATEGORIES, ...customCats].map((c) => `- ${c.id}: ${c.name} (${c.icon})`).join('\n')}
 
 SUBCATEGORIES — When possible, also assign a subcategory for more detail:
-${Object.entries(SUBCATEGORIES).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => `${s.id} (${s.name})`).join(', ')}`).join('\n')}
+${Object.entries(allSubs).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => `${s.id} (${s.name})`).join(', ')}`).join('\n')}
+${customCats.length > 0 ? '\nCUSTOM CATEGORY KEYWORDS (user-defined — prefer these when item keywords match):\n' + customCats.map(c => `- ${c.id} (${c.name}): ${(c.keywords || []).join(', ')}${c.description ? ' — ' + c.description : ''}`).join('\n') : ''}
 
 Common item→category mappings:
 - Food items (bread, milk, meat, vegetables, fruit, cheese, eggs, pasta, rice, oil) → groceries
@@ -122,13 +127,17 @@ SPLITTING RULES:
 - Restaurant receipts: always one transaction (dining category)
 - Gas station: fuel = transport, shop items = groceries/personal
 - Utility/maintenance bills: always ONE transaction (housing category)`;
+}
 
 // ─── NLP SYSTEM PROMPT ────────────────────────────────────
-const NLP_SYSTEM_PROMPT = `You parse natural language expense/income inputs for a Romanian budgeting app.
+function buildNLPPrompt(customCats = []) {
+  const allSubs = { ...SUBCATEGORIES };
+  for (const c of customCats) { if (c.subcategories?.length) allSubs[c.id] = c.subcategories; }
+  return `You parse natural language expense/income inputs for a Romanian budgeting app.
 
 Input examples: "45 lei bolt taxi", "netflix 55 lei", "salary 8000 lei", "150 lei dinner with friends", "25 eur coffee shop"
 
-CATEGORIES: ${CATEGORIES.map((c) => `${c.id} (${c.name})`).join(', ')}
+CATEGORIES: ${[...CATEGORIES, ...customCats].map((c) => `${c.id} (${c.name})`).join(', ')}
 
 MERCHANT vs DESCRIPTION — CRITICAL DISTINCTION:
 - "merchant" = a STORE, COMPANY, or BRAND name (Lidl, Bolt, Netflix, KFC, Starbucks, Emag, etc.)
@@ -147,7 +156,8 @@ Examples:
 MERCHANT→CATEGORY: Lidl/Kaufland/Carrefour/Mega Image/Auchan/Profi/Penny = groceries, Bolt/Uber = transport, Netflix/Spotify = subscriptions, Enel/Digi/Vodafone = utilities, restaurant/dinner/lunch = dining, salary/freelance = income
 
 SUBCATEGORIES (use when clear from context):
-${Object.entries(SUBCATEGORIES).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
+${Object.entries(allSubs).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
+${customCats.length > 0 ? '\nCUSTOM CATEGORY KEYWORDS (user-defined — PREFER these when input matches keywords):\n' + customCats.map(c => `- ${c.id} (${c.name}): ${(c.keywords || []).join(', ')}${c.description ? ' — ' + c.description : ''}`).join('\n') : ''}
 Examples: "coffee at starbucks" → dining, dining:cafe; "uber ride" → transport, transport:rideshare; "gym membership" → health, health:gym
 Romanian product → subcategory: paine/covrigi/corn = groceries:bakery, lapte/iaurt/branza/smantana/oua = groceries:dairy, pui/carne/peste = groceries:meat, legume/fructe/rosii/cartofi = groceries:produce, cafea = dining:cafe, benzina/motorina = transport:fuel, farmacie/medicamente = health:pharmacy
 
@@ -178,6 +188,7 @@ Return JSON:
     "debtTo": null
   }]
 }`;
+}
 
 // ─── THUMBNAIL GENERATION ────────────────────────────────
 /**
@@ -588,7 +599,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
         },
       ],
     },
-  ], RECEIPT_SYSTEM_PROMPT, 4000);
+  ], buildReceiptPrompt(await getCustomCategories()), 4000);
 
   const normalized = normalizeReceiptResult(result, userId);
 
@@ -622,7 +633,8 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
 }
 
 // ─── BANK STATEMENT PROCESSING ───────────────────────────
-const BANK_STATEMENT_PROMPT = `You are an expert bank statement parser for a Romanian budgeting app called LUMET. You extract individual transactions from PDF bank statements.
+function buildBankStatementPrompt(customCats = []) {
+  return `You are an expert bank statement parser for a Romanian budgeting app called LUMET. You extract individual transactions from PDF bank statements.
 
 BANK STATEMENT RULES:
 - Parse EVERY transaction from the statement — debits, credits, transfers, fees
@@ -634,7 +646,8 @@ BANK STATEMENT RULES:
 - Transfer between own accounts = "transfer"
 
 CATEGORIZATION — Assign categories based on merchant/description:
-${CATEGORIES.map((c) => `- ${c.id}: ${c.name}`).join('\n')}
+${[...CATEGORIES, ...customCats].map((c) => `- ${c.id}: ${c.name}`).join('\n')}
+${customCats.length > 0 ? '\nCUSTOM CATEGORY KEYWORDS (user-defined — prefer these when merchant/description matches keywords):\n' + customCats.map(c => `- ${c.id} (${c.name}): ${(c.keywords || []).join(', ')}${c.description ? ' — ' + c.description : ''}`).join('\n') : ''}
 
 COMMON MERCHANT MAPPINGS:
 - POS/card payments at stores → groceries/shopping/etc based on store name
@@ -694,6 +707,7 @@ IMPORTANT:
 - Merge multi-line descriptions into one transaction
 - If a transaction description is unclear, set category to "other" and confidence low
 - For card payments, extract the actual merchant name from "POS <merchant>" format`;
+}
 
 export async function processBankStatement(pdfBase64, { userId = 'local', signal } = {}) {
   const result = await callAI([
@@ -710,7 +724,7 @@ export async function processBankStatement(pdfBase64, { userId = 'local', signal
         },
       ],
     },
-  ], BANK_STATEMENT_PROMPT, 16000, { signal });
+  ], buildBankStatementPrompt(await getCustomCategories()), 16000, { signal });
 
   return normalizeBankStatementResult(result, userId);
 }
@@ -796,7 +810,7 @@ export async function processNaturalLanguage(text, { userId = 'local' } = {}) {
       role: 'user',
       content: `Parse this expense/income: "${inputText}". Today is ${today}. Return JSON.`,
     },
-  ], NLP_SYSTEM_PROMPT, 1000);
+  ], buildNLPPrompt(await getCustomCategories()), 1000);
 
   const normalized = normalizeNLPResult(result, userId, text);
 

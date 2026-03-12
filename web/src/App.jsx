@@ -12,6 +12,7 @@ import WhatsNew from './components/WhatsNew';
 import BackgroundJobNotifier from './components/BackgroundJobNotifier';
 import QuickAddFAB from './components/QuickAddFAB';
 import { RefreshCw, AlertTriangle, Home } from 'lucide-react';
+import { initCategories } from './lib/categoryManager';
 
 // ─── EAGER imports for core pages (instant navigation, no Suspense) ────
 // These 3 pages are visited on >90% of sessions — no lazy loading needed.
@@ -88,6 +89,9 @@ function ScrollToTop() {
 function ProtectedLayout() {
   const { user, loading } = useAuth();
   const { pathname } = useLocation();
+
+  // Pre-load custom categories + hidden list into sync cache on mount
+  useEffect(() => { initCategories(); }, []);
 
   if (loading) {
     return (

@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { getSetting } from '../../lib/storage';
 import { settings as settingsApi } from '../../lib/api';
-import { CATEGORIES } from '../../lib/constants';
 import { getCategoryById } from '../../lib/helpers';
+import { useCategories } from '../../hooks/useCategories';
+import { getCategoryLabel } from '../../lib/categoryManager';
 import { ChevronRight, ChevronLeft, Save } from 'lucide-react';
 
 export default function StepMapCategories({ extractedData, categoryMappings, setCategoryMappings, aiSuggestions, onNext, onBack }) {
   const { t } = useTranslation();
+  const { categories } = useCategories();
   const [saveMappings, setSaveMappings] = useState(true);
   const [mappingSources, setMappingSources] = useState({}); // track origin: 'saved' | 'ai' | 'manual'
 
@@ -78,7 +80,7 @@ export default function StepMapCategories({ extractedData, categoryMappings, set
     return counts;
   }, [extractedData]);
 
-  const expenseCategories = CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer');
+  const expenseCategories = categories.filter((c) => c.id !== 'income' && c.id !== 'transfer');
 
   return (
     <div className="space-y-5">
@@ -123,7 +125,7 @@ export default function StepMapCategories({ extractedData, categoryMappings, set
                   onChange={(e) => handleChange(cat, e.target.value)}
                 >
                   {expenseCategories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+                    <option key={c.id} value={c.id}>{c.icon} {getCategoryLabel(c, t)}</option>
                   ))}
                   <option value="income">💰 {t('categories.income')}</option>
                 </select>

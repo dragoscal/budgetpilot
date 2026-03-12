@@ -15,15 +15,17 @@ import { useNavigate } from 'react-router-dom';
 import { requestNotificationPermission, getNotificationPermission } from '../lib/notifications';
 import { Settings as SettingsIcon, Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
-import { CATEGORIES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel, addCustomCategory, updateCustomCategory, deleteCustomCategory, toggleCategoryVisibility } from '../lib/categoryManager';
 import HelpButton from '../components/HelpButton';
 import { APP_VERSION, CHANGELOG } from '../lib/changelog';
-import { Sparkles, History, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, History, ChevronDown, ChevronUp, Eye, Pencil, Grid3X3, Palette } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile, logout } = useAuth();
   const { dark, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const { categories, hiddenIds, refresh: refreshCategories } = useCategories({ includeHidden: true });
   const { hideAmounts, updateHideAmounts } = useHideAmounts();
   const { refreshStatus: refreshSyncStatus, syncNow } = useSync();
   const { t, language, setLanguage, languages } = useTranslation();
@@ -68,6 +70,10 @@ export default function SettingsPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
   const [showChangelog, setShowChangelog] = useState(false);
+  const [catMgmtExpanded, setCatMgmtExpanded] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [editingCat, setEditingCat] = useState(null);
+  const [catForm, setCatForm] = useState({ name: '', icon: '📁', color: '#6b7280', keywords: '', description: '' });
 
   useEffect(() => {
     loadSettings();
@@ -892,6 +898,221 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Category Management — Visibility & Custom Categories */}
+      <div className="card">
+        <button onClick={() => setCatMgmtExpanded(!catMgmtExpanded)}
+          className="flex items-center justify-between w-full text-left">
+          <h3 className="section-title flex items-center gap-2 mb-0">
+            <Grid3X3 size={14} /> {t('settings.categoryManagement')}
+            {hiddenIds.length > 0 && <span className="text-xs text-cream-400 font-normal">({hiddenIds.length} {t('settings.hidden')})</span>}
+          </h3>
+          <ChevronDown size={14} className={`text-cream-400 transition-transform ${catMgmtExpanded ? 'rotate-180' : ''}`} />
+        </button>
+
+        {catMgmtExpanded && (
+          <div className="mt-4 space-y-6">
+            {/* Section A: Category Visibility */}
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Eye size={14} /> {t('settings.categoryVisibility')}
+              </h4>
+              <p className="text-xs text-cream-500 mb-3">{t('settings.categoryVisibilityDesc')}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {categories.map((cat) => {
+                  const isHidden = hiddenIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={async () => {
+                        await toggleCategoryVisibility(cat.id);
+                        refreshCategories();
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                        isHidden
+                          ? 'border-cream-200 dark:border-dark-border bg-cream-50 dark:bg-dark-bg opacity-50 line-through'
+                          : 'border-cream-200 dark:border-dark-border bg-white dark:bg-dark-card'
+                      }`}
+                    >
+                      <span className="text-base">{cat.icon}</span>
+                      <span className="truncate">{getCategoryLabel(cat, t)}</span>
+                      {cat.isCustom && <Sparkles size={10} className="text-accent-500 shrink-0" />}
+                      {isHidden ? (
+                        <EyeOff size={12} className="ml-auto text-cream-400 shrink-0" />
+                      ) : (
+                        <Eye size={12} className="ml-auto text-success shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section B: Custom Categories */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles size={14} /> {t('settings.customCategories')}
+                </h4>
+                <button
+                  onClick={() => {
+                    setCatForm({ name: '', icon: '📁', color: '#6b7280', keywords: '', description: '' });
+                    setEditingCat(null);
+                    setShowAddCategory(true);
+                  }}
+                  className="btn-primary text-xs flex items-center gap-1 px-3 py-1.5"
+                >
+                  <Plus size={14} /> {t('settings.addCategory')}
+                </button>
+              </div>
+              <p className="text-xs text-cream-500 mb-3">{t('settings.customCategoriesDesc')}</p>
+
+              {/* Existing custom categories list */}
+              {categories.filter(c => c.isCustom).length > 0 ? (
+                <div className="space-y-2">
+                  {categories.filter(c => c.isCustom).map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-lg bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xl" style={{ color: cat.color }}>{cat.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{cat.name}</p>
+                          {cat.keywords?.length > 0 && (
+                            <p className="text-xs text-cream-500 truncate">{t('settings.keywords')}: {cat.keywords.join(', ')}</p>
+                          )}
+                          {cat.description && (
+                            <p className="text-xs text-cream-400 truncate">{cat.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => {
+                            setCatForm({
+                              name: cat.name,
+                              icon: cat.icon,
+                              color: cat.color,
+                              keywords: cat.keywords?.join(', ') || '',
+                              description: cat.description || '',
+                            });
+                            setEditingCat(cat.id);
+                            setShowAddCategory(true);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border transition-colors"
+                        >
+                          <Pencil size={14} className="text-cream-500" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(t('settings.deleteConfirmCategory'))) return;
+                            await deleteCustomCategory(cat.id);
+                            refreshCategories();
+                            toast.success(t('settings.categoryDeleted'));
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-danger/10 transition-colors"
+                        >
+                          <Trash2 size={14} className="text-danger" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-cream-400 italic">{t('settings.noCustomCategories')}</p>
+              )}
+
+              {/* Add/Edit Category Form */}
+              {showAddCategory && (
+                <div className="mt-3 p-4 rounded-xl bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border space-y-3">
+                  <h4 className="text-sm font-semibold">{editingCat ? t('settings.editCategory') : t('settings.addCategory')}</h4>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
+                    <label className="text-xs text-cream-500">{t('settings.categoryName')}</label>
+                    <input
+                      className="input text-sm"
+                      value={catForm.name}
+                      onChange={(e) => setCatForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Coffee & Tea"
+                      autoFocus
+                    />
+                    <label className="text-xs text-cream-500">{t('settings.categoryIcon')}</label>
+                    <input
+                      className="input text-sm w-20"
+                      value={catForm.icon}
+                      onChange={(e) => setCatForm(f => ({ ...f, icon: e.target.value }))}
+                      placeholder="☕"
+                      maxLength={4}
+                    />
+                    <label className="text-xs text-cream-500">{t('settings.categoryColor')}</label>
+                    <div className="flex items-center gap-2">
+                      {['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#8B4513'].map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setCatForm(f => ({ ...f, color: c }))}
+                          className={`w-6 h-6 rounded-full border-2 transition-all ${catForm.color === c ? 'border-cream-900 dark:border-white scale-110' : 'border-transparent'}`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                    <label className="text-xs text-cream-500">{t('settings.categoryKeywords')}</label>
+                    <input
+                      className="input text-sm"
+                      value={catForm.keywords}
+                      onChange={(e) => setCatForm(f => ({ ...f, keywords: e.target.value }))}
+                      placeholder="coffee, cafea, starbucks, latte"
+                    />
+                    <label className="text-xs text-cream-500">{t('settings.categoryDescription')}</label>
+                    <input
+                      className="input text-sm"
+                      value={catForm.description}
+                      onChange={(e) => setCatForm(f => ({ ...f, description: e.target.value }))}
+                      placeholder={t('settings.categoryDescriptionPlaceholder')}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={async () => {
+                        if (!catForm.name.trim()) {
+                          toast.error(t('settings.categoryNameRequired'));
+                          return;
+                        }
+                        try {
+                          const data = {
+                            name: catForm.name.trim(),
+                            icon: catForm.icon || '📁',
+                            color: catForm.color,
+                            keywords: catForm.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean),
+                            description: catForm.description.trim(),
+                          };
+                          if (editingCat) {
+                            await updateCustomCategory(editingCat, data);
+                            toast.success(t('settings.categoryUpdated'));
+                          } else {
+                            await addCustomCategory(data);
+                            toast.success(t('settings.categoryAdded'));
+                          }
+                          refreshCategories();
+                          setShowAddCategory(false);
+                          setEditingCat(null);
+                        } catch (err) {
+                          toast.error(err.message);
+                        }
+                      }}
+                      className="btn-primary text-xs flex items-center gap-1"
+                    >
+                      <CheckCircle2 size={14} /> {editingCat ? t('common.save') : t('settings.addCategory')}
+                    </button>
+                    <button
+                      onClick={() => { setShowAddCategory(false); setEditingCat(null); }}
+                      className="btn-ghost text-xs"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Category Rules — Collapsible */}
       <div className="card">
         <button onClick={() => setRulesExpanded(!rulesExpanded)}
@@ -924,7 +1145,7 @@ export default function SettingsPage() {
                 {categoryRules
                   .filter(rule => !ruleSearch || rule.merchant.toLowerCase().includes(ruleSearch.toLowerCase()))
                   .map((rule) => {
-                  const cat = CATEGORIES.find((c) => c.id === rule.category);
+                  const cat = categories.find((c) => c.id === rule.category);
                   return (
                     <div key={rule.merchant} className="flex items-center justify-between p-2 rounded-lg bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
                       <div className="flex items-center gap-2 min-w-0">
@@ -947,14 +1168,14 @@ export default function SettingsPage() {
                               autoFocus
                               onBlur={() => setEditingRule(null)}
                             >
-                              {CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'transfer').map(c => (
-                                <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+                              {categories.filter(c => c.id !== 'income' && c.id !== 'transfer').map(c => (
+                                <option key={c.id} value={c.id}>{c.icon} {getCategoryLabel(c, t)}</option>
                               ))}
                             </select>
                           ) : (
                             <p className="text-xs text-cream-500 cursor-pointer hover:text-accent-500 transition-colors"
                               onClick={() => setEditingRule({ merchant: rule.merchant, category: rule.category })}>
-                              {t(`categories.${rule.category}`)} ({rule.count}x) <span className="text-cream-400">— {t('settings.clickToEdit')}</span>
+                              {getCategoryLabel(cat, t)} ({rule.count}x) <span className="text-cream-400">— {t('settings.clickToEdit')}</span>
                             </p>
                           )}
                         </div>
@@ -995,8 +1216,8 @@ export default function SettingsPage() {
                   value={newRuleCategory}
                   onChange={(e) => setNewRuleCategory(e.target.value)}
                 >
-                  {CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => (
-                    <option key={c.id} value={c.id}>{c.icon} {t(`categories.${c.id}`)}</option>
+                  {categories.filter((c) => c.id !== 'income' && c.id !== 'transfer').map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {getCategoryLabel(c, t)}</option>
                   ))}
                 </select>
               </div>

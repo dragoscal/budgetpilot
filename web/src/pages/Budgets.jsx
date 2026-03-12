@@ -4,7 +4,9 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
-import { CATEGORIES, BUDGET_TEMPLATES } from '../lib/constants';
+import { BUDGET_TEMPLATES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { generateId, formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, getDaysRemaining } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import BudgetBar from '../components/BudgetBar';
@@ -22,6 +24,7 @@ export default function Budgets() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isFamilyMode, activeFamily, members } = useFamily();
+  const { categories } = useCategories();
   const [viewMode, setViewMode] = useState('personal'); // 'personal' | 'family'
   const [month, setMonth] = useState(new Date());
   const [budgetsList, setBudgets] = useState([]);
@@ -198,7 +201,7 @@ export default function Budgets() {
   };
 
   const usedCategories = new Set(budgetsList.map((b) => b.category));
-  const availableCategories = CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer' && !usedCategories.has(c.id));
+  const availableCategories = categories.filter((c) => c.id !== 'income' && c.id !== 'transfer' && !usedCategories.has(c.id));
 
   // ─── Template logic ─────────────────────────────────
   const handleSelectTemplate = (template) => {
@@ -218,7 +221,7 @@ export default function Budgets() {
     }
 
     // Map categories that are in mapping
-    const budgetableCats = CATEGORIES.filter((c) => c.id !== 'income' && c.id !== 'transfer');
+    const budgetableCats = categories.filter((c) => c.id !== 'income' && c.id !== 'transfer');
     for (const cat of budgetableCats) {
       const bucket = mapping[cat.id] || (template.id === '80-20' ? 'spending' : null);
       if (bucket && bucketCategories[bucket]) {
@@ -506,7 +509,7 @@ export default function Budgets() {
             {editBudget ? (
               <>
                 <label className="label">{t('budgets.category')}</label>
-                <p className="text-sm font-medium">{CATEGORIES.find((c) => c.id === formCategory)?.icon} {t(`categories.${formCategory}`)}</p>
+                <p className="text-sm font-medium">{categories.find((c) => c.id === formCategory)?.icon} {getCategoryLabel(categories.find((c) => c.id === formCategory), t)}</p>
               </>
             ) : (
               <CategoryPicker
@@ -577,10 +580,10 @@ export default function Budgets() {
               </h4>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {templatePreview.map((item) => {
-                  const cat = CATEGORIES.find((c) => c.id === item.category);
+                  const cat = categories.find((c) => c.id === item.category);
                   return (
                     <div key={item.category} className="flex items-center justify-between text-sm">
-                      <span>{cat?.icon} {t(`categories.${item.category}`)}</span>
+                      <span>{cat?.icon} {getCategoryLabel(cat, t)}</span>
                       <span className="font-medium">{formatCurrency(item.amount, currency)}</span>
                     </div>
                   );

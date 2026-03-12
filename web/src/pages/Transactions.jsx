@@ -13,7 +13,9 @@ import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
-import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
+import { SORT_OPTIONS } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
 import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
@@ -37,6 +39,7 @@ export default function Transactions() {
   const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
   const { t } = useTranslation();
+  const { categories } = useCategories();
   const currency = user?.defaultCurrency || 'RON';
   const [allTx, setAllTx] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -420,14 +423,14 @@ export default function Transactions() {
                 {showBatchCategory && (
                   <div className="absolute right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden z-50" style={{ minWidth: '200px', maxHeight: '320px' }}>
                     <div className="overflow-y-auto" style={{ maxHeight: '320px' }}>
-                      {CATEGORIES.map((cat) => (
+                      {categories.map((cat) => (
                         <button
                           key={cat.id}
                           onClick={() => handleBatchCategorize(cat.id)}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
                         >
                           <span>{cat.icon}</span>
-                          <span>{t(`categories.${cat.id}`)}</span>
+                          <span>{getCategoryLabel(cat, t)}</span>
                         </button>
                       ))}
                     </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { CATEGORIES, SUBCATEGORIES } from '../lib/constants';
 import { getSubcategoryById, getCategoryById } from '../lib/helpers';
-import { Search, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { getCategoryLabel } from '../lib/categoryManager';
+import { useCategories } from '../hooks/useCategories';
+import { Search, ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
 const RECENT_KEY = 'bp_recentCategories';
@@ -11,7 +12,6 @@ function getRecentPicks() {
   try {
     return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').slice(0, MAX_RECENT);
   } catch {
-    // Intentionally swallowed — localStorage read fallback returns empty array
     return [];
   }
 }
@@ -21,6 +21,19 @@ function saveRecentPick(categoryId, subcategoryId) {
   const recent = getRecentPicks().filter((r) => r.key !== key);
   recent.unshift({ key, categoryId, subcategoryId: subcategoryId || null });
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+/** Translate category name — custom categories use .name, built-in use t() */
+function catLabel(cat, t) {
+  return getCategoryLabel(cat, t);
+}
+
+/** Translate subcategory name — custom uses .name, built-in uses t() */
+function subLabel(sub, t) {
+  if (!sub) return '';
+  if (sub.id?.startsWith('custom_')) return sub.name;
+  const translated = t(`subcategories.${sub.id}`);
+  return translated === `subcategories.${sub.id}` ? sub.name : translated;
 }
 
 export default function CategoryPicker({
@@ -33,6 +46,7 @@ export default function CategoryPicker({
   label = null,
 }) {
   const { t } = useTranslation();
+  const { categories, subcategories } = useCategories();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedParent, setExpandedParent] = useState(null);
@@ -65,22 +79,22 @@ export default function CategoryPicker({
     return () => window.removeEventListener('keydown', handler);
   }, [open]);
 
-  const filteredCategories = CATEGORIES.filter((c) => !exclude.includes(c.id));
+  const filteredCategories = categories.filter((c) => !exclude.includes(c.id));
   const lowerSearch = search.toLowerCase();
 
-  // Filter categories and subcategories by search (search both translated and original names)
+  // Filter categories and subcategories by search
   const searchResults = [];
   if (lowerSearch) {
     for (const cat of filteredCategories) {
-      const catName = t(`categories.${cat.id}`);
-      if (catName.toLowerCase().includes(lowerSearch) || cat.name.toLowerCase().includes(lowerSearch)) {
-        searchResults.push({ type: 'category', ...cat, translatedName: catName });
+      const translatedName = catLabel(cat, t);
+      if (translatedName.toLowerCase().includes(lowerSearch) || cat.name.toLowerCase().includes(lowerSearch)) {
+        searchResults.push({ type: 'category', ...cat, translatedName });
       }
-      if (showSubcategories && SUBCATEGORIES[cat.id]) {
-        for (const sub of SUBCATEGORIES[cat.id]) {
-          const subName = t(`subcategories.${sub.id}`);
-          if (subName.toLowerCase().includes(lowerSearch) || sub.name.toLowerCase().includes(lowerSearch)) {
-            searchResults.push({ type: 'subcategory', parentId: cat.id, parentIcon: cat.icon, parentName: catName, ...sub, translatedName: subName });
+      if (showSubcategories && subcategories[cat.id]) {
+        for (const sub of subcategories[cat.id]) {
+          const translatedSub = subLabel(sub, t);
+          if (translatedSub.toLowerCase().includes(lowerSearch) || sub.name.toLowerCase().includes(lowerSearch)) {
+            searchResults.push({ type: 'subcategory', parentId: cat.id, parentIcon: cat.icon, parentName: translatedName, ...sub, translatedName: translatedSub });
           }
         }
       }
@@ -98,7 +112,7 @@ export default function CategoryPicker({
   };
 
   const handleCategoryClick = (cat) => {
-    if (showSubcategories && SUBCATEGORIES[cat.id]?.length > 0) {
+    if (showSubcategories && subcategories[cat.id]?.length > 0) {
       setExpandedParent(cat.id);
     } else {
       handleSelect(cat.id);
@@ -120,7 +134,7 @@ export default function CategoryPicker({
       >
         <span className="shrink-0">{currentSub?.icon || currentCat.icon}</span>
         <span className="truncate font-medium">
-          {currentSub ? t(`subcategories.${currentSub.id}`) : t(`categories.${currentCat.id}`)}
+          {currentSub ? subLabel(currentSub, t) : catLabel(currentCat, t)}
         </span>
         <ChevronRight size={compact ? 10 : 14} className="ml-auto text-cream-400 shrink-0" />
       </button>
@@ -171,6 +185,7 @@ export default function CategoryPicker({
                     >
                       <span>{item.icon}</span>
                       <span className="font-medium">{item.translatedName}</span>
+                      {item.isCustom && <Sparkles size={10} className="text-accent-500 shrink-0" />}
                       {item.type === 'subcategory' && (
                         <span className="text-[10px] text-cream-400 ml-auto">{item.parentName}</span>
                       )}
@@ -201,12 +216,12 @@ export default function CategoryPicker({
                   }`}
                 >
                   <span>{getCategoryById(expandedParent).icon}</span>
-                  <span>{t(`categories.${expandedParent}`)} ({t('common.general')})</span>
+                  <span>{catLabel(getCategoryById(expandedParent), t)} ({t('common.general')})</span>
                 </button>
 
                 <div className="mx-3 my-1 border-t border-cream-100 dark:border-dark-border" />
 
-                {(SUBCATEGORIES[expandedParent] || []).map((sub) => (
+                {(subcategories[expandedParent] || []).map((sub) => (
                   <button
                     key={sub.id}
                     type="button"
@@ -216,7 +231,7 @@ export default function CategoryPicker({
                     }`}
                   >
                     <span>{sub.icon}</span>
-                    <span>{t(`subcategories.${sub.id}`)}</span>
+                    <span>{subLabel(sub, t)}</span>
                   </button>
                 ))}
               </div>
@@ -238,8 +253,8 @@ export default function CategoryPicker({
                           className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
                         >
                           <span>{sub?.icon || cat.icon}</span>
-                          <span>{sub ? t(`subcategories.${sub.id}`) : t(`categories.${cat.id}`)}</span>
-                          {sub && <span className="text-[10px] text-cream-400 ml-auto">{t(`categories.${cat.id}`)}</span>}
+                          <span>{sub ? subLabel(sub, t) : catLabel(cat, t)}</span>
+                          {sub && <span className="text-[10px] text-cream-400 ml-auto">{catLabel(cat, t)}</span>}
                         </button>
                       );
                     })}
@@ -250,7 +265,7 @@ export default function CategoryPicker({
                 {/* All categories */}
                 <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-cream-400 uppercase tracking-wider">{t('filter.allCategories')}</p>
                 {filteredCategories.map((cat) => {
-                  const hasSubs = showSubcategories && SUBCATEGORIES[cat.id]?.length > 0;
+                  const hasSubs = showSubcategories && subcategories[cat.id]?.length > 0;
                   return (
                     <button
                       key={cat.id}
@@ -261,7 +276,8 @@ export default function CategoryPicker({
                       }`}
                     >
                       <span>{cat.icon}</span>
-                      <span className="font-medium">{t(`categories.${cat.id}`)}</span>
+                      <span className="font-medium">{catLabel(cat, t)}</span>
+                      {cat.isCustom && <Sparkles size={10} className="text-accent-500 shrink-0" />}
                       {hasSubs && <ChevronRight size={12} className="ml-auto text-cream-400" />}
                     </button>
                   );

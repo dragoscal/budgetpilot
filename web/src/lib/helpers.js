@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { format, startOfMonth, endOfMonth, differenceInDays, isToday, parseISO } from 'date-fns';
 import { CURRENCIES, CATEGORIES, SUBCATEGORIES, RECURRING_FREQUENCIES } from './constants';
+import { getCategoryByIdSync, getSubcategoriesSync, getSubcategoryByIdSync } from './categoryManager';
 
 export function generateId() {
   return uuidv4();
@@ -93,7 +94,7 @@ export function isDateToday(date) {
 }
 
 export function getCategoryById(id) {
-  return CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+  return getCategoryByIdSync(id);
 }
 
 export function getCurrencyByCode(code) {
@@ -198,14 +199,11 @@ export function getParentCategory(subcatId) {
 }
 
 export function getSubcategories(categoryId) {
-  return SUBCATEGORIES[categoryId] || [];
+  return getSubcategoriesSync(categoryId);
 }
 
 export function getSubcategoryById(subcatId) {
-  if (!subcatId || !subcatId.includes(':')) return null;
-  const parentId = subcatId.split(':')[0];
-  const subs = SUBCATEGORIES[parentId] || [];
-  return subs.find((s) => s.id === subcatId) || null;
+  return getSubcategoryByIdSync(subcatId);
 }
 
 export function formatCategoryLabel(categoryId, subcategoryId) {

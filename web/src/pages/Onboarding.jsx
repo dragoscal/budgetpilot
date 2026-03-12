@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { CURRENCIES, CATEGORIES, ACCOUNT_TYPES, ONBOARDING_BUDGET_DEFAULTS } from '../lib/constants';
+import { CURRENCIES, ACCOUNT_TYPES, ONBOARDING_BUDGET_DEFAULTS } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { accounts as accountsApi, budgets as budgetsApi, transactions as txApi, settings as settingsApi } from '../lib/api';
 import { generateId, formatDateISO } from '../lib/helpers';
 import { Wallet, ArrowRight, ArrowLeft, Check, Sparkles, Upload, History } from 'lucide-react';
@@ -15,6 +17,7 @@ export default function Onboarding() {
   const { user, updateProfile } = useAuth();
   const { toast } = useToast();
   const { t, language, setLanguage, languages } = useTranslation();
+  const { categories } = useCategories();
 
   const STEPS = [
     t('onboarding.stepWelcome'),
@@ -336,13 +339,13 @@ export default function Onboarding() {
                   );
                   const allCats = [...budgetCategories, ...extraCats];
                   return allCats.map((catId) => {
-                    const cat = CATEGORIES.find((c) => c.id === catId);
+                    const cat = categories.find((c) => c.id === catId);
                     if (!cat) return null;
                     const defaults = ONBOARDING_BUDGET_DEFAULTS[currency] || ONBOARDING_BUDGET_DEFAULTS.RON;
                     return (
                       <div key={catId} className="flex items-center gap-3">
                         <span className="text-xl w-8 text-center">{cat.icon}</span>
-                        <span className="text-sm font-medium flex-1">{t(`categories.${catId}`)}</span>
+                        <span className="text-sm font-medium flex-1">{getCategoryLabel(cat, t)}</span>
                         <input
                           type="number"
                           className="input w-32"

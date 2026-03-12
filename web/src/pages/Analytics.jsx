@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf, getDisplayAmount } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
-import { SUBCATEGORIES } from '../lib/constants';
+import { useCategories } from '../hooks/useCategories';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -17,6 +17,7 @@ import HelpButton from '../components/HelpButton';
 export default function Analytics() {
   const { t } = useTranslation();
   const { user, effectiveUserId } = useAuth();
+  const { subcategories } = useCategories();
   const [month, setMonth] = useState(new Date());
   const [allTx, setAllTx] = useState([]);
   const [budgetsList, setBudgets] = useState([]);
@@ -199,7 +200,7 @@ export default function Analytics() {
 
       {/* Subcategory Drill-Down */}
       {selectedCategory && (() => {
-        const subcats = SUBCATEGORIES[selectedCategory] || [];
+        const subcats = subcategories[selectedCategory] || [];
         if (!subcats.length) return null;
         const subcatData = subcats.map(sub => {
           const spent = monthTx
