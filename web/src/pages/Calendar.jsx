@@ -189,6 +189,11 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
             {dayData.bills.map((b) => {
               const cat = getCategoryById(b.category);
               const isAuto = !!b.autoDebit;
+              // Check if this bill has been paid (transaction exists)
+              const isPaid = dayData.transactions.some(tx =>
+                tx.recurringId === b.id ||
+                (tx.source === 'recurring' && tx.merchant === (b.name || b.merchant) && Math.abs(tx.amount - b.amount) < 0.01)
+              );
               return (
                 <div key={b.id} className="flex items-center justify-between py-2 px-2.5 rounded-xl bg-cream-50 dark:bg-dark-border/30 text-sm">
                   <span className="flex items-center gap-2">
@@ -197,6 +202,15 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${isAuto ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'}`}>
                       {isAuto ? t('recurring.autoLabel') : t('recurring.manualLabel')}
                     </span>
+                    {isPaid ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-success/10 text-success flex items-center gap-0.5">
+                        <CheckCircle2 size={10} /> {t('calendar.billPaid')}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-cream-200 dark:bg-dark-border text-cream-500">
+                        {t('calendar.billPending')}
+                      </span>
+                    )}
                   </span>
                   <span className="money font-bold text-sm">{formatCurrency(b.amount, b.currency || currency)}</span>
                 </div>

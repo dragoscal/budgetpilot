@@ -24,11 +24,11 @@ const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], };
 
 // Valid D1 columns per table — client may send extra fields that don't exist in the schema
 const TABLE_COLUMNS = {
-  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','items','splitFrom','importBatch','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
+  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','recurringId','items','splitFrom','importBatch','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
   budgets: new Set(['id','userId','category','amount','currency','month','rollover','createdAt','updatedAt']),
   goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
   accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
-  recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','endDate','active','autoDetected','autoDebit','createdAt','updatedAt']),
+  recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','endDate','active','autoDetected','autoDebit','status','pausedAt','cancelledAt','createdAt','updatedAt']),
   people: new Set(['id','userId','name','emoji','phone','notes','createdAt','updatedAt']),
   debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
   debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),

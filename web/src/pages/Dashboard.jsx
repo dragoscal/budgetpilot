@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
-import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getCategoryById, sortByDate, getRecurringDueToday, generateId } from '../lib/helpers';
+import { formatCurrency, percentOf, sumBy, sumAmountsMultiCurrency, groupBy, trendIndicator, getCategoryById, sortByDate, getRecurringDueToday, splitRecurringDue, generateId } from '../lib/helpers';
+import { settings as settingsApi } from '../lib/api';
 import { getCachedRates } from '../lib/exchangeRates';
 import { predictMonthlySpending, predictEndOfMonthBalance, getSpendingAnomalies } from '../lib/predictions';
 import { getBillSuggestions, dismissSuggestion } from '../lib/billSuggestions';
@@ -20,7 +21,8 @@ import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAx
 import SyncIndicator from '../components/SyncIndicator';
 import SpendingPsychology from '../components/SpendingPsychology';
 import HelpButton from '../components/HelpButton';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home, BookOpen, Check } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 
@@ -30,6 +32,7 @@ export default function Dashboard() {
   // eslint-disable-next-line no-unused-vars -- context available for future use
   const hideAmountsCtx = useHideAmounts();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
   const [prevTransactions, setPrevTransactions] = useState([]);
@@ -40,8 +43,10 @@ export default function Dashboard() {
   const [rates, setRates] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [recurringDue, setRecurringDue] = useState([]);
+  const [manualBillsDue, setManualBillsDue] = useState([]);
+  const [autoBillsDue, setAutoBillsDue] = useState([]);
   const [creatingRecurring, setCreatingRecurring] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Single master toggle for hiding all amounts
   const [hidden, setHidden] = useState(false);
@@ -218,9 +223,13 @@ export default function Dashboard() {
       setRecurring(activeRec);
       setAccounts(accts);
 
-      // Check for recurring items due this month that haven't been auto-created
-      const dueItems = getRecurringDueToday(activeRec, allTx);
-      setRecurringDue(dueItems);
+      // Check for recurring items due this month — split by manual/auto
+      const { manual, auto } = splitRecurringDue(activeRec, allTx);
+      setManualBillsDue(manual);
+      setAutoBillsDue(auto);
+
+      // Welcome card check
+      try { const seen = await settingsApi.get('hasSeenWelcome'); if (!seen) setShowWelcome(true); } catch (e) {}
     } catch (err) {
       console.error('Dashboard load error:', err);
     } finally {
@@ -247,13 +256,25 @@ export default function Dashboard() {
           });
         }
         // Check recurring due and send OS notifications
-        if (recurringDue.length > 0) {
-          await checkAndNotifyRecurringDue(recurringDue);
+        const allDue = [...manualBillsDue, ...autoBillsDue];
+        if (allDue.length > 0) {
+          await checkAndNotifyRecurringDue(allDue);
+        }
+        // Separate notifications for manual vs auto — manual needs action
+        if (manualBillsDue.length > 0) {
           await addNotification({
             type: 'recurring_due',
-            title: t('notifications.recurringDue'),
-            message: `${recurringDue.length} bill(s) due: ${recurringDue.map(r => r.name).join(', ')}`,
-            actionUrl: '/recurring',
+            title: t('dashboard.manualBillsDue'),
+            message: `${manualBillsDue.length} bill(s) need confirmation: ${manualBillsDue.map(r => r.name).join(', ')}`,
+            actionUrl: '/',
+          });
+        }
+        if (autoBillsDue.length > 0) {
+          await addNotification({
+            type: 'recurring_due',
+            title: t('dashboard.autoBillsTitle'),
+            message: `${autoBillsDue.length} auto-debit bill(s): ${autoBillsDue.map(r => r.name).join(', ')}`,
+            actionUrl: '/',
           });
         }
       } catch (err) {
@@ -262,7 +283,7 @@ export default function Dashboard() {
       }
     };
     runNotificationChecks();
-  }, [loading, transactions.length, budgetsList.length, recurringDue.length]);
+  }, [loading, transactions.length, budgetsList.length, manualBillsDue.length, autoBillsDue.length]);
 
   // Apply scope filter to transactions
   const scopedTx = useMemo(() => {
@@ -542,7 +563,7 @@ export default function Dashboard() {
     setCreatingRecurring(true);
     try {
       const cur = user?.defaultCurrency || 'RON';
-      for (const item of recurringDue) {
+      for (const item of autoBillsDue) {
         const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         const billingDay = String(item.billingDay || 1).padStart(2, '0');
         await txApi.create({
@@ -560,14 +581,60 @@ export default function Dashboard() {
           createdAt: new Date().toISOString(),
         });
       }
-      setRecurringDue([]);
+      setAutoBillsDue([]);
+      toast.success(t('dashboard.autoBillsCreated'));
       loadData();
     } catch (err) {
       console.error('Failed to auto-create recurring:', err);
+      toast.error(err.message);
     } finally {
       setCreatingRecurring(false);
     }
   };
+
+  const handleConfirmManualBill = async (item) => {
+    try {
+      const cur = user?.defaultCurrency || 'RON';
+      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const billingDay = String(item.billingDay || 1).padStart(2, '0');
+      await txApi.create({
+        id: generateId(),
+        type: 'expense',
+        amount: item.amount,
+        currency: item.currency || cur,
+        category: item.category || 'bills',
+        merchant: item.name || item.merchant,
+        description: `Confirmed payment: ${item.name || item.merchant}`,
+        date: `${currentMonth}-${billingDay}`,
+        source: 'recurring',
+        recurringId: item.id,
+        userId: effectiveUserId,
+        createdAt: new Date().toISOString(),
+      });
+      setManualBillsDue((prev) => prev.filter((b) => b.id !== item.id));
+      toast.success(`${t('dashboard.confirmPaid')}: ${item.name}`);
+      loadData();
+    } catch (err) {
+      console.error('Failed to confirm manual bill:', err);
+      toast.error(err.message);
+    }
+  };
+
+  const dismissWelcome = async () => {
+    setShowWelcome(false);
+    try { await settingsApi.set('hasSeenWelcome', true); } catch (e) {}
+  };
+
+  // Welcome progress steps
+  const welcomeProgress = useMemo(() => {
+    const steps = [
+      { key: 'transactions', done: allTransactions.length > 0 },
+      { key: 'budgets', done: budgetsList.length > 0 },
+      { key: 'accounts', done: accountsList.length > 1 },
+      { key: 'recurring', done: recurringList.length > 0 },
+    ];
+    return { steps, done: steps.filter(s => s.done).length, total: steps.length };
+  }, [allTransactions, budgetsList, accountsList, recurringList]);
 
   if (loading) return <SkeletonPage />;
 
@@ -740,22 +807,146 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Recurring Due Banner */}
-      {recurringDue.length > 0 && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-accent-50 dark:bg-accent-500/10 border border-accent-200 dark:border-accent-500/20">
-          <div className="flex items-center gap-2 min-w-0">
-            <RotateCcw size={16} className="text-accent-600 dark:text-accent-400 shrink-0" />
-            <span className="text-sm font-medium text-accent-700 dark:text-accent-300">
-              {t('dashboard.recurringDue', { count: recurringDue.length })}
-            </span>
-          </div>
-          <button
-            onClick={handleAutoCreateRecurring}
-            disabled={creatingRecurring}
-            className="btn-primary text-xs shrink-0 disabled:opacity-50"
-          >
-            {creatingRecurring ? t('common.loading') : t('dashboard.autoCreate')}
+      {/* Welcome Card — shown once for new users */}
+      {showWelcome && (
+        <div className="card relative overflow-hidden border-accent/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-success/5 dark:from-accent/10 dark:to-success/10" />
+          <button onClick={dismissWelcome} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 hover:text-cream-600 transition-colors z-10">
+            <X size={16} />
           </button>
+          <div className="relative">
+            <h2 className="text-lg font-heading font-bold mb-1">
+              {t('dashboard.welcomeTitle', { name: user?.name?.split(' ')[0] || '' })}
+            </h2>
+            <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">{t('dashboard.welcomeDesc')}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              <Link to="/add" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent/10 text-accent-700 dark:text-accent-300 text-xs font-medium hover:bg-accent/15 transition-colors">
+                <PlusCircle size={16} /> {t('dashboard.welcomeAddTx')}
+              </Link>
+              <Link to="/budgets" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-success/10 text-success text-xs font-medium hover:bg-success/15 transition-colors">
+                <Target size={16} /> {t('dashboard.welcomeBudget')}
+              </Link>
+              <Link to="/import" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-info/10 text-info text-xs font-medium hover:bg-info/15 transition-colors">
+                <Zap size={16} /> {t('dashboard.welcomeImport')}
+              </Link>
+              <Link to="/guide" className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-warning/10 text-warning text-xs font-medium hover:bg-warning/15 transition-colors">
+                <BookOpen size={16} /> {t('dashboard.welcomeGuide')}
+              </Link>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {welcomeProgress.steps.map((step, i) => (
+                  <div key={i} className={`w-2 h-2 rounded-full transition-colors ${step.done ? 'bg-accent' : 'bg-cream-300 dark:bg-dark-border'}`} />
+                ))}
+                <span className="text-[11px] text-cream-500 ml-1.5">{t('dashboard.welcomeProgress', { done: welcomeProgress.done, total: welcomeProgress.total })}</span>
+              </div>
+              <button onClick={dismissWelcome} className="text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 font-medium transition-colors">
+                {t('dashboard.welcomeDismiss')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Bills Due — need user confirmation */}
+      {manualBillsDue.length > 0 && (
+        <div className="card border-warning/30 bg-warning/5 dark:bg-warning/8 !p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
+                <Bell size={16} className="text-warning" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold">{t('dashboard.manualBillsDue')}</h3>
+                <p className="text-[11px] text-cream-500">{t('dashboard.manualBillsDesc', { count: manualBillsDue.length })}</p>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-bold">{manualBillsDue.length}</span>
+          </div>
+          <div className="divide-y divide-warning/10">
+            {manualBillsDue.map((item) => {
+              const cat = getCategoryById(item.category);
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-lg shrink-0">{cat.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {t(`categories.${item.category}`)}</p>
+                  </div>
+                  <p className="text-sm font-heading font-bold money shrink-0">{formatCurrency(item.amount, item.currency || currency)}</p>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleConfirmManualBill(item)}
+                      className="px-2.5 py-1.5 rounded-lg bg-success/15 text-success text-xs font-medium hover:bg-success/25 transition-colors flex items-center gap-1"
+                    >
+                      <Check size={12} /> {t('dashboard.confirmPaid')}
+                    </button>
+                    <button
+                      onClick={() => setManualBillsDue((prev) => prev.filter((b) => b.id !== item.id))}
+                      className="px-2 py-1.5 rounded-lg bg-cream-200/50 dark:bg-dark-border text-cream-500 text-xs font-medium hover:bg-cream-300 dark:hover:bg-cream-700 transition-colors"
+                    >
+                      {t('dashboard.skipPayment')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Auto-debit Bills — show detail card */}
+      {autoBillsDue.length > 0 && (
+        <div className="card border-accent/20 bg-accent-50/50 dark:bg-accent-500/5 !p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Landmark size={16} className="text-accent-600 dark:text-accent-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold">{t('dashboard.autoBillsTitle')}</h3>
+                <p className="text-[11px] text-cream-500">{t('dashboard.autoBillsDesc')}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleAutoCreateRecurring}
+              disabled={creatingRecurring}
+              className="btn-primary text-xs shrink-0 disabled:opacity-50"
+            >
+              {creatingRecurring ? t('common.loading') : t('dashboard.recordAll')}
+            </button>
+          </div>
+          <div className="divide-y divide-accent/10">
+            {autoBillsDue.map((item) => {
+              const cat = getCategoryById(item.category);
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-lg shrink-0">{cat.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <span className="px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-medium flex items-center gap-0.5">
+                        <Landmark size={10} /> {t('recurring.autoLabel')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {t(`categories.${item.category}`)}</p>
+                  </div>
+                  <p className="text-sm font-heading font-bold money shrink-0">{formatCurrency(item.amount, item.currency || currency)}</p>
+                </div>
+              );
+            })}
+          </div>
+          {autoBillsDue.length > 1 && (
+            <div className="flex items-center justify-between px-4 py-2.5 bg-accent/5 border-t border-accent/10">
+              <span className="text-xs font-medium text-cream-600 dark:text-cream-400">{t('dashboard.totalDue')}</span>
+              <span className="text-sm font-heading font-bold money">{formatCurrency(autoBillsDue.reduce((s, i) => s + (Number(i.amount) || 0), 0), currency)}</span>
+            </div>
+          )}
+          <div className="px-4 pb-3 pt-1">
+            <Link to="/recurring" className="text-xs text-accent-600 dark:text-accent-400 hover:underline font-medium flex items-center gap-1">
+              {t('dashboard.viewRecurring')} <ArrowRight size={12} />
+            </Link>
+          </div>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { recurring as recurringApi } from '../lib/api';
+import { recurring as recurringApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -12,7 +12,7 @@ import RecurringRow from '../components/RecurringRow';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp, Landmark, Bell } from 'lucide-react';
+import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp, Landmark, Bell, XCircle } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 
 export default function Recurring() {
@@ -20,6 +20,7 @@ export default function Recurring() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
+  const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -29,6 +30,7 @@ export default function Recurring() {
   const [audit, setAudit] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [rates, setRates] = useState(null);
+  const [cancelConfirm, setCancelConfirm] = useState(null);
 
   const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false };
   const [form, setForm] = useState(defaultForm);
@@ -40,8 +42,12 @@ export default function Recurring() {
   const loadItems = async () => {
     setLoading(true);
     try {
-      const data = await recurringApi.getAll({ userId: effectiveUserId });
+      const [data, txData] = await Promise.all([
+        recurringApi.getAll({ userId: effectiveUserId }),
+        txApi.getAll({ userId: effectiveUserId }),
+      ]);
       setItems(data);
+      setAllTransactions(txData);
       const patterns = await detectRecurringPatterns();
       setSuggestions(patterns);
       getCachedRates().then(setRates).catch(() => {});
@@ -52,8 +58,10 @@ export default function Recurring() {
     }
   };
 
-  const activeItems = items.filter((i) => i.active !== false);
-  const pausedItems = items.filter((i) => i.active === false);
+  // 3-section split: active / paused / cancelled
+  const activeItems = items.filter((i) => i.status !== 'cancelled' && i.active !== false);
+  const pausedItems = items.filter((i) => i.status !== 'cancelled' && (i.active === false || i.status === 'paused'));
+  const cancelledItems = items.filter((i) => i.status === 'cancelled');
 
   // Frequency-aware monthly total (multi-currency)
   const monthlyTotal = activeItems.reduce((sum, item) => {
@@ -100,10 +108,38 @@ export default function Recurring() {
 
   const handleToggle = async (item) => {
     try {
-      await recurringApi.update(item.id, { active: item.active === false ? true : false });
+      const isPaused = item.active === false || item.status === 'paused';
+      if (isPaused) {
+        // Resume
+        await recurringApi.update(item.id, { active: true, status: 'active', pausedAt: null });
+      } else {
+        // Pause
+        await recurringApi.update(item.id, { active: false, status: 'paused', pausedAt: new Date().toISOString() });
+      }
       loadItems();
     } catch (err) {
       toast.error(err.message || t('recurring.failedToggle'));
+    }
+  };
+
+  const handleCancel = async (item) => {
+    try {
+      await recurringApi.update(item.id, { status: 'cancelled', cancelledAt: new Date().toISOString(), active: false });
+      setCancelConfirm(null);
+      toast.success(t('recurring.cancelledMsg', { name: item.name }));
+      loadItems();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleReactivate = async (item) => {
+    try {
+      await recurringApi.update(item.id, { status: 'active', cancelledAt: null, pausedAt: null, active: true });
+      toast.success(t('recurring.reactivatedMsg', { name: item.name }));
+      loadItems();
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
@@ -235,21 +271,43 @@ export default function Recurring() {
 
       {items.length > 0 ? (
         <>
+          {/* Active Section */}
           {activeItems.length > 0 && (
-            <div className="card p-0">
-              <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                {activeItems.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
-                  <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} />
-                ))}
+            <div>
+              <h3 className="section-title flex items-center gap-2">{t('recurring.active')} <span className="text-cream-400 text-xs font-normal">({activeItems.length})</span></h3>
+              <div className="card p-0">
+                <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                  {activeItems.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
+                    <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                  ))}
+                </div>
               </div>
             </div>
           )}
+
+          {/* Paused Section */}
           {pausedItems.length > 0 && (
             <div>
-              <h3 className="section-title">{t('recurring.paused')}</h3>
+              <h3 className="section-title flex items-center gap-2">{t('recurring.paused')} <span className="text-cream-400 text-xs font-normal">({pausedItems.length})</span></h3>
               <div className="card p-0">
                 <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                  {pausedItems.map((item) => <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} />)}
+                  {pausedItems.map((item) => (
+                    <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cancelled Section */}
+          {cancelledItems.length > 0 && (
+            <div>
+              <h3 className="section-title flex items-center gap-2 text-cream-400">{t('recurring.cancelledSection')} <span className="text-cream-400 text-xs font-normal">({cancelledItems.length})</span></h3>
+              <div className="card p-0 opacity-75">
+                <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                  {cancelledItems.map((item) => (
+                    <RecurringRow key={item.id} item={item} onReactivate={handleReactivate} allTransactions={allTransactions} cancelled />
+                  ))}
                 </div>
               </div>
             </div>
@@ -344,6 +402,24 @@ export default function Recurring() {
           )}
         </div>
       )}
+
+      {/* Cancel Confirmation Modal */}
+      <Modal open={!!cancelConfirm} onClose={() => setCancelConfirm(null)} title={t('recurring.confirmCancel')}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-danger/5 border border-danger/15">
+            <XCircle size={20} className="text-danger shrink-0" />
+            <div>
+              <p className="text-sm font-medium">{cancelConfirm?.name}</p>
+              <p className="text-xs text-cream-500">{formatCurrency(cancelConfirm?.amount || 0, cancelConfirm?.currency || currency)}</p>
+            </div>
+          </div>
+          <p className="text-sm text-cream-600 dark:text-cream-400">{t('recurring.confirmCancelDesc')}</p>
+          <div className="flex gap-2">
+            <button onClick={() => setCancelConfirm(null)} className="btn-secondary flex-1">{t('common.cancel')}</button>
+            <button onClick={() => handleCancel(cancelConfirm)} className="flex-1 px-4 py-2 rounded-xl bg-danger text-white text-sm font-medium hover:bg-danger/90 transition-colors">{t('recurring.cancelSubscription')}</button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Form Modal */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} title={editItem ? t('recurring.editRecurringTitle') : t('recurring.newRecurring')}>

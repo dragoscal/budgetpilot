@@ -237,24 +237,54 @@ export function calcAnnualEquivalent(amount, freqId) {
  * and no transaction exists for it yet. Returns items that need auto-creation.
  */
 export function getRecurringDueToday(recurringItems, existingTransactions) {
-  const today = todayLocal();
   const currentDay = new Date().getDate();
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
   return recurringItems.filter(item => {
+    if (item.status === 'cancelled' || item.status === 'paused') return false;
     if (!item.active && item.active !== undefined) return false;
     if ((item.billingDay || 1) > currentDay) return false; // not yet due
 
-    // Check if already created this month
+    // Check if already created this month (by recurringId link OR merchant match)
     const alreadyCreated = existingTransactions.some(tx =>
-      tx.merchant === (item.name || item.merchant) &&
-      tx.date?.startsWith(currentMonth) &&
-      Math.abs(tx.amount - item.amount) < 0.01 &&
-      tx.source === 'recurring'
+      (tx.recurringId === item.id ||
+        (tx.merchant === (item.name || item.merchant) &&
+         Math.abs(tx.amount - item.amount) < 0.01 &&
+         tx.source === 'recurring')) &&
+      tx.date?.startsWith(currentMonth)
     );
 
     return !alreadyCreated;
   });
+}
+
+/**
+ * Split due recurring items into manual and auto-debit groups.
+ */
+export function splitRecurringDue(recurringItems, existingTransactions) {
+  const dueItems = getRecurringDueToday(recurringItems, existingTransactions);
+  return {
+    manual: dueItems.filter(item => !item.autoDebit),
+    auto: dueItems.filter(item => !!item.autoDebit),
+  };
+}
+
+/**
+ * Calculate total spent and payment count for a recurring item
+ * by querying linked transactions (by recurringId or merchant match).
+ */
+export function getRecurringPaymentStats(recurringItem, allTransactions) {
+  const linked = allTransactions.filter(tx =>
+    tx.recurringId === recurringItem.id ||
+    (tx.source === 'recurring' &&
+     tx.merchant === (recurringItem.name || recurringItem.merchant) &&
+     Math.abs(tx.amount - recurringItem.amount) < 0.01)
+  );
+  const totalSpent = linked.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  const lastPayment = linked.length > 0
+    ? linked.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0].date
+    : null;
+  return { totalSpent, paymentCount: linked.length, lastPayment };
 }
 
 /**

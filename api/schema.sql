@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   splitType TEXT,
   beneficiaries TEXT,
   source TEXT DEFAULT 'manual',
+  recurringId TEXT,
   items TEXT DEFAULT '[]',
   splitFrom TEXT,
   importBatch TEXT,
@@ -98,6 +99,9 @@ CREATE TABLE IF NOT EXISTS recurring (
   active INTEGER DEFAULT 1,
   autoDetected INTEGER DEFAULT 0,
   autoDebit INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'active',
+  pausedAt TEXT,
+  cancelledAt TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   FOREIGN KEY (userId) REFERENCES users(id)
