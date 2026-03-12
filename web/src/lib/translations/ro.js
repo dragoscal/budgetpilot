@@ -2206,6 +2206,7 @@ const ro = {
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
   // v2.1.1
+  'changelog.v230calendarEditorial': 'Calendar redesign editorial — statistici tip registru, borduri colorate pe chip-uri, bare de intensitate cheltuieli, numere de zi Fraunces, efecte hover',
   'changelog.v220importConsistency': 'Importul folosește acum analiză AI deterministă (temperature=0), cu detalii exacte despre tranzacțiile omise',
   'changelog.v220calendarRedesign': 'Calendar reproiectat — celule mai mari, text mai mare, iconițe categorii în chip-uri, puncte colorate pe mobil, spațiere și aliniere îmbunătățite',
   'changelog.v211auditFixes': 'Reparat traducerea erorii lipsă, escaparea CSV, closure în propagarea categoriilor, click-outside pentru bara de instrumente, și curățat importurile neutilizate',

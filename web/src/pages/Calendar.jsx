@@ -33,21 +33,29 @@ function getCatColor(catId) {
   return `hsl(${hash % 360}, 60%, 50%)`;
 }
 
+/* ─── Spending intensity → heat color ─── */
+function getHeatColor(intensity) {
+  if (intensity > 0.66) return '#e11d48';
+  if (intensity > 0.33) return '#d97706';
+  return '#14b8a6';
+}
+
 /* ─── Inline sub-components ──────────────────────────────────── */
 
 function TransactionChip({ tx, currency, className = '' }) {
   const cat = getCategoryById(tx.category);
   const isIncome = tx.type === 'income';
+  const color = isIncome ? '#059669' : getCatColor(tx.category);
   const label = tx.merchant || tx.description || cat.name;
   return (
-    <div className={`flex items-center gap-1 px-1.5 py-0.5 sm:py-[3px] rounded-md text-[11px] sm:text-xs font-medium truncate w-full leading-snug ${
-      isIncome
-        ? 'bg-success/10 text-success dark:bg-success/15'
-        : 'bg-danger/8 text-danger/90 dark:bg-danger/12 dark:text-danger'
-    } ${className}`}>
-      <span className="shrink-0 text-[10px]">{cat.icon}</span>
-      <span className="truncate">{label}</span>
-      <span className="ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold">
+    <div
+      className={`flex items-center gap-1.5 pr-1.5 py-[3px] rounded-[4px] text-[11px] sm:text-xs truncate w-full ${className}`}
+      style={{ borderLeft: `3px solid ${color}`, paddingLeft: '6px' }}
+    >
+      <span className="truncate text-cream-700 dark:text-cream-200 font-medium">{label}</span>
+      <span className={`ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold ${
+        isIncome ? 'text-success' : 'text-cream-900 dark:text-cream-100'
+      }`}>
         {isIncome ? '+' : ''}{formatCurrency(tx.amount, tx.currency || currency).replace(/\s/g, '')}
       </span>
     </div>
@@ -56,15 +64,14 @@ function TransactionChip({ tx, currency, className = '' }) {
 
 function BillChip({ bill, currency, className = '' }) {
   const isAuto = !!bill.autoDebit;
+  const color = isAuto ? '#14b8a6' : '#d97706';
   return (
-    <div className={`flex items-center gap-1 px-1.5 py-0.5 sm:py-[3px] rounded-md text-[11px] sm:text-xs font-medium truncate w-full leading-snug border border-dashed ${
-      isAuto
-        ? 'bg-accent/5 border-accent/25 text-accent dark:bg-accent/10'
-        : 'bg-warning/5 border-warning/25 text-warning dark:bg-warning/10'
-    } ${className}`}>
-      <span className="shrink-0 text-[10px]">{isAuto ? '🏦' : '🔔'}</span>
-      <span className="truncate">{bill.name}</span>
-      <span className="ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold">
+    <div
+      className={`flex items-center gap-1 pr-1.5 py-[3px] rounded-[4px] text-[11px] sm:text-xs truncate w-full ${className}`}
+      style={{ borderLeft: `3px dashed ${color}`, paddingLeft: '6px' }}
+    >
+      <span className="truncate text-cream-600 dark:text-cream-300 font-medium">{bill.name}</span>
+      <span className="ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold text-cream-800 dark:text-cream-100">
         {formatCurrency(bill.amount, bill.currency || currency).replace(/\s/g, '')}
       </span>
     </div>
@@ -122,14 +129,18 @@ function CalendarStats({ monthStats, currency, t }) {
     { icon: Flame, label: t('calendar.noSpendDays'), value: monthStats.noSpendDays, color: 'text-success' },
   ];
   return (
-    <div className="grid grid-cols-4 gap-2 sm:gap-3">
+    <div className="card !p-0 !rounded-2xl flex overflow-hidden">
       {items.map((item, i) => (
-        <div key={i} className="card !p-2.5 sm:!p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <item.icon size={14} className={`shrink-0 ${item.color || 'text-accent'}`} />
-            <p className="text-[9px] sm:text-[11px] text-cream-500 uppercase tracking-wider truncate">{item.label}</p>
-          </div>
-          <p className={`font-heading font-bold text-sm sm:text-lg money ${item.color}`}>{item.value}</p>
+        <div key={i} className={`flex-1 py-2.5 sm:py-4 px-1.5 sm:px-4 text-center min-w-0 ${
+          i > 0 ? 'border-l border-cream-100 dark:border-dark-border' : ''
+        }`}>
+          <item.icon size={13} className={`mx-auto mb-1 ${item.color || 'text-accent'} opacity-50`} />
+          <p className={`font-heading font-bold text-[11px] sm:text-base lg:text-lg money leading-tight truncate ${item.color}`}>
+            {item.value}
+          </p>
+          <p className="text-[7px] sm:text-[9px] text-cream-400 uppercase tracking-[0.12em] mt-0.5 font-semibold truncate">
+            {item.label}
+          </p>
         </div>
       ))}
     </div>
@@ -141,9 +152,10 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
   const dayDate = new Date(selectedDay + 'T00:00:00');
   const isPast = dayDate <= new Date();
   const noSpend = isPast && dayData.expenseTotal === 0 && dayData.incomeTotal === 0;
+  const topAccent = dayData.categories.length > 0 ? getCatColor(dayData.categories[0]) : '#14b8a6';
 
   return (
-    <div className="card p-4 space-y-4 animate-fadeUp">
+    <div className="card p-4 space-y-4 animate-fadeUp" style={{ borderTop: `3px solid ${topAccent}` }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -446,8 +458,10 @@ export default function CalendarPage() {
               <>
                 {/* Day name headers */}
                 <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2 pb-1.5 border-b border-cream-100 dark:border-dark-border">
-                  {dayNames.map((d) => (
-                    <div key={d} className="text-center text-[11px] sm:text-xs font-semibold text-cream-400 uppercase tracking-wider py-1.5">{d}</div>
+                  {dayNames.map((d, i) => (
+                    <div key={d} className={`text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider py-1.5 ${
+                      i >= 5 ? 'text-cream-300 dark:text-cream-600' : 'text-cream-400'
+                    }`}>{d}</div>
                   ))}
                 </div>
 
@@ -462,7 +476,7 @@ export default function CalendarPage() {
                       <div key={ri} className="grid grid-cols-7 gap-1.5 sm:gap-2">
                         {rowDays.map((day, ci) => {
                           if (!day) {
-                            return <div key={`e-${ri}-${ci}`} className="h-20 sm:h-28 lg:h-32 rounded-xl bg-cream-50/30 dark:bg-dark-border/10" />;
+                            return <div key={`e-${ri}-${ci}`} className="h-20 sm:h-28 lg:h-32 rounded-xl" />;
                           }
 
                           const key = format(day, 'yyyy-MM-dd');
@@ -481,43 +495,35 @@ export default function CalendarPage() {
                             ...data.transactions,
                           ];
 
-                          let bgStyle;
-                          if (!today && !isSelected && hasExpenses) {
-                            bgStyle = { backgroundColor: `rgba(225, 29, 72, ${0.03 + intensity * 0.10})` };
-                          } else if (!today && !isSelected && isNoSpend) {
-                            bgStyle = { backgroundColor: 'rgba(5, 150, 105, 0.03)' };
-                          }
-
                           const borderClass = today
-                            ? 'border-accent/40'
+                            ? 'border-accent/40 ring-2 ring-accent/15'
                             : isSelected
                               ? 'border-accent/30'
-                              : 'border-transparent hover:border-cream-200 dark:hover:border-dark-border';
+                              : 'border-cream-200/50 dark:border-dark-border/50 hover:border-cream-300 dark:hover:border-dark-border';
 
                           const bgClass = today
-                            ? 'bg-accent/5 dark:bg-accent/10'
+                            ? 'bg-accent/[0.04] dark:bg-accent/[0.08]'
                             : isSelected
                               ? 'bg-accent/[0.06] dark:bg-accent/10'
                               : isFuture
-                                ? 'opacity-40'
-                                : '';
+                                ? 'opacity-30'
+                                : 'bg-white/80 dark:bg-dark-card/40';
 
                           return (
                             <button
                               key={key}
                               onClick={() => handleDayClick(key)}
-                              className={`h-20 sm:h-28 lg:h-32 p-1.5 sm:p-2 lg:p-2.5 rounded-xl text-left flex flex-col transition-all duration-150 relative group border ${borderClass} ${bgClass}`}
-                              style={bgStyle}
+                              className={`h-20 sm:h-28 lg:h-32 p-1.5 sm:p-2 lg:p-2.5 rounded-xl text-left flex flex-col transition-all duration-200 relative group border overflow-hidden ${borderClass} ${bgClass} ${!isFuture ? 'hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0' : ''}`}
                             >
-                              {/* Day number row */}
-                              <div className="flex items-center justify-between w-full mb-0.5 sm:mb-1">
+                              {/* Day number */}
+                              <div className="flex items-center justify-between w-full mb-0.5 sm:mb-1 shrink-0">
                                 {today ? (
-                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent text-white flex items-center justify-center text-[10px] sm:text-xs font-bold leading-none">
+                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent text-white flex items-center justify-center font-heading text-[11px] sm:text-xs font-bold">
                                     {data.dayNum}
                                   </span>
                                 ) : (
-                                  <span className={`text-xs sm:text-sm font-bold ${
-                                    hasExpenses ? 'text-cream-800 dark:text-cream-100' : isNoSpend ? 'text-success/70' : 'text-cream-400'
+                                  <span className={`font-heading text-xs sm:text-sm font-bold ${
+                                    hasExpenses ? 'text-cream-800 dark:text-cream-100' : isNoSpend ? 'text-success/60' : 'text-cream-400'
                                   }`}>
                                     {data.dayNum}
                                   </span>
@@ -527,34 +533,25 @@ export default function CalendarPage() {
                                 )}
                               </div>
 
-                              {/* Mobile: compact summary (no chips) */}
-                              <div className="flex-1 flex flex-col justify-center gap-0.5 w-full sm:hidden overflow-hidden">
+                              {/* Mobile: compact amounts */}
+                              <div className="flex-1 flex flex-col justify-center w-full sm:hidden overflow-hidden">
                                 {hasExpenses && (
-                                  <span className="text-[10px] text-danger font-bold money leading-snug truncate">
+                                  <span className="font-heading text-[11px] text-danger font-bold money leading-snug truncate">
                                     {Math.round(data.expenseTotal).toLocaleString()}
                                   </span>
                                 )}
                                 {data.incomeTotal > 0 && (
-                                  <span className="text-[10px] text-success font-bold money leading-snug truncate">
+                                  <span className="font-heading text-[10px] text-success font-bold money leading-snug truncate">
                                     +{Math.round(data.incomeTotal).toLocaleString()}
                                   </span>
                                 )}
-                                {data.categories.length > 0 && (
-                                  <div className="flex items-center gap-0.5 mt-0.5">
-                                    {data.categories.slice(0, 3).map((catId) => (
-                                      <span key={catId} className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getCatColor(catId) }} />
-                                    ))}
-                                    {allChips.length > 0 && (
-                                      <span className="text-[9px] text-cream-400 font-medium ml-0.5">
-                                        {allChips.length}
-                                      </span>
-                                    )}
-                                  </div>
+                                {allChips.length > 0 && !hasExpenses && data.incomeTotal === 0 && (
+                                  <span className="text-[9px] text-cream-400 font-medium">{allChips.length} tx</span>
                                 )}
                               </div>
 
                               {/* Desktop: transaction chips */}
-                              <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden w-full hidden sm:flex sm:flex-col">
+                              <div className="flex-1 space-y-[3px] overflow-hidden w-full hidden sm:flex sm:flex-col mt-0.5">
                                 {allChips.slice(0, 2).map((chip, ci) => (
                                   chip._type === 'bill'
                                     ? <BillChip key={chip.id || ci} bill={chip} currency={currency} />
@@ -567,21 +564,35 @@ export default function CalendarPage() {
                                     : <TransactionChip key={allChips[2].id || 2} tx={allChips[2]} currency={currency} className="hidden lg:flex" />
                                 )}
                                 {allChips.length > 2 && (
-                                  <span className="text-[10px] font-medium text-accent/80 lg:hidden mt-0.5">
-                                    +{allChips.length - 2} more
+                                  <span className="text-[9px] font-semibold text-cream-400 lg:hidden">
+                                    +{allChips.length - 2}
                                   </span>
                                 )}
                                 {allChips.length > 3 && (
-                                  <span className="text-[10px] font-medium text-accent/80 hidden lg:inline mt-0.5">
-                                    +{allChips.length - 3} more
+                                  <span className="text-[9px] font-semibold text-cream-400 hidden lg:inline">
+                                    +{allChips.length - 3}
                                   </span>
                                 )}
                               </div>
 
+                              {/* Heat bar — spending intensity */}
+                              {hasExpenses && (
+                                <div className="absolute bottom-0 inset-x-0 h-[3px]">
+                                  <div
+                                    className="h-full ml-1 rounded-full"
+                                    style={{
+                                      width: `${Math.max(intensity * 100, 15)}%`,
+                                      backgroundColor: getHeatColor(intensity),
+                                      opacity: 0.6,
+                                    }}
+                                  />
+                                </div>
+                              )}
+
                               {/* No-spend indicator */}
                               {isNoSpend && allChips.length === 0 && (
-                                <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2">
-                                  <CheckCircle2 size={12} className="text-success/50" />
+                                <div className="absolute bottom-1 right-1.5 sm:bottom-1.5 sm:right-2">
+                                  <CheckCircle2 size={11} className="text-success/40" />
                                 </div>
                               )}
                             </button>
@@ -648,7 +659,7 @@ export default function CalendarPage() {
                         }`}
                       >
                         {/* Chips — hidden on mobile, shown on sm+ */}
-                        <div className="hidden sm:flex sm:flex-col gap-1">
+                        <div className="hidden sm:flex sm:flex-col gap-[3px]">
                           {data.bills.map((b) => <BillChip key={b.id} bill={b} currency={currency} />)}
                           {sortByDate(data.transactions, 'date', 'asc').map((tx) => (
                             <TransactionChip key={tx.id} tx={tx} currency={currency} />
@@ -658,7 +669,7 @@ export default function CalendarPage() {
                         {/* Mobile summary */}
                         <div className="sm:hidden flex flex-col items-center justify-center flex-1 gap-0.5">
                           {data.expenseTotal > 0 && (
-                            <span className="text-[10px] font-bold money text-danger">
+                            <span className="font-heading text-[10px] font-bold money text-danger">
                               {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                             </span>
                           )}
@@ -670,7 +681,7 @@ export default function CalendarPage() {
                         {/* Daily total — desktop */}
                         {data.expenseTotal > 0 && (
                           <div className="mt-auto pt-1 border-t border-cream-100 dark:border-dark-border hidden sm:block">
-                            <span className="text-[11px] font-bold money text-danger">
+                            <span className="font-heading text-[11px] font-bold money text-danger">
                               {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                             </span>
                           </div>

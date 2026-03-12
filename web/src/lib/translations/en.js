@@ -2206,6 +2206,7 @@ const en = {
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
   // v2.1.1
+  'changelog.v230calendarEditorial': 'Calendar editorial redesign — ledger-style stats ribbon, category color-coded chip borders, spending heat bars, Fraunces serif day numbers, hover lift interactions',
   'changelog.v220importConsistency': 'Import now uses deterministic AI analysis (temperature=0), with detailed breakdown showing exactly where transactions were dropped',
   'changelog.v220calendarRedesign': 'Calendar redesigned — larger day cells, bigger text, category icons in chips, colored category dots on mobile, better spacing and alignment',
   'changelog.v211auditFixes': 'Fixed missing error translation, CSV export escaping, stale closure in category propagation, click-outside for batch toolbar, and cleaned up unused imports',
