@@ -123,11 +123,19 @@ export default function BankStatementUpload({ onResult, onError }) {
     if (file) handleFile(file);
   };
 
-  const clear = () => {
-    setFileName(null);
+  const cancelProcessing = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setProcessing(false);
-    setStatus('');
     setProgress(0);
+    setStatus('');
+  };
+
+  const clear = () => {
+    cancelProcessing();
+    setFileName(null);
     setBankInfo(null);
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -188,14 +196,13 @@ export default function BankStatementUpload({ onResult, onError }) {
               </div>
             )}
           </div>
-          {!processing && (
-            <button
-              onClick={clear}
-              className="p-1.5 rounded-full hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 hover:text-cream-600 transition-colors shrink-0"
-            >
-              <X size={16} />
-            </button>
-          )}
+          <button
+            onClick={clear}
+            className="p-1.5 rounded-full hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 hover:text-cream-600 transition-colors shrink-0"
+            title={processing ? t('common.cancel') : undefined}
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
@@ -211,6 +218,13 @@ export default function BankStatementUpload({ onResult, onError }) {
             </div>
             <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">{status}</p>
           </div>
+          <button
+            onClick={cancelProcessing}
+            className="p-1.5 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800/30 text-indigo-400 hover:text-indigo-600 transition-colors shrink-0"
+            title={t('common.cancel')}
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
@@ -225,9 +239,11 @@ export default function BankStatementUpload({ onResult, onError }) {
       )}
 
       <button
-        onClick={() => fileRef.current?.click()}
-        disabled={processing}
-        className="btn-secondary w-full flex items-center justify-center gap-2 disabled:opacity-50"
+        onClick={() => {
+          if (processing) cancelProcessing();
+          fileRef.current?.click();
+        }}
+        className="btn-secondary w-full flex items-center justify-center gap-2"
       >
         <Upload size={16} /> {fileName ? t('addTransaction.uploadDifferent') : t('addTransaction.selectPdf')}
       </button>

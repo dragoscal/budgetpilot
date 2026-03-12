@@ -284,8 +284,9 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
   const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
   const selectedModel = model || providerConfig.defaultModel;
 
-  // Create a timeout controller (30s) merged with optional caller signal
-  const timeoutMs = 30000;
+  // Create a timeout controller (65s) merged with optional caller signal
+  // Must exceed the 55s API-side timeout so the API error is returned cleanly
+  const timeoutMs = 65000;
   const timeoutCtrl = new AbortController();
   const timeout = setTimeout(() => timeoutCtrl.abort(), timeoutMs);
   // If caller passed a signal (e.g. for navigation abort), listen to it too
@@ -433,7 +434,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
     if (err.name === 'AbortError') {
       // Check if it was a timeout vs caller abort
       if (signal?.aborted) throw err; // Re-throw caller abort as-is
-      throw new Error('AI request timed out (30s). Try a smaller document or simpler request.');
+      throw new Error('AI request timed out. Try a smaller document or simpler request.');
     }
     throw err;
   } finally {

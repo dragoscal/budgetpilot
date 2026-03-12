@@ -297,9 +297,10 @@ router.post('/api/ai/process', async (ctx) => {
   const { messages, maxTokens, system, model } = ctx.body;
   const usedModel = model || 'claude-sonnet-4-20250514';
 
-  // Abort AI call after 25s to avoid Cloudflare 524 timeout
+  // Abort AI call after 55s to avoid Cloudflare 524 timeout (~100s proxy limit)
+  // Bank statements with many transactions can take 30-50s to process
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeout = setTimeout(() => controller.abort(), 55000);
 
   let res;
   try {
@@ -321,7 +322,7 @@ router.post('/api/ai/process', async (ctx) => {
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      return json({ error: 'AI request timed out (25s). Try a smaller document or simpler request.' }, 504);
+      return json({ error: 'AI request timed out (55s). Try a smaller document or simpler request.' }, 504);
     }
     return json({ error: 'AI request failed: ' + (err.message || 'network error') }, 502);
   }
