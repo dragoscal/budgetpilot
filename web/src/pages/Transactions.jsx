@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
-import { sortByDate, formatCurrency, sumBy, sumAmountsMultiCurrency } from '../lib/helpers';
+import { sortByDate, formatCurrency, sumBy, sumAmountsMultiCurrency, getCategoryById } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import TransactionRow from '../components/TransactionRow';
 import TransactionEditModal from '../components/TransactionEditModal';
@@ -19,6 +19,7 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
 import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
+import BatchToolbar from '../components/BatchToolbar';
 import { learnCategory } from '../lib/smartFeatures';
 import { correlateTransactions } from '../lib/transactionCorrelation';
 
@@ -66,6 +67,7 @@ export default function Transactions() {
   const [auditing, setAuditing] = useState(false);
   const [correlationResult, setCorrelationResult] = useState(null);
   const [correlating, setCorrelating] = useState(false);
+  const [selectAllFiltered, setSelectAllFiltered] = useState(false);
 
   const handleAudit = async () => {
     setAuditing(true);
@@ -204,6 +206,7 @@ export default function Transactions() {
   useEffect(() => {
     setPage(1);
     setSelected(new Set());
+    setSelectAllFiltered(false);
   }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter, sort]);
 
   const filtered = useMemo(() => {
@@ -320,10 +323,53 @@ export default function Transactions() {
         const proceed = confirm(t('transactions.duplicateWarning', { merchant: realDupes[0].transaction.merchant, date: realDupes[0].transaction.date }));
         if (!proceed) return;
       }
+
+      // Capture original category before update for propagation check
+      const original = allTx.find(tx => tx.id === updated.id);
+      const categoryChanged = original && updated.category && original.category !== updated.category;
+      const merchant = updated.merchant || original?.merchant;
+
       await txApi.update(updated.id, updated);
       setAllTx((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setEditTx(null);
-      toast.success(t('transactions.updated'));
+
+      // Category propagation: offer to re-categorize all matching merchant transactions
+      if (categoryChanged && merchant) {
+        const matchingTxs = allTx.filter(tx =>
+          tx.id !== updated.id &&
+          tx.merchant && tx.merchant.toLowerCase() === merchant.toLowerCase() &&
+          tx.category !== updated.category
+        );
+        if (matchingTxs.length > 0) {
+          const catObj = getCategoryById(updated.category);
+          const catName = getCategoryLabel(catObj, t);
+          toast.action(
+            t('transactions.categoryPropagation', { category: catName, merchant, count: matchingTxs.length }),
+            {
+              actionLabel: t('transactions.applyToAll', { count: matchingTxs.length }),
+              onAction: async () => {
+                try {
+                  await Promise.all(matchingTxs.map(tx =>
+                    txApi.update(tx.id, { ...tx, category: updated.category, subcategory: updated.subcategory || null })
+                  ));
+                  setAllTx(prev => prev.map(tx =>
+                    matchingTxs.some(m => m.id === tx.id)
+                      ? { ...tx, category: updated.category, subcategory: updated.subcategory || null }
+                      : tx
+                  ));
+                  toast.success(t('transactions.recategorized', { count: matchingTxs.length }));
+                } catch (err) {
+                  toast.error(t('transactions.failedCategorize'));
+                }
+              },
+            }
+          );
+        } else {
+          toast.success(t('transactions.updated'));
+        }
+      } else {
+        toast.success(t('transactions.updated'));
+      }
     } catch (err) {
       toast.error(t('transactions.failedUpdate'));
     }
@@ -343,6 +389,7 @@ export default function Transactions() {
   };
 
   const handleSelect = (id, checked) => {
+    setSelectAllFiltered(false);
     setSelected((prev) => {
       const next = new Set(prev);
       if (checked) next.add(id); else next.delete(id);
@@ -351,11 +398,95 @@ export default function Transactions() {
   };
 
   const handleSelectAll = (checked) => {
+    setSelectAllFiltered(false);
     if (checked) {
       setSelected(new Set(paginated.map((tx) => tx.id)));
     } else {
       setSelected(new Set());
     }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectAllFiltered(true);
+    setSelected(new Set(filtered.map((tx) => tx.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelected(new Set());
+    setSelectAllFiltered(false);
+  };
+
+  // Batch date change handler
+  const handleBatchDate = async (newDate) => {
+    if (selected.size === 0) return;
+    try {
+      const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
+      await Promise.all(selectedTxs.map(tx => txApi.update(tx.id, { ...tx, date: newDate })));
+      setAllTx((prev) => prev.map((t) => selected.has(t.id) ? { ...t, date: newDate } : t));
+      toast.success(t('batch.dateUpdated', { count: selected.size }));
+      handleClearSelection();
+    } catch (err) {
+      toast.error(t('common.error'));
+    }
+  };
+
+  // Batch tag add handler
+  const handleBatchTagAdd = async (tag) => {
+    if (selected.size === 0) return;
+    try {
+      const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
+      const updates = selectedTxs.map(tx => {
+        const tags = [...new Set([...(tx.tags || []), tag])];
+        return txApi.update(tx.id, { ...tx, tags });
+      });
+      await Promise.all(updates);
+      setAllTx((prev) => prev.map((t) =>
+        selected.has(t.id) ? { ...t, tags: [...new Set([...(t.tags || []), tag])] } : t
+      ));
+      toast.success(t('batch.tagAdded', { tag, count: selected.size }));
+      handleClearSelection();
+    } catch (err) {
+      toast.error(t('common.error'));
+    }
+  };
+
+  // Batch tag remove handler
+  const handleBatchTagRemove = async (tag) => {
+    if (selected.size === 0) return;
+    try {
+      const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
+      const updates = selectedTxs.map(tx => {
+        const tags = (tx.tags || []).filter(t => t.toLowerCase() !== tag.toLowerCase());
+        return txApi.update(tx.id, { ...tx, tags });
+      });
+      await Promise.all(updates);
+      setAllTx((prev) => prev.map((t) =>
+        selected.has(t.id) ? { ...t, tags: (t.tags || []).filter(tg => tg.toLowerCase() !== tag.toLowerCase()) } : t
+      ));
+      toast.success(t('batch.tagRemoved', { tag, count: selected.size }));
+      handleClearSelection();
+    } catch (err) {
+      toast.error(t('common.error'));
+    }
+  };
+
+  // Batch export selected transactions as CSV
+  const handleBatchExport = () => {
+    if (selected.size === 0) return;
+    const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
+    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Scope'];
+    const rows = selectedTxs.map((t) => [
+      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ''}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions-selected_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(t('batch.exported', { count: selected.size }));
   };
 
   const handleUndoLastImport = async () => {
@@ -371,20 +502,24 @@ export default function Transactions() {
     }
   };
 
-  const [showBatchCategory, setShowBatchCategory] = useState(false);
-
   const handleBatchCategorize = async (newCategory) => {
     if (selected.size === 0) return;
     try {
-      const updates = [...selected].map(id => {
-        const tx = allTx.find(t => t.id === id);
-        return tx ? txApi.update(id, { ...tx, category: newCategory }) : Promise.resolve();
-      });
+      const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
+      const updates = selectedTxs.map(tx =>
+        txApi.update(tx.id, { ...tx, category: newCategory })
+      );
       await Promise.all(updates);
       setAllTx((prev) => prev.map((t) => selected.has(t.id) ? { ...t, category: newCategory } : t));
+
+      // Learn category for each unique merchant in the batch
+      const uniqueMerchants = new Set(selectedTxs.map(tx => tx.merchant).filter(Boolean));
+      for (const merchant of uniqueMerchants) {
+        learnCategory(merchant, newCategory, null);
+      }
+
       toast.success(t('transactions.recategorized', { count: selected.size }));
-      setSelected(new Set());
-      setShowBatchCategory(false);
+      handleClearSelection();
     } catch (err) {
       toast.error(t('transactions.failedCategorize'));
     }
@@ -414,34 +549,6 @@ export default function Transactions() {
           <HelpButton section="transactions" />
         </div>
         <div className="flex gap-2">
-          {selected.size > 0 && (
-            <>
-              <div className="relative">
-                <button onClick={() => setShowBatchCategory(!showBatchCategory)} className="btn-secondary text-xs flex items-center gap-1">
-                  <Tag size={14} /> {t('transactions.categorize', { count: selected.size })}
-                </button>
-                {showBatchCategory && (
-                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden z-50" style={{ minWidth: '200px', maxHeight: '320px' }}>
-                    <div className="overflow-y-auto" style={{ maxHeight: '320px' }}>
-                      {categories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          onClick={() => handleBatchCategorize(cat.id)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-cream-100 dark:hover:bg-dark-border transition-colors text-left"
-                        >
-                          <span>{cat.icon}</span>
-                          <span>{getCategoryLabel(cat, t)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <button onClick={handleBulkDelete} className="btn-danger text-xs flex items-center gap-1">
-                <Trash2 size={14} /> {t('transactions.bulkDelete', { count: selected.size })}
-              </button>
-            </>
-          )}
           {lastBatch && (
             <button onClick={handleUndoLastImport} className="btn-ghost text-xs flex items-center gap-1 text-warning">
               <Undo2 size={14} /> {t('transactions.undoImport', { count: lastBatch.count })}
@@ -852,9 +959,9 @@ export default function Transactions() {
             <div className="flex items-center gap-3 px-4 py-2 border-b border-cream-100 dark:border-dark-border bg-cream-50/50 dark:bg-dark-border/30">
               <input
                 type="checkbox"
-                checked={paginated.length > 0 && selected.size === paginated.length}
+                checked={paginated.length > 0 && (selectAllFiltered ? selected.size === filtered.length : paginated.every(tx => selected.has(tx.id)))}
                 ref={(el) => {
-                  if (el) el.indeterminate = selected.size > 0 && selected.size < paginated.length;
+                  if (el) el.indeterminate = selected.size > 0 && selected.size < (selectAllFiltered ? filtered.length : paginated.length);
                 }}
                 onChange={(e) => handleSelectAll(e.target.checked)}
                 className="w-4 h-4 rounded border-cream-300 dark:border-dark-border text-accent focus:ring-accent/30"
@@ -865,6 +972,33 @@ export default function Transactions() {
                   : t('transactions.selectAll')}
               </span>
             </div>
+            {/* Select all filtered banner */}
+            {selected.size > 0 && selected.size === paginated.length && !selectAllFiltered && filtered.length > paginated.length && (
+              <div className="px-4 py-2 bg-accent/5 border-b border-cream-100 dark:border-dark-border text-center">
+                <span className="text-xs text-cream-600 dark:text-cream-400">
+                  {t('batch.allPageSelected', { count: paginated.length })}{' '}
+                  <button
+                    onClick={handleSelectAllFiltered}
+                    className="text-accent font-medium hover:underline"
+                  >
+                    {t('batch.selectAllFiltered', { count: filtered.length })}
+                  </button>
+                </span>
+              </div>
+            )}
+            {selectAllFiltered && (
+              <div className="px-4 py-2 bg-accent/10 border-b border-cream-100 dark:border-dark-border text-center">
+                <span className="text-xs text-accent font-medium">
+                  {t('batch.allFilteredSelected', { count: filtered.length })}{' '}
+                  <button
+                    onClick={handleClearSelection}
+                    className="text-cream-500 hover:underline"
+                  >
+                    {t('batch.clearSelection')}
+                  </button>
+                </span>
+              </div>
+            )}
             <div className="divide-y divide-cream-100 dark:divide-dark-border">
               {paginated.map((tx) => (
                 <TransactionRow
@@ -938,6 +1072,18 @@ export default function Transactions() {
           <button onClick={handleDelete} className="btn-danger">{t('common.delete')}</button>
         </div>
       </Modal>
+
+      {/* Floating batch toolbar */}
+      <BatchToolbar
+        selectedCount={selected.size}
+        onClearSelection={handleClearSelection}
+        onBatchCategory={handleBatchCategorize}
+        onBatchDate={handleBatchDate}
+        onBatchTagAdd={handleBatchTagAdd}
+        onBatchTagRemove={handleBatchTagRemove}
+        onBatchExport={handleBatchExport}
+        onBulkDelete={handleBulkDelete}
+      />
     </div>
   );
 }

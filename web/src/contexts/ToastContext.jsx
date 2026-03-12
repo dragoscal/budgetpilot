@@ -38,6 +38,9 @@ export function ToastProvider({ children }) {
     /** Toast with undo button. onUndo called if user clicks undo; onExpire called when timer expires. */
     undo: (msg, { onUndo, onExpire, duration = 5000 } = {}) =>
       addToast(msg, 'undo', duration, { onUndo, onExpire }),
+    /** Toast with custom action button. actionLabel is button text, onAction is callback. */
+    action: (msg, { actionLabel, onAction, onExpire, duration = 8000 } = {}) =>
+      addToast(msg, 'action', duration, { actionLabel, onAction, onExpire }),
   }), [addToast]);
 
   return (

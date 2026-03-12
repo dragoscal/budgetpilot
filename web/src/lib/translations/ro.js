@@ -2197,6 +2197,12 @@ const ro = {
   'changelog.v200categoryVisibility': 'Ascunde categoriile nefolosite din selectoare și crearea bugetelor',
   'changelog.v200aiLearning': 'Prompturile AI includ acum dinamic categoriile personalizate pentru parsare mai inteligentă',
   'changelog.v200categoryManagement': 'Nouă secțiune Gestionare Categorii în Setări cu vizibilitate și CRUD categorii personalizate',
+
+  // v2.1.0
+  'changelog.v210categoryPropagation': 'Propagare categorii — schimbă o categorie o dată, aplică la toate tranzacțiile de la același comerciant',
+  'changelog.v210batchToolbar': 'Bară flotantă de acțiuni în grup — selectează tranzacții și categorizează, schimbă data, tag-uri, export sau ștergere',
+  'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
+  'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
   'changelog.v191fabHooksFix': 'Reparat crash-ul aplicației cauzat de butoanele QuickAdd și Feedback la navigare între pagini',
   'changelog.v191apiAuthFallback': 'Actualizarea/ștergerea API revine acum la stocare locală când sesiunea expiră',
   'changelog.v191dashboardScope': 'Comparația lunară din Panou respectă acum filtrul personal/gospodărie',
@@ -2805,6 +2811,30 @@ const ro = {
   'faq.a14': 'Mergi la Setări, derulează la secțiunea Bot Telegram și introdu tokenul botului și ID-ul de chat. Apoi poți înregistra cheltuieli trimițând mesaje botului.',
   'faq.q15': 'Ce funcții AI necesită o cheie API?',
   'faq.a15': 'Scanarea bonurilor, categorizarea inteligentă și parsarea limbajului natural folosesc toate AI. Adaugă cheia Anthropic, OpenAI sau OpenRouter în Setări pentru a le activa.',
+
+  // ─── Operații în grup ──────────────────────────────────
+  'batch.selectedCount': '{count} selectate',
+  'batch.changeCategory': 'Schimbă categoria',
+  'batch.changeDate': 'Schimbă data',
+  'batch.manageTags': 'Gestionează tag-uri',
+  'batch.addTag': 'Adaugă',
+  'batch.removeTag': 'Elimină',
+  'batch.remove': 'Elimină',
+  'batch.tagPlaceholder': 'Introdu numele tag-ului...',
+  'batch.exportSelected': 'Exportă selecția',
+  'batch.deleteSelected': 'Șterge selecția',
+  'batch.clearSelection': 'Deselectează tot',
+  'batch.allPageSelected': 'Toate {count} de pe această pagină selectate.',
+  'batch.selectAllFiltered': 'Selectează toate {count} tranzacțiile filtrate',
+  'batch.allFilteredSelected': 'Toate {count} tranzacțiile filtrate selectate.',
+  'batch.dateUpdated': 'Data actualizată pentru {count} tranzacție(i)',
+  'batch.tagAdded': '#{tag} adăugat la {count} tranzacție(i)',
+  'batch.tagRemoved': '#{tag} eliminat de la {count} tranzacție(i)',
+  'batch.exported': '{count} tranzacție(i) exportate în CSV',
+
+  // ─── Propagare categorii ─────────────────────────────
+  'transactions.categoryPropagation': 'Aplică {category} la toate cele {count} tranzacții "{merchant}"?',
+  'transactions.applyToAll': 'Aplică la toate {count}',
 };
 
 export default ro;

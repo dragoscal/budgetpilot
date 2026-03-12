@@ -2197,6 +2197,12 @@ const en = {
   'changelog.v200categoryVisibility': 'Hide unused categories from pickers and budget creation',
   'changelog.v200aiLearning': 'AI prompts now dynamically include your custom categories for smarter parsing',
   'changelog.v200categoryManagement': 'New Category Management section in Settings with visibility toggles and custom category CRUD',
+
+  // v2.1.0
+  'changelog.v210categoryPropagation': 'Category propagation — change a category once, apply it to all past transactions from the same merchant',
+  'changelog.v210batchToolbar': 'Floating batch toolbar — select transactions and categorize, date, tag, export or delete in bulk',
+  'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
+  'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
   'changelog.v191fabHooksFix': 'Fixed app crash caused by QuickAdd and Feedback buttons on certain page transitions',
   'changelog.v191apiAuthFallback': 'API update/delete now gracefully falls back to local storage when session expires',
   'changelog.v191dashboardScope': 'Month comparison on Dashboard now respects personal/household scope filter',
@@ -2805,6 +2811,30 @@ const en = {
   'faq.a14': 'Go to Settings, scroll to the Telegram Bot section, and enter your bot token and chat ID. You can then log expenses by sending messages to the bot.',
   'faq.q15': 'What AI features require an API key?',
   'faq.a15': 'Receipt scanning, smart categorization, and natural language parsing all use AI. Add your Anthropic, OpenAI, or OpenRouter key in Settings to enable them.',
+
+  // ─── Batch Operations ──────────────────────────────────
+  'batch.selectedCount': '{count} selected',
+  'batch.changeCategory': 'Change category',
+  'batch.changeDate': 'Change date',
+  'batch.manageTags': 'Manage tags',
+  'batch.addTag': 'Add',
+  'batch.removeTag': 'Remove',
+  'batch.remove': 'Remove',
+  'batch.tagPlaceholder': 'Enter tag name...',
+  'batch.exportSelected': 'Export selected',
+  'batch.deleteSelected': 'Delete selected',
+  'batch.clearSelection': 'Clear selection',
+  'batch.allPageSelected': 'All {count} on this page selected.',
+  'batch.selectAllFiltered': 'Select all {count} matching transactions',
+  'batch.allFilteredSelected': 'All {count} matching transactions selected.',
+  'batch.dateUpdated': 'Date updated for {count} transaction(s)',
+  'batch.tagAdded': '#{tag} added to {count} transaction(s)',
+  'batch.tagRemoved': '#{tag} removed from {count} transaction(s)',
+  'batch.exported': '{count} transaction(s) exported to CSV',
+
+  // ─── Category Propagation ─────────────────────────────
+  'transactions.categoryPropagation': 'Apply {category} to all {count} "{merchant}" transactions?',
+  'transactions.applyToAll': 'Apply to all {count}',
 };
 
 export default en;

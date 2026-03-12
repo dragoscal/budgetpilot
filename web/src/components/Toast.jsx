@@ -8,6 +8,7 @@ const ICONS = {
   warning: AlertTriangle,
   info: Info,
   undo: Undo2,
+  action: Info,
 };
 
 const COLORS = {
@@ -16,6 +17,7 @@ const COLORS = {
   warning: 'bg-warning/10 text-warning border-warning/20',
   info: 'bg-info/10 text-info border-info/20',
   undo: 'bg-cream-900/90 text-white border-cream-700/30 dark:bg-cream-100/90 dark:text-cream-900 dark:border-cream-300/30',
+  action: 'bg-accent/10 text-accent border-accent/20',
 };
 
 export default function ToastContainer() {
@@ -39,6 +41,14 @@ export default function ToastContainer() {
                 className="shrink-0 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 {t('common.undo')}
+              </button>
+            )}
+            {item.type === 'action' && item.actionLabel && item.onAction && (
+              <button
+                onClick={() => { item.onAction(); removeToast(item.id); }}
+                className="shrink-0 px-2.5 py-1 rounded-lg bg-accent/20 hover:bg-accent/30 text-xs font-bold transition-colors"
+              >
+                {item.actionLabel}
               </button>
             )}
             <button onClick={() => removeToast(item.id)} className="shrink-0 opacity-60 hover:opacity-100">
