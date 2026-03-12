@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [autoBillsDue, setAutoBillsDue] = useState([]);
   const [creatingRecurring, setCreatingRecurring] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [billAmounts, setBillAmounts] = useState({});
 
   // Single master toggle for hiding all amounts
   const [hidden, setHidden] = useState(false);
@@ -599,10 +600,11 @@ export default function Dashboard() {
       const cur = user?.defaultCurrency || 'RON';
       const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
       const billingDay = String(item.billingDay || 1).padStart(2, '0');
+      const finalAmount = Number(billAmounts[item.id]) || item.amount || 0;
       await txApi.create({
         id: generateId(),
         type: 'expense',
-        amount: item.amount,
+        amount: finalAmount,
         currency: item.currency || cur,
         category: item.category || 'bills',
         merchant: item.name || item.merchant,
@@ -875,7 +877,20 @@ export default function Dashboard() {
                     <p className="text-sm font-medium truncate">{item.name}</p>
                     <p className="text-[11px] text-cream-500">{t('recurring.dayBilling', { day: item.billingDay || 1 })} · {t(`categories.${item.category}`)}</p>
                   </div>
-                  <p className="text-sm font-heading font-bold money shrink-0">{formatCurrency(item.amount, item.currency || currency)}</p>
+                  <div className="shrink-0">
+                    {item.isVariable ? (
+                      <input
+                        type="number"
+                        className="input w-24 text-sm text-right font-heading font-bold py-1"
+                        value={billAmounts[item.id] ?? (item.amount || '')}
+                        onChange={(e) => setBillAmounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        placeholder={item.amount ? String(item.amount) : '0.00'}
+                        inputMode="decimal"
+                      />
+                    ) : (
+                      <p className="text-sm font-heading font-bold money">{formatCurrency(item.amount, item.currency || currency)}</p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handleConfirmManualBill(item)}

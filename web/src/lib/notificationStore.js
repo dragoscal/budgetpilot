@@ -1,8 +1,15 @@
-// IndexedDB-backed notification storage
+// IndexedDB-backed notification storage with dedup + event-based updates
 import { getDB } from './storage.js';
 
 export async function addNotification({ type, title, message, actionUrl }) {
   const db = await getDB();
+
+  // Dedup: check for same type+title created today
+  const today = new Date().toISOString().slice(0, 10);
+  const all = await db.getAll('notifications');
+  const existing = all.find(n => n.type === type && n.title === title && n.createdAt?.startsWith(today));
+  if (existing) return existing; // Already exists today, skip
+
   const notification = {
     id: crypto.randomUUID(),
     type, // 'budget_warning', 'budget_exceeded', 'recurring_due', 'achievement', 'pace_alert', 'info'
@@ -13,6 +20,9 @@ export async function addNotification({ type, title, message, actionUrl }) {
     createdAt: new Date().toISOString()
   };
   await db.put('notifications', notification);
+
+  // Dispatch custom event for real-time updates (no polling needed)
+  window.dispatchEvent(new CustomEvent('notification-added', { detail: notification }));
   return notification;
 }
 
@@ -32,6 +42,7 @@ export async function markRead(id) {
   const db = await getDB();
   const n = await db.get('notifications', id);
   if (n) { n.read = true; await db.put('notifications', n); }
+  window.dispatchEvent(new Event('notifications-changed'));
 }
 
 export async function markAllRead() {
@@ -42,6 +53,7 @@ export async function markAllRead() {
     if (!n.read) { n.read = true; tx.store.put(n); }
   }
   await tx.done;
+  window.dispatchEvent(new Event('notifications-changed'));
 }
 
 export async function clearOldNotifications(daysOld = 30) {
@@ -66,4 +78,5 @@ export async function clearAllNotifications() {
   const tx = db.transaction('notifications', 'readwrite');
   await tx.store.clear();
   await tx.done;
+  window.dispatchEvent(new Event('notifications-changed'));
 }

@@ -45,12 +45,12 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium truncate">{transaction.merchant || transaction.description}</p>
-          <span className="text-xs shrink-0" title={source.label}>{source.icon}</span>
+          {source.icon ? <span className="text-xs shrink-0" title={source.label}>{source.icon}</span> : null}
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-cream-500 flex-wrap">
-          <span>{subcatLabel ? `${catLabel} > ${subcatLabel}` : catLabel}</span>
-          <span>·</span>
           <span>{formatDate(transaction.date, 'dd MMM')}</span>
+          <span>·</span>
+          <span>{subcatLabel ? `${catLabel} > ${subcatLabel}` : catLabel}</span>
           {transaction.tags?.length > 0 && (
             <>
               <span>·</span>

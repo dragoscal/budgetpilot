@@ -28,7 +28,7 @@ const TABLE_COLUMNS = {
   budgets: new Set(['id','userId','category','amount','currency','month','rollover','createdAt','updatedAt']),
   goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
   accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
-  recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','endDate','active','autoDetected','autoDebit','status','pausedAt','cancelledAt','createdAt','updatedAt']),
+  recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','endDate','active','autoDetected','autoDebit','isVariable','recurringType','status','pausedAt','cancelledAt','createdAt','updatedAt']),
   people: new Set(['id','userId','name','emoji','phone','notes','createdAt','updatedAt']),
   debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
   debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),

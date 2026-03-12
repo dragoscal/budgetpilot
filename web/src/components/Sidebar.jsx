@@ -196,6 +196,11 @@ export default function Sidebar() {
             </NavLink>
           )}
 
+          <NavLink to="/feedback" className={navLinkClass} title={collapsed ? t('nav.feedback') : undefined}>
+            <MessageSquare size={16} className="shrink-0" />
+            {!collapsed && <span>{t('nav.feedback')}</span>}
+          </NavLink>
+
           <NavLink to="/guide" className={navLinkClass} title={collapsed ? t('nav.guide') : undefined}>
             <HelpCircle size={16} className="shrink-0" />
             {!collapsed && <span>{t('nav.guide')}</span>}

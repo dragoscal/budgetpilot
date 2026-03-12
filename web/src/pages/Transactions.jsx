@@ -15,7 +15,8 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS, CATEGORIES } from '../lib/constants';
 import { checkDuplicate } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare } from 'lucide-react';
+import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown } from 'lucide-react';
+import QuickAdd from '../components/QuickAdd';
 
 const PAGE_SIZE = 30;
 
@@ -43,6 +44,7 @@ export default function Transactions() {
   const [showAllTags, setShowAllTags] = useState(false);
   const [rates, setRates] = useState(null);
   const [lastBatch, setLastBatch] = useState(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   useEffect(() => {
     loadTransactions();
@@ -149,20 +151,30 @@ export default function Transactions() {
   const handleDelete = async () => {
     if (!deleteTx) return;
     const txToDelete = { ...deleteTx };
-    // Immediately remove from UI (soft delete)
+    // Immediately remove from UI
     setAllTx((prev) => prev.filter((t) => t.id !== txToDelete.id));
     setDeleteTx(null);
 
-    // Show undo toast — only permanently delete after timeout
+    // Delete from server immediately (no delay — prevents ghost returns on refresh)
+    try {
+      await txApi.remove(txToDelete.id);
+    } catch (err) {
+      // Restore on failure
+      setAllTx((prev) => sortByDate([...prev, txToDelete]));
+      toast.error(t('common.error'));
+      return;
+    }
+
+    // Undo toast: re-create if user wants it back
     toast.undo(t('transactions.deleted', { name: txToDelete.merchant || t('common.transaction') }), {
-      onUndo: () => {
-        // Restore the transaction in UI and re-save to DB
-        setAllTx((prev) => [...prev, txToDelete]);
-        txApi.update(txToDelete.id, txToDelete).catch(() => {});
-      },
-      onExpire: () => {
-        // Permanently delete from DB
-        txApi.remove(txToDelete.id).catch(() => {});
+      onUndo: async () => {
+        try {
+          const { deletedAt, ...clean } = txToDelete;
+          await txApi.create(clean);
+          setAllTx((prev) => sortByDate([...prev, txToDelete]));
+        } catch (err) {
+          toast.error(t('common.error'));
+        }
       },
       duration: 5000,
     });
@@ -308,6 +320,34 @@ export default function Transactions() {
             <Download size={14} /> {t('transactions.exportCsv')}
           </button>
         </div>
+      </div>
+
+      {/* Quick Add */}
+      <div className="card !p-3">
+        <button
+          onClick={() => setShowQuickAdd(prev => !prev)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-success" />
+            <span className="text-sm font-medium">{t('quickAdd.title')}</span>
+          </div>
+          <ChevronDown size={14} className={`text-cream-400 transition-transform ${showQuickAdd ? 'rotate-180' : ''}`} />
+        </button>
+        {showQuickAdd && (
+          <div className="mt-3 pt-3 border-t border-cream-200 dark:border-dark-border">
+            <QuickAdd
+              onResult={(results) => {
+                if (results && results.length > 0) {
+                  // Navigate to add transaction with pre-filled data
+                  const first = results[0];
+                  navigate(`/add?tab=quick&text=${encodeURIComponent(first.merchant || first.description || '')}`);
+                }
+              }}
+              onError={(msg) => toast.error(msg)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Summary */}

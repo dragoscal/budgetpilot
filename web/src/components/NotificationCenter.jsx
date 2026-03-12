@@ -66,9 +66,15 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
     loadNotifications();
     // Clean old notifications on mount
     clearOldNotifications(30).catch(() => {});
-    // Poll every 60s
-    const interval = setInterval(loadNotifications, 60000);
-    return () => clearInterval(interval);
+
+    // Listen for notification changes (real-time, no polling)
+    const handler = () => loadNotifications();
+    window.addEventListener('notification-added', handler);
+    window.addEventListener('notifications-changed', handler);
+    return () => {
+      window.removeEventListener('notification-added', handler);
+      window.removeEventListener('notifications-changed', handler);
+    };
   }, [loadNotifications]);
 
   // Close on click outside

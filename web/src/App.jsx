@@ -9,8 +9,6 @@ import { SkeletonPage } from './components/LoadingSkeleton';
 import InstallPrompt from './components/InstallPrompt';
 import CommandPalette from './components/CommandPalette';
 import OfflineBanner from './components/OfflineBanner';
-import FeedbackFAB from './components/FeedbackFAB';
-import QuickAddFAB from './components/QuickAddFAB';
 import WhatsNew from './components/WhatsNew';
 import BackgroundJobNotifier from './components/BackgroundJobNotifier';
 
@@ -97,8 +95,6 @@ function AppLayout({ children }) {
           </ErrorBoundary>
         </div>
       </main>
-      <FeedbackFAB />
-      <QuickAddFAB />
     </div>
   );
 }
@@ -136,6 +132,7 @@ export default function App() {
       <CommandPalette />
       <WhatsNew />
       <BackgroundJobNotifier />
+      <ErrorBoundary>
       <Suspense fallback={<PageFallback />}>
         <Routes>
           {/* Public routes */}
@@ -171,6 +168,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </>
   );
 }

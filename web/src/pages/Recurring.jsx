@@ -32,7 +32,7 @@ export default function Recurring() {
   const [rates, setRates] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null);
 
-  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false };
+  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
@@ -80,15 +80,17 @@ export default function Recurring() {
   );
 
   const handleSave = async () => {
-    if (!form.name || !form.amount) { toast.error(t('recurring.nameAndAmountRequired')); return; }
+    if (!form.name || (!form.amount && !form.isVariable)) { toast.error(t('recurring.nameAndAmountRequired')); return; }
     try {
       const data = {
         ...form,
-        amount: Number(form.amount),
+        amount: Number(form.amount) || 0,
         billingDay: Number(form.billingDay) || 1,
         frequency: form.frequency || 'monthly',
         endDate: form.endDate || null,
         autoDebit: form.autoDebit ? 1 : 0,
+        isVariable: form.isVariable ? 1 : 0,
+        recurringType: form.recurringType || 'bill',
         active: true,
         userId: effectiveUserId,
       };
@@ -157,13 +159,15 @@ export default function Recurring() {
     setEditItem(item);
     setForm({
       name: item.name,
-      amount: item.amount.toString(),
+      amount: item.amount ? item.amount.toString() : '',
       currency: item.currency || currency,
       category: item.category,
       billingDay: (item.billingDay || 1).toString(),
       frequency: item.frequency || 'monthly',
       endDate: item.endDate || '',
       autoDebit: !!item.autoDebit,
+      isVariable: !!item.isVariable,
+      recurringType: item.recurringType || 'bill',
     });
     setShowForm(true);
   };
@@ -271,19 +275,39 @@ export default function Recurring() {
 
       {items.length > 0 ? (
         <>
-          {/* Active Section */}
-          {activeItems.length > 0 && (
-            <div>
-              <h3 className="section-title flex items-center gap-2">{t('recurring.active')} <span className="text-cream-400 text-xs font-normal">({activeItems.length})</span></h3>
-              <div className="card p-0">
-                <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                  {activeItems.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
-                    <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Active Bills Section */}
+          {(() => {
+            const activeBills = activeItems.filter(i => i.recurringType !== 'subscription');
+            const activeSubs = activeItems.filter(i => i.recurringType === 'subscription');
+            return (
+              <>
+                {activeBills.length > 0 && (
+                  <div>
+                    <h3 className="section-title flex items-center gap-2">📋 {t('recurring.billsSection')} <span className="text-cream-400 text-xs font-normal">({activeBills.length})</span></h3>
+                    <div className="card p-0">
+                      <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                        {activeBills.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
+                          <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {activeSubs.length > 0 && (
+                  <div>
+                    <h3 className="section-title flex items-center gap-2">📺 {t('recurring.subscriptionsSection')} <span className="text-cream-400 text-xs font-normal">({activeSubs.length})</span></h3>
+                    <div className="card p-0">
+                      <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                        {activeSubs.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
+                          <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Paused Section */}
           {pausedItems.length > 0 && (
@@ -432,12 +456,35 @@ export default function Recurring() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">{t('recurring.amount')}</label>
-              <input type="number" className="input" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" inputMode="decimal" />
+              <input type="number" className="input" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder={form.isVariable ? t('recurring.estimatedAmount') : '0.00'} inputMode="decimal" />
             </div>
             <div>
               <label className="label">{t('recurring.billingDay')}</label>
               <input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => setForm((f) => ({ ...f, billingDay: e.target.value }))} />
             </div>
+          </div>
+
+          {/* Variable amount toggle */}
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer py-1">
+            <input
+              type="checkbox"
+              checked={form.isVariable}
+              onChange={(e) => setForm((f) => ({ ...f, isVariable: e.target.checked }))}
+              className="w-4 h-4 rounded border-cream-300 text-accent focus:ring-accent/30"
+            />
+            <div>
+              <span className="font-medium">{t('recurring.variableAmount')}</span>
+              <p className="text-[11px] text-cream-400">{t('recurring.variableAmountDesc')}</p>
+            </div>
+          </label>
+
+          {/* Recurring type: Bill vs Subscription */}
+          <div>
+            <label className="label">{t('recurring.recurringType')}</label>
+            <select className="input" value={form.recurringType} onChange={(e) => setForm((f) => ({ ...f, recurringType: e.target.value }))}>
+              <option value="bill">{t('recurring.typeBill')}</option>
+              <option value="subscription">{t('recurring.typeSubscription')}</option>
+            </select>
           </div>
 
           <div>

@@ -58,6 +58,11 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
               {daysUntil === 0 ? t('recurring.todayLabel') : t('recurring.inDays', { count: daysUntil })}
             </span>
           )}
+          {item.isVariable && (
+            <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[10px] font-medium">
+              {t('recurring.variable')}
+            </span>
+          )}
           {!isMonthly && !cancelled && (
             <span className="px-1.5 py-0.5 rounded bg-cream-200 dark:bg-dark-border text-cream-600 dark:text-cream-400 text-[10px] font-medium">
               {t(`frequencies.${item.frequency}`)}
@@ -89,7 +94,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
       </div>
       <div className="text-right shrink-0">
         <p className={`text-sm font-heading font-bold money ${cancelled ? 'text-cream-400' : ''}`}>
-          {formatCurrency(item.amount, item.currency)}<span className="text-[10px] text-cream-400 font-normal">{periodLabel}</span>
+          {item.isVariable && item.amount ? '~' : ''}{item.amount ? formatCurrency(item.amount, item.currency) : t('recurring.variable')}<span className="text-[10px] text-cream-400 font-normal">{periodLabel}</span>
         </p>
         {!cancelled && (
           !isMonthly ? (

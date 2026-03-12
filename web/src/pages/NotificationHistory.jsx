@@ -70,7 +70,17 @@ export default function NotificationHistory() {
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    loadAll();
+    // Listen for real-time notification changes
+    const handler = () => loadAll();
+    window.addEventListener('notification-added', handler);
+    window.addEventListener('notifications-changed', handler);
+    return () => {
+      window.removeEventListener('notification-added', handler);
+      window.removeEventListener('notifications-changed', handler);
+    };
+  }, [loadAll]);
 
   const handleMarkAllRead = async () => {
     await markAllRead();

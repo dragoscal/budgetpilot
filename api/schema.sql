@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS recurring (
   active INTEGER DEFAULT 1,
   autoDetected INTEGER DEFAULT 0,
   autoDebit INTEGER DEFAULT 0,
+  isVariable INTEGER DEFAULT 0,
+  recurringType TEXT DEFAULT 'bill',
   status TEXT DEFAULT 'active',
   pausedAt TEXT,
   cancelledAt TEXT,

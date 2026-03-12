@@ -122,7 +122,7 @@ export const CURRENCIES = [
 export const TRANSACTION_TYPES = ['expense', 'income', 'transfer'];
 
 export const TRANSACTION_SOURCES = {
-  manual: { label: 'Manual', icon: '✏️' },
+  manual: { label: 'Manual', icon: '' },
   nlp: { label: 'Quick Add', icon: '💬' },
   receipt: { label: 'Receipt', icon: '🧾' },
   telegram: { label: 'Telegram', icon: '📱' },
