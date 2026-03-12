@@ -41,7 +41,92 @@ export function extractDataFromGrid(rawGrid, aiAnalysis) {
   const { months, people, categoryColumnOffset, dataStartRow, layout } = aiAnalysis;
   const extracted = [];
 
-  if (layout === 'monthly-columns') {
+  if (layout === 'flat-table') {
+    // Flat table: one transaction per row with columns mapped by AI
+    const cols = aiAnalysis.columns || {};
+    const dateCol = cols.date;
+    const monthCol = cols.month;
+    const personCol = cols.person;
+    const catCol = cols.category;
+    const amountCol = cols.amount;
+
+    for (let rowIdx = (dataStartRow || 1); rowIdx < rawGrid.length; rowIdx++) {
+      const row = rawGrid[rowIdx];
+      if (!row) continue;
+
+      // Extract amount
+      const amount = parseEuropeanNumber(row[amountCol]);
+      if (!amount || amount <= 0) continue;
+
+      // Extract category
+      const categoryRaw = catCol != null ? row[catCol] : null;
+      if (!categoryRaw || (typeof categoryRaw === 'string' && !categoryRaw.trim())) continue;
+      const categoryName = String(categoryRaw).trim();
+      const catLower = categoryName.toLowerCase();
+      if (catLower === 'total' || catLower === 'totale' || catLower === 'scop') continue;
+
+      // Extract month — try month column first, then parse from date
+      let monthNumber = null;
+      let monthName = '';
+      if (monthCol != null && row[monthCol]) {
+        const mRaw = String(row[monthCol]).trim().toLowerCase();
+        monthNumber = MONTH_MAP[mRaw] || null;
+        if (monthNumber) {
+          monthName = MONTH_NAMES_RO[monthNumber] || mRaw;
+        }
+      }
+      if (!monthNumber && dateCol != null && row[dateCol]) {
+        // Try parsing date like "2026-01-15" or "15.01.2026" or a JS date number
+        const dateVal = row[dateCol];
+        if (typeof dateVal === 'number') {
+          // Excel serial date — convert
+          const d = new Date((dateVal - 25569) * 86400 * 1000);
+          monthNumber = d.getMonth() + 1;
+        } else {
+          const ds = String(dateVal).trim();
+          // Try YYYY-MM-DD
+          const isoMatch = ds.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (isoMatch) {
+            monthNumber = parseInt(isoMatch[2], 10);
+          } else {
+            // Try DD.MM.YYYY or DD/MM/YYYY
+            const euMatch = ds.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+            if (euMatch) {
+              monthNumber = parseInt(euMatch[2], 10);
+            }
+          }
+        }
+        if (monthNumber) {
+          monthName = MONTH_NAMES_RO[monthNumber] || String(monthNumber);
+        }
+      }
+      // Fallback: try matching against known months list from AI
+      if (!monthNumber && months && months.length > 0) {
+        monthNumber = months[0].monthNumber;
+        monthName = months[0].name;
+      }
+      if (!monthNumber) continue;
+
+      // Extract person — from column or fallback to people list
+      let personName = '';
+      if (personCol != null && row[personCol]) {
+        personName = String(row[personCol]).trim();
+      } else if (people && people.length > 0) {
+        personName = people[0].name;
+      }
+      if (!personName) personName = 'Unknown';
+
+      extracted.push({
+        month: monthNumber,
+        monthName,
+        originalCategory: categoryName,
+        person: personName,
+        amount,
+        rowIdx,
+        colIdx: amountCol,
+      });
+    }
+  } else if (layout === 'monthly-columns') {
     for (let rowIdx = dataStartRow; rowIdx < rawGrid.length; rowIdx++) {
       const row = rawGrid[rowIdx];
       if (!row) continue;

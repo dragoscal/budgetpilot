@@ -18,9 +18,12 @@ export default function StepAnalyze({ rawGrid, aiAnalysis, setAiAnalysis, extrac
     try {
       const sample = gridToAISample(rawGrid, 40);
       const result = await processSpreadsheetStructure(sample);
-      if (!result || !result.months || !result.people) {
+      if (!result || !result.layout) {
         throw new Error('Invalid AI response');
       }
+      // Ensure months/people arrays exist (flat-table may have them populated differently)
+      if (!result.months) result.months = [];
+      if (!result.people) result.people = [];
       setAiAnalysis(result);
 
       // Extract data using AI's structural map

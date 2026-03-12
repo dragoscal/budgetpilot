@@ -896,22 +896,48 @@ function generateLocalSummary(transactions, budgets) {
 const SPREADSHEET_ANALYSIS_PROMPT = `You are an expert spreadsheet parser for a Romanian budgeting app. You analyze household budget spreadsheets to detect their structure.
 
 COMMON LAYOUTS:
-1. "monthly-columns": Each month occupies a group of columns (person amounts + category name). Rows are categories.
-2. "monthly-rows": Each row is a month, columns are categories.
-3. "other": Any layout not matching above.
+1. "flat-table": Each row is one transaction/expense with columns like date, month, person, category, amount. This is the simplest and most common format.
+2. "monthly-columns": Each month occupies a group of columns (person amounts + category name). Rows are categories. Pivot-table style.
+3. "monthly-rows": Each row is a month, columns are categories.
+4. "other": Any layout not matching above.
 
 YOUR TASK:
-Analyze the provided spreadsheet data (first ~40 rows as JSON grid) and detect:
-1. Where month names appear (row/column indices) — they may be in Romanian: Ianuarie, Februarie, Martie, Aprilie, Mai, Iunie, Iulie, August, Septembrie, Octombrie, Noiembrie, Decembrie (or abbreviations)
-2. Where person/people names appear (not month names, not category names)
-3. Where category/expense names appear (repeated each month)
-4. Where amounts are (numeric cells)
-5. The repeating column-group pattern
+Analyze the provided spreadsheet data (first ~40 rows as JSON grid) and detect which layout it uses, then return the appropriate structure.
 
-RETURN THIS EXACT JSON FORMAT:
+RETURN FORMAT — depends on layout:
+
+For "flat-table" layout (one row per transaction):
+{
+  "layout": "flat-table",
+  "description": "Brief description",
+  "headerRow": 0,
+  "dataStartRow": 1,
+  "columns": {
+    "date": 0,
+    "month": 1,
+    "person": 2,
+    "category": 3,
+    "amount": 4
+  },
+  "months": [
+    { "name": "Ianuarie", "monthNumber": 1 }
+  ],
+  "people": [
+    { "name": "PersonName" }
+  ],
+  "categoryNames": ["category1", "category2"],
+  "categoryMappingSuggestions": {
+    "category1": "groceries",
+    "category2": "dining"
+  },
+  "currency": "RON",
+  "warnings": []
+}
+
+For "monthly-columns" layout (pivot table):
 {
   "layout": "monthly-columns",
-  "description": "Brief human-readable description of layout",
+  "description": "Brief description",
   "headerRow": 0,
   "dataStartRow": 2,
   "months": [
@@ -931,18 +957,25 @@ RETURN THIS EXACT JSON FORMAT:
   "warnings": []
 }
 
-FIELD DEFINITIONS:
-- months[].startCol: The first column index (0-based) of each month's column group
-- columnsPerMonth: How many columns each month group spans (e.g., 3 for [person1Amount, categoryName, person2Amount])
-- people[].columnOffset: Offset within each month group for this person's amount column (0-based from startCol)
-- categoryColumnOffset: Offset within each month group for the category name column
-- dataStartRow: First row index (0-based) containing actual data (not headers)
+FLAT-TABLE DETECTION — Choose "flat-table" when:
+- Each row represents a single expense/transaction
+- Columns include things like: date, month name, person name, category, amount
+- The "columns" object maps semantic meaning to 0-based column indices
+- "columns.date" and "columns.month" are optional (set to null if not present)
+- "columns.person" is optional (set to null if single-person budget)
+
+MONTHLY-COLUMNS FIELD DEFINITIONS:
+- months[].startCol: First column index (0-based) of each month's column group
+- columnsPerMonth: How many columns each month group spans
+- people[].columnOffset: Offset within month group for this person's amount column
+- categoryColumnOffset: Offset within month group for the category name column
+- dataStartRow: First row index (0-based) with actual data
 
 CATEGORY MAPPING — Map to these app categories:
 groceries, dining, transport, shopping, health, subscriptions, utilities, entertainment, education, travel, housing, personal, gifts, insurance, pets, savings, income, transfer, other
 
 Common Romanian → English:
-cumparaturi/mancare → groceries, bautura → dining, restaurant/iesit in oras → dining, utile/utilitati → utilities, chirie → housing, facturi → utilities, haine/imbracaminte → shopping, transport/uber → transport, bilete → transport, sanatate/medic/dentist/farmacie → health, cosmetice/manichiura/tuns → personal, divertisment/party → entertainment, educatie/carti → education, cadouri → gifts, abonamente/netflix/spotify → subscriptions, economii → savings, salariu/venit → income, cafea → dining, comanda mancare → dining, chirie + facturi → housing, utile masina → transport, tigari → personal, aspirator → shopping, orange → subscriptions, consultatie → health, capadoccia → travel
+cumparaturi/mancare → groceries, bautura → dining, restaurant/iesit in oras → dining, utile/utilitati → utilities, chirie → housing, facturi → utilities, haine/imbracaminte → shopping, transport/uber → transport, bilete → transport, sanatate/medic/dentist/farmacie → health, cosmetice/manichiura/tuns → personal, divertisment/party → entertainment, educatie/carti → education, cadouri → gifts, abonamente/netflix/spotify → subscriptions, economii → savings, salariu/venit → income, cafea → dining, comanda mancare → dining, chirie + facturi → housing, utile masina → transport, tigari → personal, aspirator → shopping, orange → subscriptions, consultatie → health, capadoccia → travel, oana SMM → other
 
 IMPORTANT:
 - Cell data is: { "row": N, "cells": [...values...] }
