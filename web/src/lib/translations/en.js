@@ -77,6 +77,7 @@ const en = {
   'common.unknown': 'Unknown',
   'common.other': 'Other',
   'common.undo': 'Undo',
+  'common.error': 'Something went wrong',
 
   // ─── Navigation ──────────────────────────────────────
   'nav.main': 'Main',
@@ -2203,6 +2204,9 @@ const en = {
   'changelog.v210batchToolbar': 'Floating batch toolbar — select transactions and categorize, date, tag, export or delete in bulk',
   'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
+
+  // v2.1.1
+  'changelog.v211auditFixes': 'Fixed missing error translation, CSV export escaping, stale closure in category propagation, click-outside for batch toolbar, and cleaned up unused imports',
   'changelog.v191fabHooksFix': 'Fixed app crash caused by QuickAdd and Feedback buttons on certain page transitions',
   'changelog.v191apiAuthFallback': 'API update/delete now gracefully falls back to local storage when session expires',
   'changelog.v191dashboardScope': 'Month comparison on Dashboard now respects personal/household scope filter',

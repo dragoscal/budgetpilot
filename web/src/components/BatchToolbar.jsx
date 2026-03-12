@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
-import { Tag, Calendar, Hash, Download, Trash2, X, FolderOpen, Plus, Minus } from 'lucide-react';
+import { Tag, Calendar, Hash, Download, Trash2, X, Plus, Minus } from 'lucide-react';
 
 export default function BatchToolbar({
   selectedCount,
@@ -22,6 +22,19 @@ export default function BatchToolbar({
   const [tagMode, setTagMode] = useState('add'); // 'add' | 'remove'
   const [tagValue, setTagValue] = useState('');
   const [dateValue, setDateValue] = useState('');
+
+  const toolbarRef = useRef(null);
+
+  // Close popovers when clicking outside the toolbar
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target)) {
+        closeAll();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (selectedCount === 0) return null;
 
@@ -53,7 +66,7 @@ export default function BatchToolbar({
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+    <div ref={toolbarRef} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
       <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-cream-900/95 dark:bg-cream-100/95 text-white dark:text-cream-900 shadow-2xl backdrop-blur-sm border border-cream-700/30 dark:border-cream-300/30">
         {/* Selection count */}
         <span className="text-sm font-medium whitespace-nowrap">

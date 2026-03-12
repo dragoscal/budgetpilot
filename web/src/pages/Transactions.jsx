@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
-import { sortByDate, formatCurrency, sumBy, sumAmountsMultiCurrency, getCategoryById } from '../lib/helpers';
+import { sortByDate, formatCurrency, sumAmountsMultiCurrency, getCategoryById } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import TransactionRow from '../components/TransactionRow';
 import TransactionEditModal from '../components/TransactionEditModal';
@@ -16,11 +16,10 @@ import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
-import { checkDuplicate, auditTransactions } from '../lib/smartFeatures';
-import { Receipt, Download, Trash2, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
+import { checkDuplicate, auditTransactions, learnCategory } from '../lib/smartFeatures';
+import { Receipt, Download, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
 import BatchToolbar from '../components/BatchToolbar';
-import { learnCategory } from '../lib/smartFeatures';
 import { correlateTransactions } from '../lib/transactionCorrelation';
 
 const PAGE_SIZE = 30;
@@ -343,21 +342,25 @@ export default function Transactions() {
         if (matchingTxs.length > 0) {
           const catObj = getCategoryById(updated.category);
           const catName = getCategoryLabel(catObj, t);
+          // Capture only IDs to avoid stale closure over full transaction objects
+          const matchingIds = new Set(matchingTxs.map(tx => tx.id));
+          const newCategory = updated.category;
+          const newSubcategory = updated.subcategory || null;
           toast.action(
             t('transactions.categoryPropagation', { category: catName, merchant, count: matchingTxs.length }),
             {
               actionLabel: t('transactions.applyToAll', { count: matchingTxs.length }),
               onAction: async () => {
                 try {
-                  await Promise.all(matchingTxs.map(tx =>
-                    txApi.update(tx.id, { ...tx, category: updated.category, subcategory: updated.subcategory || null })
+                  await Promise.all([...matchingIds].map(id =>
+                    txApi.update(id, { category: newCategory, subcategory: newSubcategory })
                   ));
                   setAllTx(prev => prev.map(tx =>
-                    matchingTxs.some(m => m.id === tx.id)
-                      ? { ...tx, category: updated.category, subcategory: updated.subcategory || null }
+                    matchingIds.has(tx.id)
+                      ? { ...tx, category: newCategory, subcategory: newSubcategory }
                       : tx
                   ));
-                  toast.success(t('transactions.recategorized', { count: matchingTxs.length }));
+                  toast.success(t('transactions.recategorized', { count: matchingIds.size }));
                 } catch (err) {
                   toast.error(t('transactions.failedCategorize'));
                 }
@@ -478,7 +481,7 @@ export default function Transactions() {
     const rows = selectedTxs.map((t) => [
       t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ''}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -530,7 +533,7 @@ export default function Transactions() {
     const rows = filtered.map((t) => [
       t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ''}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

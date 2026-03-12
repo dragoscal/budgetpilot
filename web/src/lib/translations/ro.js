@@ -77,6 +77,7 @@ const ro = {
   'common.unknown': 'Necunoscut',
   'common.other': 'Altele',
   'common.undo': 'Anulează',
+  'common.error': 'Ceva nu a funcționat',
 
   // ─── Navigare ────────────────────────────────────────
   'nav.main': 'Principal',
@@ -2203,6 +2204,9 @@ const ro = {
   'changelog.v210batchToolbar': 'Bară flotantă de acțiuni în grup — selectează tranzacții și categorizează, schimbă data, tag-uri, export sau ștergere',
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
+
+  // v2.1.1
+  'changelog.v211auditFixes': 'Reparat traducerea erorii lipsă, escaparea CSV, closure în propagarea categoriilor, click-outside pentru bara de instrumente, și curățat importurile neutilizate',
   'changelog.v191fabHooksFix': 'Reparat crash-ul aplicației cauzat de butoanele QuickAdd și Feedback la navigare între pagini',
   'changelog.v191apiAuthFallback': 'Actualizarea/ștergerea API revine acum la stocare locală când sesiunea expiră',
   'changelog.v191dashboardScope': 'Comparația lunară din Panou respectă acum filtrul personal/gospodărie',
