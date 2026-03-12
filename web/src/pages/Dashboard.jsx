@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
@@ -184,11 +184,12 @@ export default function Dashboard() {
     saveStatCardConfig(STAT_CARD_ALL);
   }, [saveStatCardConfig]);
 
-  useEffect(() => {
-    loadData();
-  }, [month, effectiveUserId]);
+  // Version counter to discard stale fetches when month/user changes rapidly
+  const loadVersion = useRef(0);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [allTx, budgets, goals, rec, accts, ratesData] = await Promise.all([
@@ -199,6 +200,7 @@ export default function Dashboard() {
         accountsApi.getAll({ userId: effectiveUserId }),
         getCachedRates(),
       ]);
+      if (loadVersion.current !== version) return; // Stale — discard
       setRates(ratesData);
 
       const start = startOfMonth(month);
@@ -232,11 +234,15 @@ export default function Dashboard() {
       // Welcome card check
       try { const seen = await settingsApi.get('hasSeenWelcome'); if (!seen) setShowWelcome(true); } catch (e) {}
     } catch (err) {
-      console.error('Dashboard load error:', err);
+      if (loadVersion.current === version) console.error('Dashboard load error:', err);
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
-  };
+  }, [month, effectiveUserId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // ─── Notification checks (run once when data is loaded) ─────
   useEffect(() => {

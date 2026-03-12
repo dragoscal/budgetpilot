@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { wishlistApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,14 +32,32 @@ export default function Wishlist() {
   const [form, setForm] = useState({ name: '', estimatedPrice: '', category: 'shopping', priority: '3', url: '', notes: '' });
 
   const currency = user?.defaultCurrency || 'RON';
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadItems(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await wishlistApi.getAll({ userId: effectiveUserId });
+        if (loadVersion.current !== version) return;
+        setItems(data);
+      } catch (err) { if (loadVersion.current === version) toast.error(t('wishlist.failedLoad')); }
+      finally { if (loadVersion.current === version) setLoading(false); }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadItems = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
-    try { setItems(await wishlistApi.getAll({ userId: effectiveUserId })); }
-    catch (err) { toast.error(t('wishlist.failedLoad')); }
-    finally { setLoading(false); }
+    try {
+      const data = await wishlistApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
+      setItems(data);
+    } catch (err) { if (loadVersion.current === version) toast.error(t('wishlist.failedLoad')); }
+    finally { if (loadVersion.current === version) setLoading(false); }
   };
 
   const handleAdd = async () => {

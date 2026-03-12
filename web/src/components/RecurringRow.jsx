@@ -10,7 +10,34 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
   const now = new Date();
   const today = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysUntil = billingDay >= today ? billingDay - today : daysInMonth - today + billingDay;
+
+  // Calculate daysUntil based on frequency
+  let daysUntil;
+  if (item.frequency === 'weekly') {
+    // Weekly: find next occurrence within 7 days from last billing weekday
+    daysUntil = billingDay >= today ? billingDay - today : 7 - (today - billingDay) % 7;
+    if (daysUntil > 7) daysUntil = daysUntil % 7;
+  } else if (item.frequency === 'biweekly') {
+    daysUntil = billingDay >= today ? billingDay - today : 14 - (today - billingDay) % 14;
+    if (daysUntil > 14) daysUntil = daysUntil % 14;
+  } else if (item.frequency === 'daily') {
+    daysUntil = 0; // always due
+  } else if (['annual', 'semiannual', 'biannual'].includes(item.frequency)) {
+    // For annual+ : check billingMonth first
+    const billingMonth = (item.billingMonth || 1) - 1; // 0-indexed
+    const currentMonth = now.getMonth();
+    if (currentMonth === billingMonth) {
+      daysUntil = billingDay >= today ? billingDay - today : daysInMonth - today + billingDay;
+    } else {
+      // Not in billing month — compute months until
+      const monthsAway = billingMonth > currentMonth ? billingMonth - currentMonth : 12 - currentMonth + billingMonth;
+      daysUntil = monthsAway * 30 + billingDay; // approximate
+    }
+  } else {
+    // Monthly / quarterly (default)
+    daysUntil = billingDay >= today ? billingDay - today : daysInMonth - today + billingDay;
+  }
+
   const isNear = daysUntil <= 3 && item.active !== false && !cancelled;
 
   const isMonthly = !item.frequency || item.frequency === 'monthly';

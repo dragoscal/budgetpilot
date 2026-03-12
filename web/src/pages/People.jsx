@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { people as peopleApi, debts as debtsApi, debtPayments as paymentsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -41,10 +41,31 @@ export default function People() {
   const currency = user?.defaultCurrency || 'RON';
 
   const EMOJI_OPTIONS = ['👤', '👩', '👨', '🧑', '👩‍💼', '👨‍💼', '🧔', '👱', '👸', '🤴', '🧑‍🤝‍🧑', '👥', '🏢', '🏠'];
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadData(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [people, debts, payments] = await Promise.all([
+          peopleApi.getAll({ userId: effectiveUserId }),
+          debtsApi.getAll({ userId: effectiveUserId }),
+          paymentsApi.getAll({ userId: effectiveUserId }),
+        ]);
+        if (loadVersion.current !== version) return;
+        setPeople(people);
+        setDebts(debts);
+        setPayments(payments);
+      } catch (err) { if (loadVersion.current === version) toast.error(t('people.failedLoad')); }
+      finally { if (loadVersion.current === version) setLoading(false); }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadData = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [people, debts, payments] = await Promise.all([
@@ -52,11 +73,12 @@ export default function People() {
         debtsApi.getAll({ userId: effectiveUserId }),
         paymentsApi.getAll({ userId: effectiveUserId }),
       ]);
+      if (loadVersion.current !== version) return;
       setPeople(people);
       setDebts(debts);
       setPayments(payments);
-    } catch (err) { toast.error(t('people.failedLoad')); }
-    finally { setLoading(false); }
+    } catch (err) { if (loadVersion.current === version) toast.error(t('people.failedLoad')); }
+    finally { if (loadVersion.current === version) setLoading(false); }
   };
 
   // Calculate balances per person

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { budgets as budgetsApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,10 +44,11 @@ export default function Budgets() {
 
   const currency = user?.defaultCurrency || 'RON';
   const monthKey = format(month, 'yyyy-MM');
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadData(); }, [month, viewMode, effectiveUserId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const isFamily = viewMode === 'family' && isFamilyMode;
@@ -56,6 +57,7 @@ export default function Budgets() {
         budgetsApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
         txApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
       ]);
+      if (loadVersion.current !== version) return;
 
       const start = startOfMonth(month);
       const end = endOfMonth(month);
@@ -88,11 +90,13 @@ export default function Budgets() {
       setPrevMonthTransactions(prevTx);
       getCachedRates().then(setRates).catch(() => {});
     } catch (err) {
-      toast.error(t('budgets.failedLoad'));
+      if (loadVersion.current === version) toast.error(t('budgets.failedLoad'));
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
-  };
+  }, [month, viewMode, effectiveUserId]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const budgetData = useMemo(() => {
     return budgetsList.map((b) => {

@@ -1,7 +1,12 @@
 import { format, addMonths, subMonths } from 'date-fns';
+import { ro, enUS } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export default function MonthPicker({ value, onChange }) {
+  const { language } = useTranslation();
+  const locale = language === 'ro' ? ro : enUS;
+
   return (
     <div className="flex items-center gap-2">
       <button
@@ -11,7 +16,7 @@ export default function MonthPicker({ value, onChange }) {
         <ChevronLeft size={18} />
       </button>
       <span className="text-sm font-medium min-w-[120px] text-center">
-        {format(value, 'MMMM yyyy')}
+        {format(value, 'MMMM yyyy', { locale })}
       </span>
       <button
         onClick={() => onChange(addMonths(value, 1))}

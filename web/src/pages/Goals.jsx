@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { goals as goalsApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,18 +26,37 @@ export default function Goals() {
   const [form, setForm] = useState({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency: user?.defaultCurrency || 'RON', icon: '🎯', color: '#059669', interestRate: '', minimumPayment: '' });
 
   const currency = user?.defaultCurrency || 'RON';
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadGoals(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await goalsApi.getAll({ userId: effectiveUserId });
+        if (loadVersion.current !== version) return;
+        setGoals(data);
+      } catch (err) {
+        if (loadVersion.current === version) toast.error(t('goals.failedLoad'));
+      } finally {
+        if (loadVersion.current === version) setLoading(false);
+      }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadGoals = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const data = await goalsApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
       setGoals(data);
     } catch (err) {
-      toast.error(t('goals.failedLoad'));
+      if (loadVersion.current === version) toast.error(t('goals.failedLoad'));
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { challenges as challengeApi, transactions as txApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -101,22 +101,50 @@ export default function Challenges() {
     durationDays: '30',
   });
 
-  useEffect(() => { loadData(); }, [effectiveUserId]);
+  const loadVersion = useRef(0);
+
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [ch, tx] = await Promise.all([
+          challengeApi.getAll({ userId: effectiveUserId }),
+          txApi.getAll({ userId: effectiveUserId }),
+        ]);
+        if (loadVersion.current !== version) return;
+        setItems(ch);
+        setAllTx(tx);
+      } catch (err) {
+        if (loadVersion.current === version) {
+          console.error('Failed to load challenges:', err);
+          toast.error(t('challenges.failedLoad'));
+        }
+      }
+      finally { if (loadVersion.current === version) setLoading(false); }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadData = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [ch, tx] = await Promise.all([
         challengeApi.getAll({ userId: effectiveUserId }),
         txApi.getAll({ userId: effectiveUserId }),
       ]);
+      if (loadVersion.current !== version) return;
       setItems(ch);
       setAllTx(tx);
     } catch (err) {
-      console.error('Failed to load challenges:', err);
-      toast.error(t('challenges.failedLoad'));
+      if (loadVersion.current === version) {
+        console.error('Failed to load challenges:', err);
+        toast.error(t('challenges.failedLoad'));
+      }
     }
-    finally { setLoading(false); }
+    finally { if (loadVersion.current === version) setLoading(false); }
   };
 
   const active = useMemo(() => items.filter(c => {

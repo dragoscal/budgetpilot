@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as auth from '../lib/auth';
 import { migrateLocalToUser } from '../lib/migration';
-import { pullAllDataToCache } from '../lib/api';
-import { clearAllData } from '../lib/storage';
+import { pullAllDataToCache, resetCacheReady } from '../lib/api';
+import { clearUserData } from '../lib/storage';
 
 const AuthContext = createContext(null);
 
@@ -64,8 +64,10 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     auth.logout();
     setUser(null);
-    // Clear local cache to prevent stale data for next user
-    clearAllData().catch((e) => console.warn('Logout cache clear error:', e));
+    // Reset cache readiness so next login re-populates from server
+    resetCacheReady();
+    // Clear local data cache but preserve settings (API URL, AI keys, theme, etc.)
+    clearUserData().catch((e) => console.warn('Logout cache clear error:', e));
   }, []);
 
   const updateProfile = useCallback(async (changes) => {

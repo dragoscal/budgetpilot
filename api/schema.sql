@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS budgets (
   currency TEXT DEFAULT 'RON',
   month TEXT,
   rollover INTEGER DEFAULT 0,
+  familyId TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   FOREIGN KEY (userId) REFERENCES users(id)
@@ -131,8 +132,12 @@ CREATE TABLE IF NOT EXISTS debts (
   remaining REAL NOT NULL,
   currency TEXT DEFAULT 'RON',
   description TEXT,
+  reason TEXT,
   date TEXT NOT NULL,
+  dueDate TEXT,
   settled INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'active',
+  settledDate TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   FOREIGN KEY (userId) REFERENCES users(id),
@@ -273,6 +278,8 @@ CREATE TABLE IF NOT EXISTS families (
   name TEXT NOT NULL,
   createdBy TEXT NOT NULL,
   emoji TEXT DEFAULT '👨‍👩‍👧‍👦',
+  inviteCode TEXT,
+  defaultCurrency TEXT DEFAULT 'RON',
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
   FOREIGN KEY (createdBy) REFERENCES users(id)
@@ -286,6 +293,7 @@ CREATE TABLE IF NOT EXISTS family_members (
   isVirtual INTEGER DEFAULT 0,
   displayName TEXT,
   emoji TEXT DEFAULT '👤',
+  monthlyIncome REAL,
   joinedAt TEXT NOT NULL,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
@@ -313,12 +321,15 @@ CREATE TABLE IF NOT EXISTS shared_expenses (
 CREATE TABLE IF NOT EXISTS challenges (
   id TEXT PRIMARY KEY,
   userId TEXT NOT NULL,
-  name TEXT NOT NULL,
+  name TEXT,
+  title TEXT,
   type TEXT NOT NULL,
   targetAmount REAL,
+  target REAL,
   category TEXT,
   startDate TEXT NOT NULL,
   endDate TEXT NOT NULL,
+  durationDays INTEGER,
   status TEXT DEFAULT 'active',
   progress REAL DEFAULT 0,
   createdAt TEXT NOT NULL,
@@ -340,7 +351,22 @@ CREATE TABLE IF NOT EXISTS receipts (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
+-- Settlement History (for debt settlements)
+CREATE TABLE IF NOT EXISTS settlement_history (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  settlements TEXT DEFAULT '[]',
+  totalSettled REAL DEFAULT 0,
+  currency TEXT DEFAULT 'RON',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Indexes
+CREATE INDEX IF NOT EXISTS idx_settlement_history_userId ON settlement_history(userId);
+CREATE INDEX IF NOT EXISTS idx_budgets_familyId ON budgets(familyId);
+CREATE INDEX IF NOT EXISTS idx_debts_status ON debts(status);
 CREATE INDEX IF NOT EXISTS idx_loans_userId ON loans(userId);
 CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
 CREATE INDEX IF NOT EXISTS idx_loans_type ON loans(type);

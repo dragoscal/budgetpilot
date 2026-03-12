@@ -3,10 +3,10 @@ import { json } from './router.js';
 import { generateId } from './auth.js';
 import { logActivity } from './index.js';
 
-const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments', 'families', 'family_members', 'shared_expenses', 'challenges', 'receipts'];
+const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments', 'families', 'family_members', 'shared_expenses', 'challenges', 'receipts', 'settlement_history'];
 
 // Map client-side store names to D1 table names (for sync compatibility)
-const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments', familyMembers: 'family_members', sharedExpenses: 'shared_expenses' };
+const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments', familyMembers: 'family_members', sharedExpenses: 'shared_expenses', settlementHistory: 'settlement_history' };
 
 function resolveTable(name) {
   return TABLE_ALIASES[name] || name;
@@ -20,26 +20,27 @@ function getUserColumn(table) {
 }
 
 // JSON columns that need to be serialized/deserialized
-const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], };
+const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], settlement_history: ['settlements'] };
 
 // Valid D1 columns per table — client may send extra fields that don't exist in the schema
 const TABLE_COLUMNS = {
   transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','recurringId','items','splitFrom','importBatch','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
-  budgets: new Set(['id','userId','category','amount','currency','month','rollover','createdAt','updatedAt']),
+  budgets: new Set(['id','userId','category','amount','currency','month','rollover','familyId','createdAt','updatedAt']),
   goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
   accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
   recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','billingMonth','endDate','active','autoDetected','autoDebit','isVariable','recurringType','status','pausedAt','cancelledAt','createdAt','updatedAt']),
   people: new Set(['id','userId','name','emoji','phone','notes','createdAt','updatedAt']),
-  debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','date','settled','createdAt','updatedAt']),
+  debts: new Set(['id','userId','personId','type','amount','remaining','currency','description','reason','date','dueDate','settled','status','settledDate','createdAt','updatedAt']),
   debt_payments: new Set(['id','userId','debtId','amount','date','note','createdAt','updatedAt']),
   wishlist: new Set(['id','userId','name','estimatedPrice','currency','category','priority','url','notes','purchased','purchasedDate','createdAt','updatedAt']),
   loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','interestPeriod','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
   loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
-  families: new Set(['id','name','createdBy','emoji','createdAt','updatedAt']),
-  family_members: new Set(['id','familyId','userId','role','isVirtual','displayName','emoji','joinedAt','createdAt','updatedAt']),
+  families: new Set(['id','name','createdBy','emoji','inviteCode','defaultCurrency','createdAt','updatedAt']),
+  family_members: new Set(['id','familyId','userId','role','isVirtual','displayName','emoji','monthlyIncome','joinedAt','createdAt','updatedAt']),
   shared_expenses: new Set(['id','familyId','paidByUserId','amount','currency','description','category','date','splitMethod','settled','createdAt','updatedAt']),
-  challenges: new Set(['id','userId','name','type','targetAmount','category','startDate','endDate','status','progress','createdAt','updatedAt']),
+  challenges: new Set(['id','userId','name','title','type','targetAmount','target','category','startDate','endDate','durationDays','status','progress','createdAt','updatedAt']),
   receipts: new Set(['id','userId','merchant','total','currency','category','transactionId','processedAt','createdAt','updatedAt']),
+  settlement_history: new Set(['id','userId','settlements','totalSettled','currency','createdAt','updatedAt']),
 };
 
 // Strip unknown columns so D1 doesn't throw "table X has no column named Y"
@@ -269,7 +270,7 @@ export function registerCrudRoutes(router) {
     const since = ctx.query.since || '1970-01-01T00:00:00.000Z';
     const userId = ctx.user.id;
 
-    const limit = Math.min(parseInt(ctx.query.limit) || 1000, 5000);
+    const limit = Math.min(parseInt(ctx.query.limit) || 10000, 10000);
     const offset = parseInt(ctx.query.offset) || 0;
 
     const tables = {};
@@ -367,7 +368,7 @@ export function registerCrudRoutes(router) {
     query += ' ORDER BY createdAt DESC';
 
     // Pagination
-    const limit = Math.min(parseInt(ctx.query.limit) || 500, 5000);
+    const limit = Math.min(parseInt(ctx.query.limit) || 10000, 10000);
     const offset = parseInt(ctx.query.offset) || 0;
     query += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);

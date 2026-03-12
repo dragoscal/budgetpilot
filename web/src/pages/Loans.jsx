@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -41,14 +41,20 @@ export default function Loans() {
   const [paymentForm, setPaymentForm] = useState({ ...EMPTY_PAYMENT });
   const [savingPayment, setSavingPayment] = useState(false);
 
+  const loadVersion = useRef(0);
+
   const loadData = useCallback(async () => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const allLoans = await loansApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
       setLoansList(Array.isArray(allLoans) ? allLoans : []);
 
       // Load payments for all loans
       const allPayments = await lpApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
       const grouped = {};
       (Array.isArray(allPayments) ? allPayments : []).forEach((p) => {
         if (!grouped[p.loanId]) grouped[p.loanId] = [];
@@ -60,11 +66,11 @@ export default function Loans() {
       });
       setPayments(grouped);
     } catch (err) {
-      toast.error(t('loans.failedLoad') + ': ' + err.message);
+      if (loadVersion.current === version) toast.error(t('loans.failedLoad') + ': ' + err.message);
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
-  }, [toast]);
+  }, [effectiveUserId, toast]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
-import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber } from '../lib/helpers';
+import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
 import { CATEGORIES } from '../lib/constants';
 import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
@@ -238,7 +238,7 @@ export default function AddTransaction() {
   const showBudgetAlerts = async () => {
     try {
       const { start, end } = getMonthRange(new Date());
-      const monthTx = await getTransactionsByDateRange(start, end);
+      const monthTx = await getTransactionsByDateRange(formatDateISO(start), formatDateISO(end));
       const alerts = await checkBudgetAlerts(monthTx);
       for (const alert of alerts) {
         if (alert.type === 'over') toast.error(alert.message);

@@ -15,6 +15,7 @@ const REVERSE_TABLE_MAP = {
   loan_payments: 'loanPayments',
   family_members: 'familyMembers',
   shared_expenses: 'sharedExpenses',
+  settlement_history: 'settlementHistory',
 };
 
 function toApiTable(storeName) {
@@ -64,6 +65,21 @@ async function apiFetch(apiUrl, path, options = {}) {
 // ─── SERVER-FIRST CRUD ───────────────────────────────────
 // In API mode: server is source of truth. IndexedDB is a read cache.
 // In local mode (no apiUrl): operates on IndexedDB only.
+//
+// IMPORTANT: getAll() returns server data directly (in-memory filter)
+// to avoid race conditions with pullAllDataToCache(). Cache is updated
+// in the background, so stale reads from IndexedDB don't affect the UI.
+function applyFilters(records, filters) {
+  if (!filters || Object.keys(filters).length === 0) return records;
+  return records.filter((record) =>
+    Object.entries(filters).every(([key, value]) => {
+      if (value === undefined || value === null || value === '') return true;
+      if (Array.isArray(value)) return value.includes(record[key]);
+      return record[key] === value;
+    })
+  );
+}
+
 function createCrud(storeName) {
   const apiTable = toApiTable(storeName);
 
@@ -72,13 +88,14 @@ function createCrud(storeName) {
       const apiUrl = await getApiUrl();
       if (isApiMode(apiUrl) && getAuthToken()) {
         try {
-          const data = await apiFetch(apiUrl, `/api/${apiTable}?limit=500`);
-          // Replace local cache with server data
-          await storage.clearStore(storeName);
-          for (const record of data) {
-            await storage.add(storeName, record);
-          }
-          return storage.getAll(storeName, filters);
+          const data = await apiFetch(apiUrl, `/api/${apiTable}?limit=10000`);
+          const records = Array.isArray(data) ? data : [];
+          // Update local cache in background (non-blocking) using atomic bulkImport
+          storage.clearStore(storeName)
+            .then(() => storage.bulkImport(storeName, records))
+            .catch((err) => console.warn(`Background cache update failed for ${storeName}:`, err.message));
+          // Return server data directly — no IndexedDB round-trip, no race condition
+          return applyFilters(records, filters);
         } catch (err) {
           // Server unreachable — fall back to cached data
           console.warn(`Server fetch failed for ${storeName}, using cache:`, err.message);
@@ -105,7 +122,7 @@ function createCrud(storeName) {
 
     async create(record) {
       const apiUrl = await getApiUrl();
-      if (isApiMode(apiUrl)) {
+      if (isApiMode(apiUrl) && getAuthToken()) {
         if (!navigator.onLine) throw new Error('You are offline. Cannot save right now.');
         const serverRecord = { ...record };
         if (serverRecord.userId === 'local') delete serverRecord.userId;
@@ -260,21 +277,47 @@ export const settings = {
 };
 
 // ─── PULL ALL DATA TO CACHE (on login) ──────────────────
+// Uses atomic bulkImport per table to avoid race conditions with getAll().
+let _cacheReady = false;
+let _cacheReadyPromise = null;
+let _cacheReadyResolve = null;
+
+export function isCacheReady() { return _cacheReady; }
+export function waitForCacheReady() {
+  if (_cacheReady) return Promise.resolve();
+  if (!_cacheReadyPromise) {
+    _cacheReadyPromise = new Promise(resolve => { _cacheReadyResolve = resolve; });
+  }
+  return _cacheReadyPromise;
+}
+
+/** Reset cache readiness state (call on logout so next login re-populates) */
+export function resetCacheReady() {
+  _cacheReady = false;
+  _cacheReadyPromise = null;
+  _cacheReadyResolve = null;
+}
+
 export async function pullAllDataToCache() {
   const apiUrl = await getApiUrl();
-  if (!isApiMode(apiUrl) || !getAuthToken()) return;
+  if (!isApiMode(apiUrl) || !getAuthToken()) {
+    _cacheReady = true;
+    if (_cacheReadyResolve) _cacheReadyResolve();
+    return;
+  }
 
   try {
-    const data = await apiFetch(apiUrl, '/api/sync/pull?since=1970-01-01T00:00:00.000Z&limit=5000');
+    const data = await apiFetch(apiUrl, '/api/sync/pull?since=1970-01-01T00:00:00.000Z&limit=10000');
     if (data) {
       const tables = data.data || data;
       for (const [serverTable, records] of Object.entries(tables)) {
         if (serverTable === 'syncedAt') continue;
         const localStore = toLocalStore(serverTable);
         try {
+          // Atomic: clear + bulk write in a single IndexedDB transaction
           await storage.clearStore(localStore);
-          for (const record of records) {
-            await storage.add(localStore, record);
+          if (Array.isArray(records) && records.length > 0) {
+            await storage.bulkImport(localStore, records);
           }
         } catch (err) {
           console.warn(`Failed to cache ${localStore}:`, err.message);
@@ -296,6 +339,10 @@ export async function pullAllDataToCache() {
     }
   } catch (err) {
     console.error('Failed to pull data to cache:', err);
+  } finally {
+    _cacheReady = true;
+    if (_cacheReadyResolve) _cacheReadyResolve();
+    window.dispatchEvent(new Event('cache-ready'));
   }
 }
 
@@ -363,7 +410,7 @@ export async function getLastImportBatch() {
   const apiUrl = await getApiUrl();
   let txList;
   if (isApiMode(apiUrl) && getAuthToken()) {
-    txList = await apiFetch(apiUrl, '/api/transactions?limit=500');
+    txList = await apiFetch(apiUrl, '/api/transactions?limit=10000');
   } else {
     txList = await storage.getAll('transactions');
   }

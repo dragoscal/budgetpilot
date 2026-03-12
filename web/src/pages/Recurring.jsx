@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { recurring as recurringApi, transactions as txApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,25 +36,53 @@ export default function Recurring() {
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadItems(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [data, txData] = await Promise.all([
+          recurringApi.getAll({ userId: effectiveUserId }),
+          txApi.getAll({ userId: effectiveUserId }),
+        ]);
+        if (loadVersion.current !== version) return;
+        setItems(data);
+        setAllTransactions(txData);
+        const patterns = await detectRecurringPatterns();
+        if (loadVersion.current !== version) return;
+        setSuggestions(patterns);
+        getCachedRates().then(setRates).catch(() => {});
+      } catch (err) {
+        if (loadVersion.current === version) toast.error(t('recurring.failedLoad'));
+      } finally {
+        if (loadVersion.current === version) setLoading(false);
+      }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadItems = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [data, txData] = await Promise.all([
         recurringApi.getAll({ userId: effectiveUserId }),
         txApi.getAll({ userId: effectiveUserId }),
       ]);
+      if (loadVersion.current !== version) return;
       setItems(data);
       setAllTransactions(txData);
       const patterns = await detectRecurringPatterns();
+      if (loadVersion.current !== version) return;
       setSuggestions(patterns);
       getCachedRates().then(setRates).catch(() => {});
     } catch (err) {
-      toast.error(t('recurring.failedLoad'));
+      if (loadVersion.current === version) toast.error(t('recurring.failedLoad'));
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
   };
 

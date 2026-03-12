@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { accounts as accountsApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,14 +27,32 @@ export default function NetWorth() {
   const [form, setForm] = useState({ name: '', type: 'checking', balance: '', currency: user?.defaultCurrency || 'RON', icon: '🏦', color: '#14b8a6' });
 
   const currency = user?.defaultCurrency || 'RON';
+  const loadVersion = useRef(0);
 
-  useEffect(() => { loadAccounts(); }, [effectiveUserId]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await accountsApi.getAll({ userId: effectiveUserId });
+        if (loadVersion.current !== version) return;
+        setAccounts(data);
+      } catch (err) { if (loadVersion.current === version) toast.error(t('networth.failedLoad')); }
+      finally { if (loadVersion.current === version) setLoading(false); }
+    };
+    load();
+  }, [effectiveUserId]);
 
   const loadAccounts = async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
-    try { setAccounts(await accountsApi.getAll({ userId: effectiveUserId })); }
-    catch (err) { toast.error(t('networth.failedLoad')); }
-    finally { setLoading(false); }
+    try {
+      const data = await accountsApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
+      setAccounts(data);
+    } catch (err) { if (loadVersion.current === version) toast.error(t('networth.failedLoad')); }
+    finally { if (loadVersion.current === version) setLoading(false); }
   };
 
   const assets = accountsList.filter((a) => !LIABILITY_TYPES.includes(a.type));

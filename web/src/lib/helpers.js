@@ -247,12 +247,17 @@ export function getRecurringDueToday(recurringItems, existingTransactions) {
     if (!item.active && item.active !== undefined) return false;
     if ((item.billingDay || 1) > currentDay) return false; // not yet due
 
-    // For annual/semiannual: check if current month matches billingMonth
+    // For annual/semiannual/biannual: check if current month matches billingMonth
     if (['annual', 'semiannual', 'biannual'].includes(item.frequency)) {
       const billingMonth = (item.billingMonth || 1) - 1; // convert to 0-indexed
       if (item.frequency === 'annual' && currentMonthNum !== billingMonth) return false;
       if (item.frequency === 'semiannual' && currentMonthNum !== billingMonth && currentMonthNum !== (billingMonth + 6) % 12) return false;
-      if (item.frequency === 'biannual' && currentMonthNum !== billingMonth) return false;
+      if (item.frequency === 'biannual') {
+        // Every 2 years: check month matches AND year parity matches creation year
+        if (currentMonthNum !== billingMonth) return false;
+        const startYear = item.createdAt ? new Date(item.createdAt).getFullYear() : now.getFullYear();
+        if ((now.getFullYear() - startYear) % 2 !== 0) return false;
+      }
     }
 
     // Check if already created this month (by recurringId link OR merchant match)
@@ -351,7 +356,20 @@ export function parseLocalNumber(str) {
       s = s.replace(/,/g, '');
     }
   } else if (s.includes(',')) {
-    s = s.replace(',', '.');
+    // Multiple commas = thousands separators (e.g., "1,234,567")
+    const commaCount = (s.match(/,/g) || []).length;
+    if (commaCount > 1) {
+      s = s.replace(/,/g, ''); // strip all commas (thousands separators)
+    } else {
+      // Single comma: could be decimal (EU "12,50") or thousands ("1,234")
+      // If exactly 3 digits after the comma, treat as thousands separator
+      const afterComma = s.split(',')[1];
+      if (afterComma && afterComma.length === 3) {
+        s = s.replace(',', ''); // thousands separator
+      } else {
+        s = s.replace(',', '.'); // decimal separator
+      }
+    }
   }
   return Number(s);
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { transactions as txApi, undoImportBatch, getLastImportBatch } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
@@ -143,23 +143,42 @@ export default function Transactions() {
     }
   };
 
+  const loadVersion = useRef(0);
+
   useEffect(() => {
     if (!effectiveUserId) return;
-    loadTransactions();
+    const version = ++loadVersion.current;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await txApi.getAll({ userId: effectiveUserId });
+        if (loadVersion.current !== version) return; // Stale
+        setAllTx(data);
+      } catch (err) {
+        if (loadVersion.current === version) toast.error(t('transactions.failedLoad'));
+      } finally {
+        if (loadVersion.current === version) setLoading(false);
+      }
+    };
+
+    load();
     getCachedRates().then(setRates);
     getLastImportBatch().then(setLastBatch).catch(() => {});
   }, [effectiveUserId]);
 
   const loadTransactions = async () => {
     if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const data = await txApi.getAll({ userId: effectiveUserId });
+      if (loadVersion.current !== version) return;
       setAllTx(data);
     } catch (err) {
-      toast.error(t('transactions.failedLoad'));
+      if (loadVersion.current === version) toast.error(t('transactions.failedLoad'));
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
   };
 

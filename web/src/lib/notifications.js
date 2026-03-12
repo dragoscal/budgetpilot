@@ -62,17 +62,39 @@ export async function checkAndNotifyBudgetAlerts(transactions) {
   }
 }
 
-// Check recurring bills due today
+// Check recurring bills due today (uses billingDay field, not nextDueDate which doesn't exist)
 export async function checkAndNotifyRecurringDue(recurringItems) {
   const { getSetting } = await import('./storage.js');
   const enabled = await getSetting('notificationsEnabled');
   if (!enabled || Notification.permission !== 'granted') return;
 
-  const today = new Date();
+  const today = new Date().toISOString().split('T')[0];
+  const lastNotified = await getSetting('lastRecurringNotifyDate');
+  if (lastNotified === today) return; // Already notified today
+
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonthNum = now.getMonth(); // 0-indexed
+
   const dueToday = recurringItems.filter(r => {
-    // Check if due today based on frequency and nextDueDate
-    if (!r.nextDueDate) return false;
-    return r.nextDueDate.startsWith(today.toISOString().split('T')[0]);
+    if (r.status === 'cancelled' || r.status === 'paused') return false;
+    if (r.active === false) return false;
+    const billingDay = r.billingDay || 1;
+    if (billingDay !== currentDay) return false;
+
+    // For annual/semiannual/biannual: check if current month matches billingMonth
+    if (['annual', 'semiannual', 'biannual'].includes(r.frequency)) {
+      const billingMonth = (r.billingMonth || 1) - 1; // convert to 0-indexed
+      if (r.frequency === 'annual' && currentMonthNum !== billingMonth) return false;
+      if (r.frequency === 'semiannual' && currentMonthNum !== billingMonth && currentMonthNum !== (billingMonth + 6) % 12) return false;
+      if (r.frequency === 'biannual') {
+        if (currentMonthNum !== billingMonth) return false;
+        const startYear = r.createdAt ? new Date(r.createdAt).getFullYear() : now.getFullYear();
+        if ((now.getFullYear() - startYear) % 2 !== 0) return false;
+      }
+    }
+
+    return true;
   });
 
   if (dueToday.length > 0) {
@@ -82,5 +104,7 @@ export async function checkAndNotifyRecurringDue(recurringItems) {
       `${dueToday.length} bill(s) due: ${names}`,
       { tag: 'recurring-due', url: '/recurring' }
     );
+    const { setSetting } = await import('./storage.js');
+    await setSetting('lastRecurringNotifyDate', today);
   }
 }

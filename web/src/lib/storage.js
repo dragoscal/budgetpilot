@@ -233,6 +233,7 @@ export async function exportAll() {
     'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
     'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
+    'notifications', 'settlementHistory',
   ];
   const data = {};
   for (const store of stores) {
@@ -251,6 +252,7 @@ export async function importAll(data, { merge = false } = {}) {
     'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
     'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
+    'notifications', 'settlementHistory',
   ];
   const stats = { imported: 0, skipped: 0, overwritten: 0 };
 
@@ -296,6 +298,26 @@ export async function clearAllData() {
     'transactions', 'budgets', 'goals', 'accounts', 'recurring',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
     'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts', 'receiptDrafts',
+    'notifications', 'settlementHistory', 'settings',
+  ];
+  for (const store of stores) {
+    if (db.objectStoreNames.contains(store)) {
+      await db.clear(store);
+    }
+  }
+}
+
+/**
+ * Clear user data but preserve settings (API URL, AI keys, theme, language, etc.)
+ * Used on logout to prevent stale data for the next user while keeping config.
+ */
+export async function clearUserData() {
+  const db = await getDB();
+  const stores = [
+    'transactions', 'budgets', 'goals', 'accounts', 'recurring',
+    'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
+    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts', 'receiptDrafts',
+    'notifications', 'settlementHistory',
   ];
   for (const store of stores) {
     if (db.objectStoreNames.contains(store)) {
@@ -523,5 +545,5 @@ export async function deleteDraft(id) {
 
 export async function getDraftCount() {
   const db = await getDB();
-  return (await db.getAll('receiptDrafts')).length;
+  return db.count('receiptDrafts');
 }

@@ -625,6 +625,11 @@ export async function auditTransactions(userId) {
         const billingMonth = (item.billingMonth || 1) - 1;
         if (item.frequency === 'annual' && now.getMonth() !== billingMonth) continue;
         if (item.frequency === 'semiannual' && now.getMonth() !== billingMonth && now.getMonth() !== (billingMonth + 6) % 12) continue;
+        if (item.frequency === 'biannual') {
+          if (now.getMonth() !== billingMonth) continue;
+          const startYear = item.createdAt ? new Date(item.createdAt).getFullYear() : now.getFullYear();
+          if ((now.getFullYear() - startYear) % 2 !== 0) continue;
+        }
       }
 
       // Check if the billing day has passed

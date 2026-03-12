@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -32,7 +32,11 @@ export default function Reports() {
     { id: 'trends', label: t('reports.monthlyTrends'), description: t('reports.monthlyTrendsDesc') },
   ];
 
+  const loadVersion = useRef(0);
+
   useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     (async () => {
       setLoading(true);
       try {
@@ -40,12 +44,15 @@ export default function Reports() {
           txApi.getAll({ userId: effectiveUserId }),
           budgetsApi.getAll({ userId: effectiveUserId }),
         ]);
+        if (loadVersion.current !== version) return;
         setAllTx(tx);
         setBudgets(budgets);
       } catch (err) {
-        console.error('Failed to load report data:', err);
-        toast.error(t('reports.failedLoad') || 'Failed to load report data');
-      } finally { setLoading(false); }
+        if (loadVersion.current === version) {
+          console.error('Failed to load report data:', err);
+          toast.error(t('reports.failedLoad') || 'Failed to load report data');
+        }
+      } finally { if (loadVersion.current === version) setLoading(false); }
     })();
   }, [effectiveUserId]);
 

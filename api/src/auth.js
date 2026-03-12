@@ -13,7 +13,13 @@ async function hmacSign(message, secret) {
 
 async function hmacVerify(message, signature, secret) {
   const expected = await hmacSign(message, secret);
-  return expected === signature;
+  // Constant-time comparison to prevent timing attacks
+  if (expected.length !== signature.length) return false;
+  let result = 0;
+  for (let i = 0; i < expected.length; i++) {
+    result |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 function base64url(str) {
