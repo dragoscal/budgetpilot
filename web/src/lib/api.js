@@ -182,6 +182,44 @@ export const sharedExpenses = createCrud('sharedExpenses');
 export const challenges = createCrud('challenges');
 export const settlementHistory = createCrud('settlementHistory');
 
+// ─── FAMILY-SPECIFIC API (scoped endpoints) ─────────────
+export const familyApi = {
+  /** Get ALL members of a family (real + virtual), bypassing userId filter */
+  async getAllMembers(familyId) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl) || !getAuthToken()) {
+      // Local-only fallback: return cached family members for this family
+      const all = await storage.getAll('familyMembers');
+      return all.filter((m) => m.familyId === familyId);
+    }
+    return apiFetch(apiUrl, `/api/families/${familyId}/members`);
+  },
+
+  /** Add a virtual member to a family (no account required) */
+  async addVirtualMember(familyId, displayName, emoji) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to add members.');
+    const member = await apiFetch(apiUrl, `/api/families/${familyId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ displayName, emoji }),
+    });
+    // Cache locally
+    await storage.add('familyMembers', member);
+    return member;
+  },
+
+  /** Remove a virtual member from a family */
+  async removeVirtualMember(familyId, memberId) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to remove members.');
+    await apiFetch(apiUrl, `/api/families/${familyId}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+    // Remove from cache
+    await storage.remove('familyMembers', memberId);
+  },
+};
+
 // ─── SETTINGS ────────────────────────────────────────────
 export const settings = {
   async get(key) {

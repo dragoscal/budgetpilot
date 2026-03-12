@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { families as familiesApi, familyMembers as membersApi, transactions as txApi, sharedExpenses as sharedApi } from '../lib/api';
+import { families as familiesApi, familyMembers as membersApi, familyApi, transactions as txApi, sharedExpenses as sharedApi } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { generateId } from '../lib/helpers';
 
@@ -61,7 +61,14 @@ export function FamilyProvider({ children }) {
       if (savedActive && userFamilies.find((f) => f.id === savedActive)) {
         const family = userFamilies.find((f) => f.id === savedActive);
         setActiveFamily(family);
-        setMembers(allMembers.filter((m) => m.familyId === family.id));
+        // Use scoped endpoint to get ALL members (including other users + virtual)
+        try {
+          const scopedMembers = await familyApi.getAllMembers(family.id);
+          setMembers(scopedMembers);
+        } catch {
+          // Fallback to filtered local data
+          setMembers(allMembers.filter((m) => m.familyId === family.id));
+        }
       }
     } catch (err) {
       console.error('Failed to load families:', err);
@@ -194,9 +201,16 @@ export function FamilyProvider({ children }) {
     const family = myFamilies.find((f) => f.id === familyId);
     if (!family) return;
 
-    const allMembers = await membersApi.getAll();
     setActiveFamily(family);
-    setMembers(allMembers.filter((m) => m.familyId === family.id));
+    // Use scoped endpoint to get ALL members (including virtual)
+    try {
+      const scopedMembers = await familyApi.getAllMembers(family.id);
+      setMembers(scopedMembers);
+    } catch {
+      // Fallback to generic endpoint
+      const allMembers = await membersApi.getAll();
+      setMembers(allMembers.filter((m) => m.familyId === family.id));
+    }
     sessionStorage.setItem('bp_activeFamily', family.id);
   }, [myFamilies, effectiveUserId]);
 
@@ -222,6 +236,19 @@ export function FamilyProvider({ children }) {
       sessionStorage.removeItem('bp_activeFamily');
     }
   }, [effectiveUserId, activeFamily]);
+
+  const createVirtualMember = useCallback(async (displayName, emoji) => {
+    if (!activeFamily) throw new Error('No active family');
+    const member = await familyApi.addVirtualMember(activeFamily.id, displayName, emoji);
+    setMembers((prev) => [...prev, member]);
+    return member;
+  }, [activeFamily]);
+
+  const removeVirtualMember = useCallback(async (memberId) => {
+    if (!activeFamily) return;
+    await familyApi.removeVirtualMember(activeFamily.id, memberId);
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+  }, [activeFamily]);
 
   const updateMember = useCallback(async (memberId, changes) => {
     const member = members.find((m) => m.id === memberId);
@@ -261,6 +288,8 @@ export function FamilyProvider({ children }) {
         switchFamily,
         updateFamily,
         leaveFamily,
+        createVirtualMember,
+        removeVirtualMember,
         updateMember,
         updateMemberIncome,
         loadFamilies,

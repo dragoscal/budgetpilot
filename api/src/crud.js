@@ -36,7 +36,7 @@ const TABLE_COLUMNS = {
   loans: new Set(['id','userId','name','type','lender','principalAmount','remainingBalance','interestRate','interestType','monthlyPayment','currency','startDate','endDate','paymentDay','status','notes','createdAt','updatedAt']),
   loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
   families: new Set(['id','name','createdBy','emoji','createdAt','updatedAt']),
-  family_members: new Set(['id','familyId','userId','role','joinedAt','createdAt','updatedAt']),
+  family_members: new Set(['id','familyId','userId','role','isVirtual','displayName','emoji','joinedAt','createdAt','updatedAt']),
   shared_expenses: new Set(['id','familyId','paidByUserId','amount','currency','description','category','date','splitMethod','settled','createdAt','updatedAt']),
   challenges: new Set(['id','userId','name','type','targetAmount','category','startDate','endDate','status','progress','createdAt','updatedAt']),
   receipts: new Set(['id','userId','merchant','total','currency','category','transactionId','processedAt','createdAt','updatedAt']),
@@ -78,6 +78,87 @@ function deserializeRow(table, row) {
 
 export function registerCrudRoutes(router) {
   // ─── SPECIFIC routes FIRST (before generic :table routes) ───
+
+  // GET /api/families/:familyId/members — get ALL members of a family
+  // (The generic /api/family_members endpoint only returns the current user's records)
+  router.get('/api/families/:familyId/members', async (ctx) => {
+    const { familyId } = ctx.params;
+
+    // Verify requesting user is a member of this family
+    const myMembership = await ctx.env.DB.prepare(
+      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
+
+    // Return ALL members of this family (real + virtual)
+    const result = await ctx.env.DB.prepare(
+      'SELECT * FROM family_members WHERE familyId = ? ORDER BY isVirtual ASC, joinedAt ASC'
+    ).bind(familyId).all();
+
+    return json({ data: result.results || [] });
+  });
+
+  // POST /api/families/:familyId/members — add a virtual member to a family
+  router.post('/api/families/:familyId/members', async (ctx) => {
+    const { familyId } = ctx.params;
+
+    // Verify requesting user is admin of this family
+    const myMembership = await ctx.env.DB.prepare(
+      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
+    if (myMembership.role !== 'admin') return json({ error: 'Only admins can add members' }, 403);
+
+    const { displayName, emoji } = ctx.body;
+    if (!displayName?.trim()) return json({ error: 'Display name is required' }, 400);
+
+    const now = new Date().toISOString();
+    const id = generateId();
+
+    const member = {
+      id,
+      familyId,
+      userId: ctx.user.id, // Virtual member owned by creator for API filtering
+      role: 'member',
+      isVirtual: 1,
+      displayName: displayName.trim(),
+      emoji: emoji || '👤',
+      joinedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const columns = Object.keys(member);
+    const placeholders = columns.map(() => '?').join(', ');
+    await ctx.env.DB.prepare(
+      `INSERT INTO family_members (${columns.join(', ')}) VALUES (${placeholders})`
+    ).bind(...columns.map((c) => member[c])).run();
+
+    return json({ data: member }, 201);
+  });
+
+  // DELETE /api/families/:familyId/members/:memberId — remove a virtual member
+  router.delete('/api/families/:familyId/members/:memberId', async (ctx) => {
+    const { familyId, memberId } = ctx.params;
+
+    // Verify requesting user is admin
+    const myMembership = await ctx.env.DB.prepare(
+      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
+    if (myMembership.role !== 'admin') return json({ error: 'Only admins can remove members' }, 403);
+
+    // Only allow removing virtual members through this endpoint
+    const target = await ctx.env.DB.prepare(
+      'SELECT id, isVirtual FROM family_members WHERE id = ? AND familyId = ?'
+    ).bind(memberId, familyId).first();
+    if (!target) return json({ error: 'Member not found' }, 404);
+    if (!target.isVirtual) return json({ error: 'Cannot remove real members through this endpoint' }, 400);
+
+    await ctx.env.DB.prepare('DELETE FROM family_members WHERE id = ?').bind(memberId).run();
+
+    return json({ success: true });
+  });
 
   // POST /api/sync/push — bulk push from client
   router.post('/api/sync/push', async (ctx) => {
