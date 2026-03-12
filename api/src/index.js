@@ -297,20 +297,35 @@ router.post('/api/ai/process', async (ctx) => {
   const { messages, maxTokens, system, model } = ctx.body;
   const usedModel = model || 'claude-sonnet-4-20250514';
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: usedModel,
-      max_tokens: maxTokens || 2000,
-      system: system || undefined,
-      messages,
-    }),
-  });
+  // Abort AI call after 25s to avoid Cloudflare 524 timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: usedModel,
+        max_tokens: maxTokens || 2000,
+        system: system || undefined,
+        messages,
+      }),
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      return json({ error: 'AI request timed out (25s). Try a smaller document or simpler request.' }, 504);
+    }
+    return json({ error: 'AI request failed: ' + (err.message || 'network error') }, 502);
+  }
+  clearTimeout(timeout);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

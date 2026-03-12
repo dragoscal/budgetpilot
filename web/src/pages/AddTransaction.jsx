@@ -48,6 +48,54 @@ export default function AddTransaction() {
     return () => { if (deletedItem?.timeout) clearTimeout(deletedItem.timeout); };
   }, [deletedItem]);
 
+  // ─── Auto-save pending results as draft when navigating away ───
+  // Use a ref so the cleanup closure always sees the latest values
+  const pendingRef = useRef(null);
+  const receiptMetaRef = useRef(null);
+  useEffect(() => { pendingRef.current = pendingResults; }, [pendingResults]);
+  useEffect(() => { receiptMetaRef.current = receiptMeta; }, [receiptMeta]);
+
+  useEffect(() => {
+    // beforeunload: warn when closing tab with unsaved results
+    const onBeforeUnload = (e) => {
+      if (pendingRef.current && pendingRef.current.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    // Cleanup: auto-save draft when component unmounts (route change)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      const pending = pendingRef.current;
+      if (pending && pending.length > 0) {
+        const meta = receiptMetaRef.current;
+        const merchant = pending[0]?.merchant || 'Draft';
+        const date = pending[0]?.date || new Date().toISOString().slice(0, 10);
+        const totalAmount = pending
+          .filter(tx => !tx._dismissed)
+          .reduce((s, tx) => s + (tx.amount || 0), 0);
+        const currency = pending[0]?.currency || 'RON';
+        const draft = {
+          id: generateId(),
+          savedAt: new Date().toISOString(),
+          label: `${merchant} — ${date}`,
+          merchant,
+          date,
+          totalAmount,
+          currency,
+          transactionCount: pending.filter(tx => !tx._dismissed).length,
+          transactions: pending,
+          receiptMeta: meta || null,
+          _autoSaved: true,
+        };
+        // Fire-and-forget — can't await in cleanup, but saveDraft is fast (IndexedDB)
+        saveDraft(draft).catch(() => {});
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Add new item state
   const [addingItem, setAddingItem] = useState(null); // txIdx or null
   const [newItem, setNewItem] = useState({ name: '', price: '', qty: '1', category: 'other' });

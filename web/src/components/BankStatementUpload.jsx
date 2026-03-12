@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, FileText, X, Loader2, Building2, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
 import { processBankStatement } from '../lib/ai';
 import { formatCurrency } from '../lib/helpers';
@@ -15,6 +15,17 @@ export default function BankStatementUpload({ onResult, onError }) {
   const [progress, setProgress] = useState(0);
   const [bankInfo, setBankInfo] = useState(null);
   const fileRef = useRef(null);
+  const abortRef = useRef(null);
+
+  // Abort any in-flight AI request when component unmounts (user navigates away)
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+  }, []);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -49,7 +60,11 @@ export default function BankStatementUpload({ onResult, onError }) {
         setProgress(25);
         setStatus(t('addTransaction.aiAnalyzing'));
 
-        const results = await processBankStatement(base64Data, { userId: effectiveUserId });
+        // Create AbortController so we can cancel if user navigates away
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        const results = await processBankStatement(base64Data, { userId: effectiveUserId, signal: controller.signal });
 
         setProgress(90);
         setStatus(t('addTransaction.preparingTx'));
@@ -80,9 +95,12 @@ export default function BankStatementUpload({ onResult, onError }) {
         onResult?.(enrichedResult);
         setTimeout(() => setStatus(''), 1500);
       } catch (err) {
+        // Don't show error if we aborted intentionally (user navigated away)
+        if (err.name === 'AbortError') return;
         onError?.(err.message || t('addTransaction.failedProcess'));
         setStatus('');
       } finally {
+        abortRef.current = null;
         setProcessing(false);
         setProgress(0);
       }

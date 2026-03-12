@@ -277,15 +277,27 @@ function repairTruncatedJSON(text) {
 }
 
 // ─── API CALLER (multi-provider) ─────────────────────────
-async function callAI(messages, systemPrompt, maxTokens = 4000) {
+async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {}) {
   const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
   const provider = (await getSetting('aiProvider')) || 'anthropic';
   const model = await getSetting('aiModel');
   const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
   const selectedModel = model || providerConfig.defaultModel;
 
+  // Create a timeout controller (30s) merged with optional caller signal
+  const timeoutMs = 30000;
+  const timeoutCtrl = new AbortController();
+  const timeout = setTimeout(() => timeoutCtrl.abort(), timeoutMs);
+  // If caller passed a signal (e.g. for navigation abort), listen to it too
+  if (signal) {
+    if (signal.aborted) { clearTimeout(timeout); throw new DOMException('Aborted', 'AbortError'); }
+    signal.addEventListener('abort', () => timeoutCtrl.abort(), { once: true });
+  }
+  const fetchSignal = timeoutCtrl.signal;
+
   const apiKey = await getSetting(providerConfig.keyName);
 
+  try {
   // If no client-side key, try server proxy (for Anthropic only)
   if (!apiKey && apiUrl && provider === 'anthropic') {
     const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
@@ -294,6 +306,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     const res = await fetch(`${apiUrl}/api/ai/process`, {
       method: 'POST',
       headers,
+      signal: fetchSignal,
       body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel }),
     });
     if (!res.ok) {
@@ -321,6 +334,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
     // Anthropic Messages API
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: fetchSignal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -390,6 +404,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
 
     const res = await fetch(baseUrl, {
       method: 'POST',
+      signal: fetchSignal,
       headers,
       body: JSON.stringify({
         model: selectedModel,
@@ -413,6 +428,17 @@ async function callAI(messages, systemPrompt, maxTokens = 4000) {
   const jsonStr = extractJSON(text);
   if (!jsonStr) throw new Error('Could not parse AI response — no valid JSON found. The response may have been truncated.');
   return JSON.parse(jsonStr);
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      // Check if it was a timeout vs caller abort
+      if (signal?.aborted) throw err; // Re-throw caller abort as-is
+      throw new Error('AI request timed out (30s). Try a smaller document or simpler request.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ─── RECEIPT PROCESSING ───────────────────────────────────
@@ -538,7 +564,7 @@ IMPORTANT:
 - If a transaction description is unclear, set category to "other" and confidence low
 - For card payments, extract the actual merchant name from "POS <merchant>" format`;
 
-export async function processBankStatement(pdfBase64, { userId = 'local' } = {}) {
+export async function processBankStatement(pdfBase64, { userId = 'local', signal } = {}) {
   const result = await callAI([
     {
       role: 'user',
@@ -553,7 +579,7 @@ export async function processBankStatement(pdfBase64, { userId = 'local' } = {})
         },
       ],
     },
-  ], BANK_STATEMENT_PROMPT, 16000);
+  ], BANK_STATEMENT_PROMPT, 16000, { signal });
 
   return normalizeBankStatementResult(result, userId);
 }
