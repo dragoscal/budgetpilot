@@ -276,6 +276,55 @@ function repairTruncatedJSON(text) {
   }
 }
 
+// ─── SSE Stream Reader (for proxy streaming responses) ───
+// Protocol: proxy sends {t:"text chunk"} for deltas, {d:true} when done, {error:"msg"} on error.
+// Client collects all text chunks and returns parsed JSON.
+async function readSSEStream(response, signal) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+
+  try {
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (signal?.aborted) { reader.cancel(); throw new DOMException('Aborted', 'AbortError'); }
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+          try {
+            const evt = JSON.parse(raw);
+            if (evt.t) fullText += evt.t;           // text chunk
+            else if (evt.d) { /* done */ }           // stream complete
+            else if (evt.error) throw new Error(evt.error);
+          } catch (e) {
+            if (e.message && !e.message.startsWith('Unexpected') && !e.message.startsWith('Expected')) throw e;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') throw err;
+    if (!fullText) throw err;
+    // If we have partial text, try to use it
+  }
+
+  if (!fullText) throw new Error('No data received from AI stream');
+
+  // Parse JSON from collected text (uses robust balanced-brace extraction)
+  const jsonStr = extractJSON(fullText);
+  if (jsonStr) return JSON.parse(jsonStr);
+
+  return { content: [{ text: fullText }] };
+}
+
 // ─── API CALLER (multi-provider) ─────────────────────────
 async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {}) {
   const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
@@ -284,17 +333,14 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
   const providerConfig = AI_PROVIDERS.find(p => p.id === provider) || AI_PROVIDERS[0];
   const selectedModel = model || providerConfig.defaultModel;
 
-  // Create a timeout controller (65s) merged with optional caller signal
-  // Must exceed the 55s API-side timeout so the API error is returned cleanly
-  const timeoutMs = 65000;
-  const timeoutCtrl = new AbortController();
-  const timeout = setTimeout(() => timeoutCtrl.abort(), timeoutMs);
-  // If caller passed a signal (e.g. for navigation abort), listen to it too
+  // Create an abort controller that merges caller signal
+  // No fixed timeout — streaming keeps connection alive
+  const abortCtrl = new AbortController();
   if (signal) {
-    if (signal.aborted) { clearTimeout(timeout); throw new DOMException('Aborted', 'AbortError'); }
-    signal.addEventListener('abort', () => timeoutCtrl.abort(), { once: true });
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    signal.addEventListener('abort', () => abortCtrl.abort(), { once: true });
   }
-  const fetchSignal = timeoutCtrl.signal;
+  const fetchSignal = abortCtrl.signal;
 
   const apiKey = await getSetting(providerConfig.keyName);
 
@@ -311,14 +357,22 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
       body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel }),
     });
     if (!res.ok) {
+      // Non-streaming error (auth failures, etc.)
       const err = await res.json().catch(() => ({}));
       if (res.status === 403) {
         throw new Error(err.error || 'AI proxy access not granted. Add your own API key in Settings.');
       }
       throw new Error(err.error || 'AI processing failed via server');
     }
+
+    // Server returns SSE stream with text deltas — readSSEStream collects and parses
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/event-stream')) {
+      return await readSSEStream(res, fetchSignal);
+    }
+
+    // Fallback: non-streaming JSON response (auth errors etc.)
     const proxyResult = await res.json();
-    // Server proxy returns raw Anthropic response — extract inner JSON
     const proxyText = proxyResult.content?.[0]?.text || (typeof proxyResult === 'string' ? proxyResult : JSON.stringify(proxyResult));
     const proxyJson = extractJSON(proxyText);
     if (proxyJson) return JSON.parse(proxyJson);
@@ -329,10 +383,18 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
     throw new Error(`No ${providerConfig.name} API key configured. Go to Settings to add it.`);
   }
 
+  // ─── Direct API calls (client-side key) ────────────────
+  // Use a 3-minute timeout for direct calls (no streaming proxy to keep alive)
+  const timeoutMs = 180000;
+  const timeoutId = setTimeout(() => abortCtrl.abort(), timeoutMs);
+
   let text;
 
+  try {
   if (provider === 'anthropic') {
-    // Anthropic Messages API
+    // Anthropic Messages API (direct, with streaming for large requests)
+    const useStream = maxTokens > 4000;
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       signal: fetchSignal,
@@ -347,17 +409,46 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
         max_tokens: maxTokens,
         system: systemPrompt,
         messages,
+        ...(useStream ? { stream: true } : {}),
       }),
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
       throw new Error(error.error?.message || `Anthropic API error: ${res.status}`);
     }
-    const data = await res.json();
-    text = data.content?.[0]?.text || '';
-    // Detect if response was truncated due to max_tokens
-    if (data.stop_reason === 'max_tokens') {
-      console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+
+    if (useStream) {
+      // Read SSE stream from Anthropic directly
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      text = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const raw = line.slice(6).trim();
+            if (raw === '[DONE]') continue;
+            try {
+              const evt = JSON.parse(raw);
+              if (evt.type === 'content_block_delta' && evt.delta?.text) {
+                text += evt.delta.text;
+              }
+            } catch { /* skip */ }
+          }
+        }
+      }
+    } else {
+      const data = await res.json();
+      text = data.content?.[0]?.text || '';
+      if (data.stop_reason === 'max_tokens') {
+        console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+      }
     }
   } else {
     // OpenAI-compatible API (OpenAI, OpenRouter)
@@ -379,9 +470,6 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
               type: 'image_url',
               image_url: { url: `data:${part.source.media_type};base64,${part.source.data}` },
             };
-            // Convert Anthropic 'document' type to OpenAI-compatible format
-            // OpenAI/OpenRouter don't support PDF documents natively via vision —
-            // send as a text explanation that the PDF content should be extracted
             if (part.type === 'document') {
               return {
                 type: 'image_url',
@@ -419,10 +507,12 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
     }
     const data = await res.json();
     text = data.choices?.[0]?.message?.content || '';
-    // Detect if response was truncated due to max_tokens
     if (data.choices?.[0]?.finish_reason === 'length') {
       console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
     }
+  }
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Extract JSON using balanced brace matching (with truncation repair)
@@ -432,13 +522,10 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal } = {})
 
   } catch (err) {
     if (err.name === 'AbortError') {
-      // Check if it was a timeout vs caller abort
-      if (signal?.aborted) throw err; // Re-throw caller abort as-is
+      if (signal?.aborted) throw err;
       throw new Error('AI request timed out. Try a smaller document or simpler request.');
     }
     throw err;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

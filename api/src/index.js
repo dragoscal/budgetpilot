@@ -276,7 +276,10 @@ router.get('/api/feedback', async (ctx) => {
   return json({ data: result.results || [] });
 });
 
-// ─── AI Proxy ─────────────────────────────────────────────
+// ─── AI Proxy (streaming) ─────────────────────────────────
+// Uses Anthropic streaming API to avoid timeout issues.
+// Forwards text deltas to browser as SSE events so no connection times out.
+// Protocol: sends {t:"chunk"} for text, {d:true} when done, {error:"msg"} on error.
 router.post('/api/ai/process', async (ctx) => {
   const anthropicKey = ctx.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return json({ error: 'Anthropic API key not configured on server' }, 503);
@@ -297,16 +300,10 @@ router.post('/api/ai/process', async (ctx) => {
   const { messages, maxTokens, system, model } = ctx.body;
   const usedModel = model || 'claude-sonnet-4-20250514';
 
-  // Abort AI call after 55s to avoid Cloudflare 524 timeout (~100s proxy limit)
-  // Bank statements with many transactions can take 30-50s to process
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
-
   let res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': anthropicKey,
@@ -317,40 +314,85 @@ router.post('/api/ai/process', async (ctx) => {
         max_tokens: maxTokens || 2000,
         system: system || undefined,
         messages,
+        stream: true,
       }),
     });
   } catch (err) {
-    clearTimeout(timeout);
-    if (err.name === 'AbortError') {
-      return json({ error: 'AI request timed out (55s). Try a smaller document or simpler request.' }, 504);
-    }
     return json({ error: 'AI request failed: ' + (err.message || 'network error') }, 502);
   }
-  clearTimeout(timeout);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return json({ error: err.error?.message || 'AI processing failed' }, res.status);
   }
 
-  const data = await res.json();
-  const text = data.content?.[0]?.text || '';
+  // Stream text deltas directly to the browser.
+  // This keeps both connections alive (browser↔worker, worker↔anthropic).
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
 
-  // Log token usage for cost tracking
-  const usage = data.usage || {};
-  ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {
-    model: usedModel,
-    inputTokens: usage.input_tokens || 0,
-    outputTokens: usage.output_tokens || 0,
-  }));
+  const send = (obj) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
 
-  // Try to extract JSON
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try { return json(JSON.parse(jsonMatch[0])); } catch { /* fall through */ }
-  }
+  ctx.ctx.waitUntil((async () => {
+    let inputTokens = 0;
+    let outputTokens = 0;
+    try {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-  return json({ content: data.content });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const raw = line.slice(6).trim();
+            if (raw === '[DONE]') continue;
+            try {
+              const event = JSON.parse(raw);
+              if (event.type === 'content_block_delta' && event.delta?.text) {
+                // Forward text chunk to browser
+                await send({ t: event.delta.text });
+              } else if (event.type === 'message_delta' && event.usage) {
+                outputTokens = event.usage.output_tokens || 0;
+              } else if (event.type === 'message_start' && event.message?.usage) {
+                inputTokens = event.message.usage.input_tokens || 0;
+              }
+            } catch { /* skip */ }
+          }
+        }
+      }
+
+      // Signal completion
+      await send({ d: true });
+
+      // Log token usage asynchronously
+      ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {
+        model: usedModel,
+        inputTokens,
+        outputTokens,
+      }));
+    } catch (err) {
+      try { await send({ error: err.message || 'Stream failed' }); } catch { /* closed */ }
+    } finally {
+      try { await writer.close(); } catch { /* already closed */ }
+    }
+  })());
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 });
 
 // ─── Register routes (admin BEFORE crud to avoid /:table collision) ──
