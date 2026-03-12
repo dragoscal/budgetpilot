@@ -1,18 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, getCategoryById, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
-import Modal from '../components/Modal';
 import TransactionRow from '../components/TransactionRow';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday, startOfWeek } from 'date-fns';
+import {
+  startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isToday,
+  startOfWeek, addDays, addWeeks, subWeeks,
+} from 'date-fns';
 import HelpButton from '../components/HelpButton';
-import { TrendingDown, TrendingUp, Zap, Flame, Star, Landmark, Bell } from 'lucide-react';
+import {
+  TrendingDown, TrendingUp, Zap, Flame, Star, Landmark, Bell,
+  CalendarDays, CalendarRange, ChevronLeft, ChevronRight, X, CheckCircle2,
+} from 'lucide-react';
 
-// Category color palette
+/* ─── Category color palette ─────────────────────────────────── */
 const CAT_COLORS = {
   food: '#e11d48', dining: '#e11d48', groceries: '#e11d48',
   transport: '#2563eb', housing: '#7c3aed', utilities: '#d97706',
@@ -28,6 +33,234 @@ function getCatColor(catId) {
   return `hsl(${hash % 360}, 60%, 50%)`;
 }
 
+/* ─── Inline sub-components ──────────────────────────────────── */
+
+function TransactionChip({ tx, currency, className = '' }) {
+  const cat = getCategoryById(tx.category);
+  const isIncome = tx.type === 'income';
+  const label = tx.merchant || tx.description || cat.name;
+  return (
+    <div className={`flex items-center gap-1 px-1.5 py-[3px] rounded-md text-[10px] sm:text-[11px] font-medium truncate w-full leading-tight ${
+      isIncome
+        ? 'bg-success/10 text-success dark:bg-success/15'
+        : 'bg-danger/8 text-danger/90 dark:bg-danger/12 dark:text-danger'
+    } ${className}`}>
+      <span className="shrink-0 text-[10px]">{cat.icon}</span>
+      <span className="truncate">{label}</span>
+      <span className="ml-auto shrink-0 money text-[9px] sm:text-[10px] font-bold">
+        {isIncome ? '+' : ''}{formatCurrency(tx.amount, tx.currency || currency).replace(/\s/g, '')}
+      </span>
+    </div>
+  );
+}
+
+function BillChip({ bill, currency, className = '' }) {
+  const isAuto = !!bill.autoDebit;
+  return (
+    <div className={`flex items-center gap-1 px-1.5 py-[3px] rounded-md text-[10px] sm:text-[11px] font-medium truncate w-full leading-tight border border-dashed ${
+      isAuto
+        ? 'bg-accent/5 border-accent/25 text-accent dark:bg-accent/10'
+        : 'bg-warning/5 border-warning/25 text-warning dark:bg-warning/10'
+    } ${className}`}>
+      {isAuto ? <Landmark size={9} className="shrink-0" /> : <Bell size={9} className="shrink-0" />}
+      <span className="truncate">{bill.name}</span>
+      <span className="ml-auto shrink-0 money text-[9px] font-bold">
+        {formatCurrency(bill.amount, bill.currency || currency).replace(/\s/g, '')}
+      </span>
+    </div>
+  );
+}
+
+function ViewToggle({ viewMode, setViewMode, t }) {
+  return (
+    <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
+      <button onClick={() => setViewMode('month')}
+        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${
+          viewMode === 'month'
+            ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+            : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
+        }`}>
+        <CalendarDays size={13} />
+        <span className="hidden sm:inline">{t('calendar.monthView')}</span>
+      </button>
+      <button onClick={() => setViewMode('week')}
+        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${
+          viewMode === 'week'
+            ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+            : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
+        }`}>
+        <CalendarRange size={13} />
+        <span className="hidden sm:inline">{t('calendar.weekView')}</span>
+      </button>
+    </div>
+  );
+}
+
+function WeekPicker({ weekStart, onChange }) {
+  const end = addDays(weekStart, 6);
+  const label = `${format(weekStart, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`;
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={() => onChange(subWeeks(weekStart, 1))}
+        className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 transition-colors">
+        <ChevronLeft size={18} />
+      </button>
+      <span className="text-sm font-medium min-w-[160px] text-center">{label}</span>
+      <button onClick={() => onChange(addWeeks(weekStart, 1))}
+        className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 transition-colors">
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  );
+}
+
+function CalendarStats({ monthStats, currency, t }) {
+  const items = [
+    { icon: TrendingDown, label: t('calendar.totalSpent'), value: formatCurrency(monthStats.totalExpenses, currency), color: 'text-danger' },
+    { icon: TrendingUp, label: t('calendar.totalIncome'), value: formatCurrency(monthStats.totalIncome, currency), color: 'text-income' },
+    { icon: Zap, label: t('calendar.dailyAvg'), value: formatCurrency(monthStats.pastDayCount > 0 ? monthStats.totalExpenses / monthStats.pastDayCount : 0, currency), color: '' },
+    { icon: Flame, label: t('calendar.noSpendDays'), value: monthStats.noSpendDays, color: 'text-success' },
+  ];
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      {items.map((item, i) => (
+        <div key={i} className="card !p-2.5 sm:!p-3">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <item.icon size={12} className={item.color || 'text-accent'} />
+            <p className="text-[10px] text-cream-500 uppercase tracking-wider">{item.label}</p>
+          </div>
+          <p className={`font-heading font-bold text-sm sm:text-base money ${item.color}`}>{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
+  if (!dayData) return null;
+  const dayDate = new Date(selectedDay + 'T00:00:00');
+  const isPast = dayDate <= new Date();
+  const noSpend = isPast && dayData.expenseTotal === 0 && dayData.incomeTotal === 0;
+
+  return (
+    <div className="card p-4 space-y-4 animate-fadeUp">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] text-cream-500 uppercase tracking-wider">{format(dayDate, 'EEEE')}</p>
+          <p className="font-heading font-bold text-lg">{format(dayDate, 'dd MMMM yyyy')}</p>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-dark-border text-cream-400 transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      {(dayData.expenseTotal > 0 || dayData.incomeTotal > 0) && (
+        <div className="flex gap-2">
+          {dayData.expenseTotal > 0 && (
+            <div className="flex-1 p-2.5 rounded-xl bg-danger/5 border border-danger/10">
+              <p className="text-[10px] text-cream-500 uppercase">{t('calendar.expenses')}</p>
+              <p className="font-heading font-bold text-base money text-danger">{formatCurrency(dayData.expenseTotal, currency)}</p>
+            </div>
+          )}
+          {dayData.incomeTotal > 0 && (
+            <div className="flex-1 p-2.5 rounded-xl bg-success/5 border border-success/10">
+              <p className="text-[10px] text-cream-500 uppercase">{t('calendar.income')}</p>
+              <p className="font-heading font-bold text-base money text-income">{formatCurrency(dayData.incomeTotal, currency)}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No-spend celebration */}
+      {noSpend && (
+        <div className="text-center py-3">
+          <span className="text-2xl">🌟</span>
+          <p className="text-sm font-medium text-success mt-1">{t('calendar.noSpendDay')}</p>
+        </div>
+      )}
+
+      {/* Bills */}
+      {dayData.bills.length > 0 && (
+        <div>
+          <h4 className="section-title">{t('calendar.billsDue')}</h4>
+          <div className="space-y-1.5">
+            {dayData.bills.map((b) => {
+              const cat = getCategoryById(b.category);
+              const isAuto = !!b.autoDebit;
+              return (
+                <div key={b.id} className="flex items-center justify-between py-2 px-2.5 rounded-xl bg-cream-50 dark:bg-dark-border/30 text-sm">
+                  <span className="flex items-center gap-2">
+                    {isAuto ? <Landmark size={13} className="text-accent" /> : <Bell size={13} className="text-warning" />}
+                    <span>{cat.icon} {b.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${isAuto ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'}`}>
+                      {isAuto ? t('recurring.autoLabel') : t('recurring.manualLabel')}
+                    </span>
+                  </span>
+                  <span className="money font-bold text-sm">{formatCurrency(b.amount, b.currency || currency)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Transactions */}
+      {dayData.transactions.length > 0 && (
+        <div>
+          <h4 className="section-title">{t('calendar.transactionsTitle')}</h4>
+          <div className="divide-y divide-cream-100 dark:divide-dark-border">
+            {sortByDate(dayData.transactions).map((tx) => <TransactionRow key={tx.id} transaction={tx} />)}
+          </div>
+        </div>
+      )}
+
+      {dayData.transactions.length === 0 && dayData.bills.length === 0 && !isPast && (
+        <div className="text-center py-6">
+          <p className="text-sm text-cream-400">{t('calendar.nothingPlanned')}</p>
+        </div>
+      )}
+
+      {dayData.transactions.length === 0 && dayData.bills.length === 0 && isPast && !noSpend && (
+        <p className="text-sm text-cream-500 text-center py-4">{t('calendar.noTransactions')}</p>
+      )}
+
+      {/* Category breakdown */}
+      {dayData.categories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-3 border-t border-cream-100 dark:border-dark-border">
+          {dayData.categories.map((catId, i) => {
+            const cat = getCategoryById(catId);
+            return (
+              <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-cream-100 dark:bg-dark-border"
+                style={{ borderLeft: `3px solid ${getCatColor(catId)}` }}>
+                {cat.icon} {cat.name}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileBottomSheet({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={onClose} />
+      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden max-h-[80vh] overflow-y-auto bg-white dark:bg-dark-card border-t border-cream-200 dark:border-dark-border rounded-t-2xl shadow-xl animate-slide-up">
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white dark:bg-dark-card z-10">
+          <div className="w-10 h-1 rounded-full bg-cream-300 dark:bg-dark-border" />
+        </div>
+        <div className="px-4 pb-6">{children}</div>
+      </div>
+    </>
+  );
+}
+
+/* ─── Main Calendar Page ─────────────────────────────────────── */
+
 export default function CalendarPage() {
   const { t } = useTranslation();
   const { user, effectiveUserId } = useAuth();
@@ -37,9 +270,13 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rates, setRates] = useState(null);
+  const [viewMode, setViewMode] = useState('month');
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [monthTransition, setMonthTransition] = useState(null);
 
   const currency = user?.defaultCurrency || 'RON';
 
+  /* ─── Data fetching ─── */
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -58,6 +295,7 @@ export default function CalendarPage() {
     })();
   }, [month, effectiveUserId]);
 
+  /* ─── Derived data ─── */
   const days = useMemo(() => eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) }), [month]);
 
   const dayData = useMemo(() => {
@@ -88,100 +326,76 @@ export default function CalendarPage() {
       const key = format(d, 'yyyy-MM-dd');
       return dayData[key]?.expenseTotal === 0;
     }).length;
-
     let streak = 0;
     for (let i = pastDays.length - 1; i >= 0; i--) {
       const key = format(pastDays[i], 'yyyy-MM-dd');
       if (dayData[key]?.expenseTotal === 0) streak++;
       else break;
     }
-
     return { totalExpenses, totalIncome, noSpendDays, streak, pastDayCount: pastDays.length };
   }, [transactions, days, dayData, currency, rates]);
 
-  // Weekly totals
-  const weeklyTotals = useMemo(() => {
-    const totals = {};
-    for (const day of days) {
-      const ws = startOfWeek(day, { weekStartsOn: 1 });
-      const wk = format(ws, 'yyyy-MM-dd');
-      if (!totals[wk]) totals[wk] = 0;
-      const key = format(day, 'yyyy-MM-dd');
-      totals[wk] += dayData[key]?.expenseTotal || 0;
-    }
-    return totals;
-  }, [days, dayData]);
-
   const maxExpense = useMemo(() => Math.max(...Object.values(dayData).map((d) => d.expenseTotal), 1), [dayData]);
 
+  /* ─── Grid rows (month view) ─── */
   const firstDayOfWeek = getDay(startOfMonth(month));
   const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
-  // Build grid rows
   const gridRows = useMemo(() => {
     const cells = [...Array(offset).fill(null), ...days];
     const rows = [];
     for (let i = 0; i < cells.length; i += 7) {
       const rowDays = cells.slice(i, i + 7);
       while (rowDays.length < 7) rowDays.push(null);
-      const realDays = rowDays.filter(Boolean);
-      const weekKey = realDays.length > 0 ? format(startOfWeek(realDays[0], { weekStartsOn: 1 }), 'yyyy-MM-dd') : null;
-      const weekTotal = weekKey ? (weeklyTotals[weekKey] || 0) : 0;
-      rows.push({ days: rowDays, weekTotal });
+      rows.push(rowDays);
     }
     return rows;
-  }, [offset, days, weeklyTotals]);
+  }, [offset, days]);
+
+  /* ─── Week view days ─── */
+  const weekDays = useMemo(() => eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) }), [weekStart]);
 
   const selectedDayData = selectedDay ? dayData[selectedDay] : null;
 
+  /* ─── Handlers ─── */
+  const handleDayClick = useCallback((key) => {
+    setSelectedDay((prev) => prev === key ? null : key);
+  }, []);
+
+  const handleMonthChange = useCallback((newMonth) => {
+    const dir = newMonth > month ? 'left' : 'right';
+    setMonthTransition(dir);
+    setTimeout(() => {
+      setMonth(newMonth);
+      setMonthTransition(null);
+    }, 150);
+  }, [month]);
+
   if (loading) return <SkeletonPage />;
 
+  const dayNames = [t('calendar.mon'), t('calendar.tue'), t('calendar.wed'), t('calendar.thu'), t('calendar.fri'), t('calendar.sat'), t('calendar.sun')];
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('calendar.title')}</h1>
           <HelpButton section="calendar" />
         </div>
-        <MonthPicker value={month} onChange={setMonth} />
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingDown size={14} className="text-danger" />
-            <p className="text-[11px] text-cream-500 uppercase tracking-wider">{t('calendar.totalSpent')}</p>
-          </div>
-          <p className="font-heading font-bold text-base money text-danger">{formatCurrency(monthStats.totalExpenses, currency)}</p>
-        </div>
-        <div className="card p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp size={14} className="text-income" />
-            <p className="text-[11px] text-cream-500 uppercase tracking-wider">{t('calendar.totalIncome')}</p>
-          </div>
-          <p className="font-heading font-bold text-base money text-income">{formatCurrency(monthStats.totalIncome, currency)}</p>
-        </div>
-        <div className="card p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Zap size={14} className="text-accent" />
-            <p className="text-[11px] text-cream-500 uppercase tracking-wider">{t('calendar.dailyAvg')}</p>
-          </div>
-          <p className="font-heading font-bold text-base money">
-            {formatCurrency(monthStats.pastDayCount > 0 ? monthStats.totalExpenses / monthStats.pastDayCount : 0, currency)}
-          </p>
-        </div>
-        <div className="card p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Flame size={14} className="text-success" />
-            <p className="text-[11px] text-cream-500 uppercase tracking-wider">{t('calendar.noSpendDays')}</p>
-          </div>
-          <p className="font-heading font-bold text-base text-success">{monthStats.noSpendDays}</p>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ViewToggle viewMode={viewMode} setViewMode={setViewMode} t={t} />
+          {viewMode === 'month'
+            ? <MonthPicker value={month} onChange={handleMonthChange} />
+            : <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
+          }
         </div>
       </div>
 
-      {/* Streak banner */}
+      {/* ─── Compact stats ─── */}
+      <CalendarStats monthStats={monthStats} currency={currency} t={t} />
+
+      {/* ─── Streak banner ─── */}
       {monthStats.streak >= 2 && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-success/10 to-accent/10 border border-success/20">
           <Star size={18} className="text-success shrink-0" />
@@ -192,214 +406,267 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* Calendar grid */}
-      <div className="card p-3 sm:p-5">
-        {/* Day name headers */}
-        <div className="grid grid-cols-[repeat(7,1fr)_4.5rem] gap-1 mb-1">
-          {[t('calendar.mon'), t('calendar.tue'), t('calendar.wed'), t('calendar.thu'), t('calendar.fri'), t('calendar.sat'), t('calendar.sun')].map((d) => (
-            <div key={d} className="text-center text-[11px] font-semibold text-cream-400 uppercase tracking-wider py-1.5">{d}</div>
-          ))}
-          <div className="text-center text-[11px] font-semibold text-cream-400 uppercase tracking-wider py-1.5">{t('calendar.week')}</div>
-        </div>
+      {/* ─── Main content: grid + detail panel ─── */}
+      <div className="flex gap-4 items-start">
+        {/* Calendar grid card */}
+        <div className="flex-1 min-w-0">
+          <div className="card p-2 sm:p-4 overflow-hidden">
+            {viewMode === 'month' ? (
+              <>
+                {/* Day name headers */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {dayNames.map((d) => (
+                    <div key={d} className="text-center text-[10px] sm:text-[11px] font-semibold text-cream-400 uppercase tracking-wider py-1.5">{d}</div>
+                  ))}
+                </div>
 
-        {/* Grid rows */}
-        <div className="space-y-1">
-          {gridRows.map((row, ri) => (
-            <div key={ri} className="grid grid-cols-[repeat(7,1fr)_4.5rem] gap-1">
-              {row.days.map((day, ci) => {
-                if (!day) {
-                  return <div key={`empty-${ri}-${ci}`} className="h-16 sm:h-[4.5rem] rounded-lg bg-cream-50/50 dark:bg-dark-border/20" />;
-                }
+                {/* Month grid with transition */}
+                <div className={`transition-all duration-200 ${
+                  monthTransition === 'left' ? 'opacity-0 -translate-x-3' :
+                  monthTransition === 'right' ? 'opacity-0 translate-x-3' :
+                  'opacity-100 translate-x-0'
+                }`}>
+                  <div className="space-y-1">
+                    {gridRows.map((rowDays, ri) => (
+                      <div key={ri} className="grid grid-cols-7 gap-1">
+                        {rowDays.map((day, ci) => {
+                          if (!day) {
+                            return <div key={`e-${ri}-${ci}`} className="h-20 sm:h-28 lg:h-32 rounded-xl bg-cream-50/30 dark:bg-dark-border/10" />;
+                          }
 
-                const key = format(day, 'yyyy-MM-dd');
-                const data = dayData[key];
-                const today = isToday(day);
-                const isFuture = day > new Date();
-                const isPast = !isFuture && !today;
-                const hasExpenses = data.expenseTotal > 0;
-                const hasIncome = data.incomeTotal > 0;
-                const hasBills = data.bills.length > 0;
-                const isNoSpend = isPast && !hasExpenses;
-                const intensity = hasExpenses ? Math.min(data.expenseTotal / maxExpense, 1) : 0;
+                          const key = format(day, 'yyyy-MM-dd');
+                          const data = dayData[key];
+                          const today = isToday(day);
+                          const isFuture = day > new Date();
+                          const isPast = !isFuture && !today;
+                          const hasExpenses = data.expenseTotal > 0;
+                          const isNoSpend = isPast && !hasExpenses;
+                          const isSelected = selectedDay === key;
+                          const intensity = hasExpenses ? Math.min(data.expenseTotal / maxExpense, 1) : 0;
 
-                let bgStyle = undefined;
-                if (hasExpenses && !today) {
-                  bgStyle = { backgroundColor: `rgba(225, 29, 72, ${0.04 + intensity * 0.12})` };
-                } else if (isNoSpend && !today) {
-                  bgStyle = { backgroundColor: 'rgba(5, 150, 105, 0.04)' };
-                }
+                          // Combine bills + transactions for chips
+                          const allChips = [
+                            ...data.bills.map((b) => ({ ...b, _type: 'bill' })),
+                            ...data.transactions,
+                          ];
 
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedDay(key)}
-                    className={`h-16 sm:h-[4.5rem] p-1.5 rounded-lg text-left flex flex-col transition-all relative ${
-                      today
-                        ? 'ring-2 ring-accent bg-accent/5'
-                        : selectedDay === key
-                          ? 'ring-2 ring-accent/40 bg-cream-50 dark:bg-dark-border/50'
-                          : isFuture
-                            ? 'opacity-35'
-                            : 'hover:bg-cream-100/60 dark:hover:bg-dark-border/40'
-                    } ${!bgStyle && !today ? 'bg-white dark:bg-dark-card' : ''}`}
-                    style={bgStyle}
-                  >
-                    {/* Day number row */}
-                    <div className="flex items-center justify-between w-full">
-                      <span className={`text-xs font-bold ${
-                        today ? 'text-accent' : hasExpenses ? 'text-cream-800 dark:text-cream-100' : isNoSpend ? 'text-success/80' : 'text-cream-400'
-                      }`}>
-                        {data.dayNum}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        {data.autoDebitBills.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                        {data.manualBills.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-warning" />}
-                        {isNoSpend && <span className="text-[9px] text-success font-medium">✓</span>}
-                      </div>
-                    </div>
+                          let bgStyle;
+                          if (!today && !isSelected && hasExpenses) {
+                            bgStyle = { backgroundColor: `rgba(225, 29, 72, ${0.03 + intensity * 0.10})` };
+                          } else if (!today && !isSelected && isNoSpend) {
+                            bgStyle = { backgroundColor: 'rgba(5, 150, 105, 0.03)' };
+                          }
 
-                    {/* Bottom area: amount + dots */}
-                    <div className="mt-auto w-full space-y-0.5">
-                      {hasExpenses && (
-                        <span className="block text-[10px] sm:text-[11px] text-danger font-bold money truncate leading-tight">
-                          {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
-                        </span>
-                      )}
-                      {hasIncome && (
-                        <span className="block text-[10px] sm:text-[11px] text-income font-bold money truncate leading-tight">
-                          +{formatCurrency(data.incomeTotal, currency).replace(/\s/g, '')}
-                        </span>
-                      )}
-                      {data.categories.length > 0 && (
-                        <div className="flex items-center gap-[3px]">
-                          {data.categories.slice(0, 4).map((catId, i) => (
-                            <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getCatColor(catId) }} />
-                          ))}
-                          {data.categories.length > 4 && <span className="text-[8px] text-cream-400">+{data.categories.length - 4}</span>}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+                          const borderClass = today
+                            ? 'border-accent/40'
+                            : isSelected
+                              ? 'border-accent/30'
+                              : 'border-transparent hover:border-cream-200 dark:hover:border-dark-border';
 
-              {/* Weekly total */}
-              <div className="h-16 sm:h-[4.5rem] rounded-lg bg-cream-50 dark:bg-dark-border/30 flex flex-col items-center justify-center px-1">
-                {row.weekTotal > 0 ? (
-                  <span className="text-[11px] font-bold money text-danger text-center leading-tight">
-                    {formatCurrency(row.weekTotal, currency).replace(/\s/g, '')}
-                  </span>
-                ) : (
-                  <span className="text-xs text-cream-300">—</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+                          const bgClass = today
+                            ? 'bg-accent/5 dark:bg-accent/10'
+                            : isSelected
+                              ? 'bg-accent/[0.06] dark:bg-accent/10'
+                              : isFuture
+                                ? 'opacity-40'
+                                : '';
 
-        {/* Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-4 pt-3 border-t border-cream-100 dark:border-dark-border">
-          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="w-3 h-3 rounded bg-danger/12" /> {t('calendar.spending')}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="w-3 h-3 rounded bg-success/10 flex items-center justify-center text-[7px] text-success">✓</div> {t('calendar.noSpend')}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent" /> {t('calendar.autoDebitDue')}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="w-1.5 h-1.5 rounded-full bg-warning" /> {t('calendar.manualBillDue')}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-cream-400">
-            <div className="flex gap-[3px]">
-              <div className="w-1.5 h-1.5 rounded-full bg-danger" />
-              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <div className="w-1.5 h-1.5 rounded-full bg-success" />
-            </div>
-            {t('calendar.categories')}
-          </div>
-        </div>
-      </div>
-
-      {/* Day detail modal */}
-      <Modal open={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? format(new Date(selectedDay), 'EEEE, dd MMMM yyyy') : ''} wide>
-        {selectedDayData && (
-          <div className="space-y-4">
-            {(selectedDayData.expenseTotal > 0 || selectedDayData.incomeTotal > 0) && (
-              <div className="flex gap-3">
-                {selectedDayData.expenseTotal > 0 && (
-                  <div className="flex-1 p-3 rounded-xl bg-danger/5">
-                    <p className="text-[11px] text-cream-500 uppercase">{t('calendar.expenses')}</p>
-                    <p className="font-heading font-bold text-lg money text-danger">{formatCurrency(selectedDayData.expenseTotal, currency)}</p>
-                    {selectedDayData.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {selectedDayData.categories.map((catId, i) => {
-                          const cat = getCategoryById(catId);
                           return (
-                            <span key={i} className="text-[11px] px-1.5 py-0.5 rounded-full bg-white/60 dark:bg-dark-border" style={{ borderLeft: `2px solid ${getCatColor(catId)}` }}>
-                              {cat.icon} {cat.name}
-                            </span>
+                            <button
+                              key={key}
+                              onClick={() => handleDayClick(key)}
+                              className={`h-20 sm:h-28 lg:h-32 p-1 sm:p-1.5 rounded-xl text-left flex flex-col transition-all duration-150 relative group border ${borderClass} ${bgClass}`}
+                              style={bgStyle}
+                            >
+                              {/* Day number row */}
+                              <div className="flex items-center justify-between w-full mb-0.5">
+                                {today ? (
+                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent text-white flex items-center justify-center text-[10px] sm:text-xs font-bold leading-none">
+                                    {data.dayNum}
+                                  </span>
+                                ) : (
+                                  <span className={`text-[10px] sm:text-xs font-bold ${
+                                    hasExpenses ? 'text-cream-800 dark:text-cream-100' : isNoSpend ? 'text-success/70' : 'text-cream-400'
+                                  }`}>
+                                    {data.dayNum}
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-0.5">
+                                  {data.autoDebitBills.length > 0 && <Landmark size={9} className="text-accent" />}
+                                  {data.manualBills.length > 0 && <Bell size={9} className="text-warning" />}
+                                </div>
+                              </div>
+
+                              {/* Transaction chips */}
+                              <div className="flex-1 space-y-[2px] overflow-hidden w-full">
+                                {/* Chip 1 — always visible */}
+                                {allChips[0] && (
+                                  allChips[0]._type === 'bill'
+                                    ? <BillChip bill={allChips[0]} currency={currency} />
+                                    : <TransactionChip tx={allChips[0]} currency={currency} />
+                                )}
+                                {/* Chip 2 — hidden on mobile */}
+                                {allChips[1] && (
+                                  allChips[1]._type === 'bill'
+                                    ? <BillChip bill={allChips[1]} currency={currency} className="hidden sm:flex" />
+                                    : <TransactionChip tx={allChips[1]} currency={currency} className="hidden sm:flex" />
+                                )}
+                                {/* Chip 3 — desktop only */}
+                                {allChips[2] && (
+                                  allChips[2]._type === 'bill'
+                                    ? <BillChip bill={allChips[2]} currency={currency} className="hidden lg:flex" />
+                                    : <TransactionChip tx={allChips[2]} currency={currency} className="hidden lg:flex" />
+                                )}
+                                {/* Overflow */}
+                                {allChips.length > 1 && (
+                                  <span className="text-[9px] font-medium text-accent sm:hidden">
+                                    +{allChips.length - 1} {t('calendar.more')}
+                                  </span>
+                                )}
+                                {allChips.length > 2 && (
+                                  <span className="text-[9px] font-medium text-accent hidden sm:inline lg:hidden">
+                                    +{allChips.length - 2} {t('calendar.more')}
+                                  </span>
+                                )}
+                                {allChips.length > 3 && (
+                                  <span className="text-[9px] font-medium text-accent hidden lg:inline">
+                                    +{allChips.length - 3} {t('calendar.more')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* No-spend indicator */}
+                              {isNoSpend && allChips.length === 0 && (
+                                <div className="absolute bottom-1 right-1.5">
+                                  <CheckCircle2 size={11} className="text-success/60" />
+                                </div>
+                              )}
+
+                              {/* Expense total when no chips visible (fallback on mobile for days with >0 chips hidden) */}
+                              {hasExpenses && allChips.length === 0 && (
+                                <span className="text-[10px] text-danger font-bold money mt-auto">
+                                  {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
+                                </span>
+                              )}
+                            </button>
                           );
                         })}
                       </div>
-                    )}
+                    ))}
                   </div>
-                )}
-                {selectedDayData.incomeTotal > 0 && (
-                  <div className="flex-1 p-3 rounded-xl bg-income/5">
-                    <p className="text-[11px] text-cream-500 uppercase">{t('calendar.income')}</p>
-                    <p className="font-heading font-bold text-lg money text-income">{formatCurrency(selectedDayData.incomeTotal, currency)}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {selectedDayData.expenseTotal === 0 && selectedDayData.incomeTotal === 0 && selectedDayData.day <= new Date() && (
-              <div className="text-center py-4">
-                <span className="text-3xl">🌟</span>
-                <p className="text-sm font-medium text-success mt-1">{t('calendar.noSpendDay')}</p>
-              </div>
-            )}
-
-            {selectedDayData.bills.length > 0 && (
-              <div>
-                <h4 className="section-title">{t('calendar.billsDue')}</h4>
-                {selectedDayData.bills.map((b) => {
-                  const cat = getCategoryById(b.category);
-                  const isAuto = !!b.autoDebit;
-                  return (
-                    <div key={b.id} className="flex items-center justify-between py-2 text-sm">
-                      <span className="flex items-center gap-2">
-                        {isAuto ? (
-                          <Landmark size={12} className="text-accent" />
-                        ) : (
-                          <Bell size={12} className="text-warning" />
-                        )}
-                        <span>{cat.icon} {b.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${isAuto ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'}`}>
-                          {isAuto ? t('recurring.autoLabel') : t('recurring.manualLabel')}
-                        </span>
-                      </span>
-                      <span className="money font-medium">{formatCurrency(b.amount, b.currency || currency)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {selectedDayData.transactions.length > 0 ? (
-              <div>
-                <h4 className="section-title">{t('calendar.transactionsTitle')}</h4>
-                <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                  {sortByDate(selectedDayData.transactions).map((tx) => <TransactionRow key={tx.id} transaction={tx} />)}
                 </div>
-              </div>
-            ) : selectedDayData.bills.length === 0 && selectedDayData.day > new Date() ? (
-              <p className="text-sm text-cream-500 text-center py-6">{t('calendar.noTransactions')}</p>
-            ) : null}
+              </>
+            ) : (
+              /* ─── Week View ─── */
+              <>
+                {/* Day headers */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {weekDays.map((day) => {
+                    const key = format(day, 'yyyy-MM-dd');
+                    const today = isToday(day);
+                    return (
+                      <div key={key} className="text-center py-1.5">
+                        <p className="text-[10px] uppercase text-cream-400 tracking-wider font-semibold">
+                          {format(day, 'EEE')}
+                        </p>
+                        {today ? (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white text-sm font-bold mt-0.5">
+                            {format(day, 'd')}
+                          </span>
+                        ) : (
+                          <p className="text-sm font-bold mt-0.5 text-cream-700 dark:text-cream-200">{format(day, 'd')}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Day columns */}
+                <div className="grid grid-cols-7 gap-1" style={{ minHeight: '22rem' }}>
+                  {weekDays.map((day) => {
+                    const key = format(day, 'yyyy-MM-dd');
+                    const data = dayData[key];
+                    const isSelected = selectedDay === key;
+                    const today = isToday(day);
+                    const isFuture = day > new Date();
+
+                    // If day not in current month's data, show empty
+                    if (!data) {
+                      return (
+                        <button key={key} onClick={() => handleDayClick(key)}
+                          className="rounded-xl bg-cream-50/30 dark:bg-dark-border/10 p-1 text-left opacity-40">
+                          <p className="text-[10px] text-cream-400 text-center">{format(day, 'd')}</p>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleDayClick(key)}
+                        className={`rounded-xl p-1.5 text-left flex flex-col gap-[2px] transition-all border ${
+                          isSelected ? 'border-accent/30 bg-accent/5 dark:bg-accent/10' :
+                          today ? 'border-accent/15 bg-accent/[0.02]' :
+                          isFuture ? 'border-transparent opacity-40' :
+                          'border-transparent hover:border-cream-200 dark:hover:border-dark-border bg-white dark:bg-dark-card'
+                        }`}
+                      >
+                        {/* All chips */}
+                        {data.bills.map((b) => <BillChip key={b.id} bill={b} currency={currency} />)}
+                        {sortByDate(data.transactions, 'date', 'asc').map((tx) => (
+                          <TransactionChip key={tx.id} tx={tx} currency={currency} />
+                        ))}
+
+                        {/* Daily total */}
+                        {data.expenseTotal > 0 && (
+                          <div className="mt-auto pt-1.5 border-t border-cream-100 dark:border-dark-border">
+                            <span className="text-[10px] font-bold money text-danger">
+                              {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* No spend */}
+                        {data.expenseTotal === 0 && data.transactions.length === 0 && !isFuture && (
+                          <div className="flex items-center justify-center flex-1">
+                            <CheckCircle2 size={14} className="text-success/40" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
-        )}
-      </Modal>
+        </div>
+
+        {/* ─── Desktop side panel ─── */}
+        <div className={`hidden lg:block w-80 shrink-0 sticky top-4 transition-all duration-300 ${
+          selectedDay ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
+        }`}>
+          {selectedDay && (
+            <DayDetailPanel
+              dayData={selectedDayData}
+              selectedDay={selectedDay}
+              currency={currency}
+              t={t}
+              onClose={() => setSelectedDay(null)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ─── Mobile bottom sheet ─── */}
+      <MobileBottomSheet open={!!selectedDay} onClose={() => setSelectedDay(null)}>
+        <DayDetailPanel
+          dayData={selectedDayData}
+          selectedDay={selectedDay}
+          currency={currency}
+          t={t}
+          onClose={() => setSelectedDay(null)}
+        />
+      </MobileBottomSheet>
     </div>
   );
 }

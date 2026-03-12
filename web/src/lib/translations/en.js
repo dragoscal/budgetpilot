@@ -653,6 +653,11 @@ const en = {
   'calendar.spent': 'Spent',
   'calendar.week': 'Wk',
   'calendar.dayStreak': 'day streak',
+  'calendar.monthView': 'Month',
+  'calendar.weekView': 'Week',
+  'calendar.more': 'more',
+  'calendar.nothingPlanned': 'Nothing planned',
+  'calendar.selectDay': 'Select a day to see details',
 
   // ─── Cash Flow ───────────────────────────────────────
   'cashflow.title': 'Cash Flow',

@@ -653,6 +653,11 @@ const ro = {
   'calendar.spent': 'Cheltuit',
   'calendar.week': 'Săpt',
   'calendar.dayStreak': 'zile consecutive',
+  'calendar.monthView': 'Lună',
+  'calendar.weekView': 'Săptămână',
+  'calendar.more': 'în plus',
+  'calendar.nothingPlanned': 'Nimic planificat',
+  'calendar.selectDay': 'Selectează o zi pentru detalii',
 
   // ─── Flux numerar ────────────────────────────────────
   'cashflow.title': 'Flux de numerar',
