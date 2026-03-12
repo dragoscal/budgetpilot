@@ -121,7 +121,7 @@ export default function FeedbackFAB() {
           />
           <div
             ref={modalRef}
-            className="pointer-events-auto w-full md:w-96 md:max-w-[calc(100vw-2rem)] mb-0 md:mb-6 md:mr-6 bg-white dark:bg-dark-card rounded-t-2xl md:rounded-2xl shadow-2xl border border-cream-200 dark:border-dark-border animate-slide-up md:animate-fadeUp overflow-hidden"
+            className="pointer-events-auto relative z-10 w-full md:w-96 md:max-w-[calc(100vw-2rem)] mb-0 md:mb-6 md:mr-6 bg-white dark:bg-dark-card rounded-t-2xl md:rounded-2xl shadow-2xl border border-cream-200 dark:border-dark-border animate-slide-up md:animate-fadeUp overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-dark-border">
