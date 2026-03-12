@@ -528,15 +528,15 @@ export default function CalendarPage() {
                               </div>
 
                               {/* Mobile: compact summary (no chips) */}
-                              <div className="flex-1 flex flex-col justify-center gap-0.5 w-full sm:hidden">
+                              <div className="flex-1 flex flex-col justify-center gap-0.5 w-full sm:hidden overflow-hidden">
                                 {hasExpenses && (
-                                  <span className="text-[10px] text-danger font-bold money leading-snug">
-                                    {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
+                                  <span className="text-[10px] text-danger font-bold money leading-snug truncate">
+                                    {Math.round(data.expenseTotal).toLocaleString()}
                                   </span>
                                 )}
                                 {data.incomeTotal > 0 && (
-                                  <span className="text-[10px] text-success font-bold money leading-snug">
-                                    +{formatCurrency(data.incomeTotal, currency).replace(/\s/g, '')}
+                                  <span className="text-[10px] text-success font-bold money leading-snug truncate">
+                                    +{Math.round(data.incomeTotal).toLocaleString()}
                                   </span>
                                 )}
                                 {data.categories.length > 0 && (
