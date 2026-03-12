@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -287,9 +287,12 @@ export default function CalendarPage() {
   const [monthTransition, setMonthTransition] = useState(null);
 
   const currency = user?.defaultCurrency || 'RON';
+  const loadVersion = useRef(0);
 
   /* ─── Data fetching ─── */
   useEffect(() => {
+    if (!effectiveUserId) return;
+    const version = ++loadVersion.current;
     (async () => {
       setLoading(true);
       try {
@@ -297,13 +300,14 @@ export default function CalendarPage() {
           txApi.getAll({ userId: effectiveUserId }),
           recurringApi.getAll({ userId: effectiveUserId }),
         ]);
+        if (loadVersion.current !== version) return;
         const start = startOfMonth(month);
         const end = endOfMonth(month);
         setTransactions(allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; }));
         setRecurring(rec.filter((r) => r.active !== false));
         getCachedRates().then(setRates).catch(() => {});
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      } catch (err) { if (loadVersion.current === version) console.error(err); }
+      finally { if (loadVersion.current === version) setLoading(false); }
     })();
   }, [month, effectiveUserId]);
 
@@ -316,7 +320,18 @@ export default function CalendarPage() {
       const key = format(day, 'yyyy-MM-dd');
       const dayNum = day.getDate();
       const dayTx = transactions.filter((t) => t.date === key);
-      const dayBills = recurringItems.filter((r) => (r.billingDay || 1) === dayNum);
+      const currentMonthNum = month.getMonth(); // 0-indexed
+      const dayBills = recurringItems.filter((r) => {
+        if ((r.billingDay || 1) !== dayNum) return false;
+        // For annual/semiannual/biannual, only show in the correct month(s)
+        if (['annual', 'semiannual', 'biannual'].includes(r.frequency)) {
+          const bm = (r.billingMonth || 1) - 1; // 0-indexed
+          if (r.frequency === 'annual' && currentMonthNum !== bm) return false;
+          if (r.frequency === 'semiannual' && currentMonthNum !== bm && currentMonthNum !== (bm + 6) % 12) return false;
+          if (r.frequency === 'biannual' && currentMonthNum !== bm && currentMonthNum !== (bm + 24) % 12) return false;
+        }
+        return true;
+      });
       const autoDebitBills = dayBills.filter((r) => r.autoDebit);
       const manualBills = dayBills.filter((r) => !r.autoDebit);
       const expenses = dayTx.filter((t) => t.type === 'expense');

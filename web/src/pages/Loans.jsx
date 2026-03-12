@@ -181,11 +181,17 @@ export default function Loans() {
     const amount = parseLocalNumber(paymentForm.amount);
     const principal = parseLocalNumber(paymentForm.principalPortion) || 0;
     const interest = parseLocalNumber(paymentForm.interestPortion) || 0;
-    const effectivePrincipal = principal || (interest ? amount - interest : amount);
+
+    // Validate: principal + interest should not exceed total amount
+    if (principal > 0 && interest > 0 && principal + interest > amount * 1.01) {
+      return toast.error(t('loans.partsExceedTotal') || 'Principal + interest exceed payment total');
+    }
+
+    const effectivePrincipal = principal || (interest ? Math.max(0, amount - interest) : amount);
 
     // Prevent overpaying beyond remaining balance
-    if (loan && effectivePrincipal > loan.remainingBalance) {
-      return toast.error(`Principal portion (${formatCurrency(effectivePrincipal, currency)}) exceeds remaining balance (${formatCurrency(loan.remainingBalance, currency)})`);
+    if (loan && effectivePrincipal > loan.remainingBalance * 1.01) {
+      return toast.error(`${t('loans.principalExceedsBalance') || 'Principal portion exceeds remaining balance'} (${formatCurrency(loan.remainingBalance, loan.currency || currency)})`);
     }
 
     setSavingPayment(true);

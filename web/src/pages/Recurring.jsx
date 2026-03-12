@@ -115,10 +115,12 @@ export default function Recurring() {
 
   const handleSave = async () => {
     if (!form.name || (!form.amount && !form.isVariable)) { toast.error(t('recurring.nameAndAmountRequired')); return; }
+    const parsedAmount = Math.abs(Number(form.amount)) || 0;
+    if (!form.isVariable && parsedAmount <= 0) { toast.error(t('recurring.nameAndAmountRequired')); return; }
     try {
       const data = {
         ...form,
-        amount: Number(form.amount) || 0,
+        amount: parsedAmount,
         billingDay: Math.min(31, Math.max(1, Number(form.billingDay) || 1)),
         billingMonth: Math.min(12, Math.max(1, Number(form.billingMonth) || 1)),
         frequency: form.frequency || 'monthly',

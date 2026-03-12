@@ -235,6 +235,42 @@ export default function SettingsPage() {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
+
+      // Validate backup structure: must be an object with at least one known store
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return toast.error(t('settings.invalidBackup'));
+      }
+      const KNOWN_STORES = [
+        'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
+        'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
+        'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
+        'notifications', 'settlementHistory',
+      ];
+      const hasKnownData = KNOWN_STORES.some((s) => Array.isArray(data[s]) && data[s].length > 0);
+      if (!hasKnownData) {
+        return toast.error(t('settings.invalidBackup'));
+      }
+      // Validate each store entry: must be arrays of objects with an id (except settings which uses key)
+      for (const store of KNOWN_STORES) {
+        if (!data[store] || !Array.isArray(data[store])) continue;
+        for (const record of data[store]) {
+          if (!record || typeof record !== 'object') {
+            return toast.error(t('settings.invalidBackup'));
+          }
+          // settings store uses 'key' as keyPath, all others use 'id'
+          const keyField = store === 'settings' ? 'key' : 'id';
+          if (record[keyField] === undefined || record[keyField] === null) {
+            return toast.error(t('settings.invalidBackup'));
+          }
+        }
+        // Sanitize: strip any records with non-string/non-number id (prevents prototype pollution)
+        data[store] = data[store].filter((r) => {
+          const keyField = store === 'settings' ? 'key' : 'id';
+          const val = r[keyField];
+          return typeof val === 'string' || typeof val === 'number';
+        });
+      }
+
       await importData(data);
       toast.success(t('settings.dataImported'));
       window.location.reload();

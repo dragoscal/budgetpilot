@@ -3,11 +3,12 @@ import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { formatCurrency, sumBy, groupBy, getCategoryById } from '../lib/helpers';
+import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById } from '../lib/helpers';
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
 import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
+import { getCachedRates } from '../lib/exchangeRates';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 
@@ -24,6 +25,7 @@ export default function Reports() {
   const [dateFrom, setDateFrom] = useState(format(subMonths(new Date(), 2), 'yyyy-MM-dd'));
   const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [taxTags, setTaxTags] = useState(['business']);
+  const [rates, setRates] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
   const REPORT_TYPES = [
@@ -40,13 +42,15 @@ export default function Reports() {
     (async () => {
       setLoading(true);
       try {
-        const [tx, budgets] = await Promise.all([
+        const [tx, budgets, ratesData] = await Promise.all([
           txApi.getAll({ userId: effectiveUserId }),
           budgetsApi.getAll({ userId: effectiveUserId }),
+          getCachedRates().catch(() => null),
         ]);
         if (loadVersion.current !== version) return;
         setAllTx(tx);
         setBudgets(budgets);
+        if (ratesData) setRates(ratesData);
       } catch (err) {
         if (loadVersion.current === version) {
           console.error('Failed to load report data:', err);
@@ -63,8 +67,8 @@ export default function Reports() {
 
   const expenses = filtered.filter((t) => t.type === 'expense');
   const income = filtered.filter((t) => t.type === 'income');
-  const totalExpenses = sumBy(expenses, 'amount');
-  const totalIncome = sumBy(income, 'amount');
+  const totalExpenses = sumAmountsMultiCurrency(expenses, currency, rates);
+  const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
 
   // Category breakdown
   const categoryData = useMemo(() => {
@@ -72,10 +76,10 @@ export default function Reports() {
     return Object.entries(byCategory)
       .map(([catId, txs]) => {
         const cat = getCategoryById(catId);
-        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, total: sumBy(txs, 'amount'), count: txs.length };
+        return { id: catId, name: t(`categories.${catId}`) || cat.name, icon: cat.icon, total: sumAmountsMultiCurrency(txs, currency, rates), count: txs.length };
       })
       .sort((a, b) => b.total - a.total);
-  }, [expenses, t]);
+  }, [expenses, t, currency, rates]);
 
   // Tax-filtered transactions
   const taxFiltered = useMemo(() => {
@@ -97,12 +101,12 @@ export default function Reports() {
       });
       months.push({
         month: format(m, 'MMM yy'),
-        expenses: sumBy(monthTx.filter((t) => t.type === 'expense'), 'amount'),
-        income: sumBy(monthTx.filter((t) => t.type === 'income'), 'amount'),
+        expenses: sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'expense'), currency, rates),
+        income: sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'income'), currency, rates),
       });
     }
     return months;
-  }, [allTx]);
+  }, [allTx, currency, rates]);
 
   const handleExportCSV = () => {
     const data = reportType === 'tax' ? taxFiltered : filtered;
@@ -273,7 +277,7 @@ export default function Reports() {
             </div>
             <p className="text-sm text-cream-500">
               {t('reports.taxTransactions', { count: taxFiltered.length })}{' '}
-              <strong className="money">{formatCurrency(sumBy(taxFiltered, 'amount'), currency)}</strong>
+              <strong className="money">{formatCurrency(sumAmountsMultiCurrency(taxFiltered, currency, rates), currency)}</strong>
             </p>
           </div>
 

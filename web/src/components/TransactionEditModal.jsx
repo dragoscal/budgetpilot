@@ -40,19 +40,23 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
       updatedAt: new Date().toISOString(),
     });
 
-    // Offer to learn this categorization
+    // Learn this categorization immediately, offer undo to cancel learning
     if (categoryChanged && merchantExists) {
       const merchant = form.merchant.trim();
       const newCategory = form.category;
       const catObj = CATEGORIES.find((c) => c.id === newCategory);
       const catName = catObj ? `${catObj.icon} ${t('categories.' + newCategory)}` : newCategory;
 
+      // Learn immediately
+      learnCategory(merchant, newCategory);
+
       toast.undo(
         t('categories.alwaysCategorize', { merchant, category: catName }),
         {
-          onUndo: () => {
-            learnCategory(merchant, newCategory);
-            toast.success(t('categories.learnConfirm'));
+          onUndo: async () => {
+            // Undo the learning by importing removeLearnedCategory
+            const { removeLearnedCategory } = await import('../lib/smartFeatures');
+            await removeLearnedCategory(merchant);
           },
           duration: 6000,
         }

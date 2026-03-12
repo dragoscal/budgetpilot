@@ -15,143 +15,133 @@ if (import.meta.hot) {
   });
 }
 
+/**
+ * Helper: safely create an object store + indexes only if it doesn't already exist.
+ * Prevents crashes when retrying after a partial upgrade (e.g. browser crash mid-upgrade).
+ */
+function ensureStore(db, name, options, indexes = []) {
+  const store = db.objectStoreNames.contains(name)
+    ? db.transaction.objectStore(name)
+    : db.createObjectStore(name, options);
+  for (const idx of indexes) {
+    if (!store.indexNames.contains(idx.name)) {
+      store.createIndex(idx.name, idx.keyPath || idx.name, idx.options);
+    }
+  }
+  return store;
+}
+
 export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           // Transactions
-          const txStore = db.createObjectStore('transactions', { keyPath: 'id' });
-          txStore.createIndex('date', 'date');
-          txStore.createIndex('category', 'category');
-          txStore.createIndex('type', 'type');
-          txStore.createIndex('merchant', 'merchant');
-          txStore.createIndex('userId', 'userId');
+          ensureStore(db, 'transactions', { keyPath: 'id' }, [
+            { name: 'date' }, { name: 'category' }, { name: 'type' },
+            { name: 'merchant' }, { name: 'userId' },
+          ]);
 
           // Budgets
-          const budgetStore = db.createObjectStore('budgets', { keyPath: 'id' });
-          budgetStore.createIndex('category', 'category');
-          budgetStore.createIndex('userId', 'userId');
+          ensureStore(db, 'budgets', { keyPath: 'id' }, [
+            { name: 'category' }, { name: 'userId' },
+          ]);
 
           // Goals
-          const goalStore = db.createObjectStore('goals', { keyPath: 'id' });
-          goalStore.createIndex('type', 'type');
-          goalStore.createIndex('userId', 'userId');
+          ensureStore(db, 'goals', { keyPath: 'id' }, [
+            { name: 'type' }, { name: 'userId' },
+          ]);
 
           // Accounts
-          const accountStore = db.createObjectStore('accounts', { keyPath: 'id' });
-          accountStore.createIndex('type', 'type');
-          accountStore.createIndex('userId', 'userId');
+          ensureStore(db, 'accounts', { keyPath: 'id' }, [
+            { name: 'type' }, { name: 'userId' },
+          ]);
 
           // Recurring
-          const recurringStore = db.createObjectStore('recurring', { keyPath: 'id' });
-          recurringStore.createIndex('category', 'category');
-          recurringStore.createIndex('userId', 'userId');
+          ensureStore(db, 'recurring', { keyPath: 'id' }, [
+            { name: 'category' }, { name: 'userId' },
+          ]);
 
           // Settings (key-value)
-          db.createObjectStore('settings', { keyPath: 'key' });
+          ensureStore(db, 'settings', { keyPath: 'key' });
 
           // People
-          const peopleStore = db.createObjectStore('people', { keyPath: 'id' });
-          peopleStore.createIndex('userId', 'userId');
+          ensureStore(db, 'people', { keyPath: 'id' }, [{ name: 'userId' }]);
 
           // Debts
-          const debtStore = db.createObjectStore('debts', { keyPath: 'id' });
-          debtStore.createIndex('personId', 'personId');
-          debtStore.createIndex('status', 'status');
-          debtStore.createIndex('userId', 'userId');
+          ensureStore(db, 'debts', { keyPath: 'id' }, [
+            { name: 'personId' }, { name: 'status' }, { name: 'userId' },
+          ]);
 
           // Debt payments
-          const debtPaymentStore = db.createObjectStore('debtPayments', { keyPath: 'id' });
-          debtPaymentStore.createIndex('debtId', 'debtId');
+          ensureStore(db, 'debtPayments', { keyPath: 'id' }, [{ name: 'debtId' }]);
 
           // Wishlist
-          const wishlistStore = db.createObjectStore('wishlist', { keyPath: 'id' });
-          wishlistStore.createIndex('status', 'status');
-          wishlistStore.createIndex('userId', 'userId');
+          ensureStore(db, 'wishlist', { keyPath: 'id' }, [
+            { name: 'status' }, { name: 'userId' },
+          ]);
 
           // Users
-          db.createObjectStore('users', { keyPath: 'id' });
+          ensureStore(db, 'users', { keyPath: 'id' });
 
           // Sync queue
-          const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
-          syncStore.createIndex('timestamp', 'timestamp');
+          ensureStore(db, 'syncQueue', { keyPath: 'id', autoIncrement: true }, [
+            { name: 'timestamp' },
+          ]);
         }
 
         if (oldVersion < 2) {
           // Receipts history
-          const receiptStore = db.createObjectStore('receipts', { keyPath: 'id' });
-          receiptStore.createIndex('processedAt', 'processedAt');
-          receiptStore.createIndex('userId', 'userId');
+          ensureStore(db, 'receipts', { keyPath: 'id' }, [
+            { name: 'processedAt' }, { name: 'userId' },
+          ]);
         }
 
         // Versions 3-4 consumed by HMR in dev — receipt drafts added at v5
         if (oldVersion < 5) {
-          if (!db.objectStoreNames.contains('receiptDrafts')) {
-            const draftStore = db.createObjectStore('receiptDrafts', { keyPath: 'id' });
-            draftStore.createIndex('savedAt', 'savedAt');
-          }
+          ensureStore(db, 'receiptDrafts', { keyPath: 'id' }, [{ name: 'savedAt' }]);
         }
 
         // v6: Bank loans
         if (oldVersion < 6) {
-          if (!db.objectStoreNames.contains('loans')) {
-            const loanStore = db.createObjectStore('loans', { keyPath: 'id' });
-            loanStore.createIndex('type', 'type');
-            loanStore.createIndex('status', 'status');
-            loanStore.createIndex('userId', 'userId');
-          }
-          if (!db.objectStoreNames.contains('loanPayments')) {
-            const lpStore = db.createObjectStore('loanPayments', { keyPath: 'id' });
-            lpStore.createIndex('loanId', 'loanId');
-            lpStore.createIndex('date', 'date');
-          }
+          ensureStore(db, 'loans', { keyPath: 'id' }, [
+            { name: 'type' }, { name: 'status' }, { name: 'userId' },
+          ]);
+          ensureStore(db, 'loanPayments', { keyPath: 'id' }, [
+            { name: 'loanId' }, { name: 'date' },
+          ]);
         }
 
         // v7: Family system + shared expenses
         if (oldVersion < 7) {
-          if (!db.objectStoreNames.contains('families')) {
-            const familyStore = db.createObjectStore('families', { keyPath: 'id' });
-            familyStore.createIndex('createdBy', 'createdBy');
-          }
-          if (!db.objectStoreNames.contains('familyMembers')) {
-            const memberStore = db.createObjectStore('familyMembers', { keyPath: 'id' });
-            memberStore.createIndex('familyId', 'familyId');
-            memberStore.createIndex('userId', 'userId');
-          }
-          if (!db.objectStoreNames.contains('sharedExpenses')) {
-            const sharedStore = db.createObjectStore('sharedExpenses', { keyPath: 'id' });
-            sharedStore.createIndex('familyId', 'familyId');
-            sharedStore.createIndex('paidByUserId', 'paidByUserId');
-            sharedStore.createIndex('date', 'date');
-          }
+          ensureStore(db, 'families', { keyPath: 'id' }, [{ name: 'createdBy' }]);
+          ensureStore(db, 'familyMembers', { keyPath: 'id' }, [
+            { name: 'familyId' }, { name: 'userId' },
+          ]);
+          ensureStore(db, 'sharedExpenses', { keyPath: 'id' }, [
+            { name: 'familyId' }, { name: 'paidByUserId' }, { name: 'date' },
+          ]);
         }
 
         // v8: Spending challenges
         if (oldVersion < 8) {
-          if (!db.objectStoreNames.contains('challenges')) {
-            const challengeStore = db.createObjectStore('challenges', { keyPath: 'id' });
-            challengeStore.createIndex('userId', 'userId');
-            challengeStore.createIndex('status', 'status');
-          }
+          ensureStore(db, 'challenges', { keyPath: 'id' }, [
+            { name: 'userId' }, { name: 'status' },
+          ]);
         }
 
         // v9: In-app notifications
         if (oldVersion < 9) {
-          if (!db.objectStoreNames.contains('notifications')) {
-            const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
-            notifStore.createIndex('read', 'read');
-            notifStore.createIndex('createdAt', 'createdAt');
-          }
+          ensureStore(db, 'notifications', { keyPath: 'id' }, [
+            { name: 'read' }, { name: 'createdAt' },
+          ]);
         }
 
         // v10: Settlement history
         if (oldVersion < 10) {
-          if (!db.objectStoreNames.contains('settlementHistory')) {
-            const shStore = db.createObjectStore('settlementHistory', { keyPath: 'id' });
-            shStore.createIndex('familyId', 'familyId');
-            shStore.createIndex('settledAt', 'settledAt');
-          }
+          ensureStore(db, 'settlementHistory', { keyPath: 'id' }, [
+            { name: 'familyId' }, { name: 'settledAt' },
+          ]);
         }
       },
       blocked(currentVersion, blockedVersion) {
@@ -159,6 +149,12 @@ export function getDB() {
         console.warn(`IndexedDB upgrade blocked: v${currentVersion} → v${blockedVersion}. Reloading...`);
         window.location.reload();
       },
+    }).catch((err) => {
+      // Clear cached promise so the next getDB() call retries instead of
+      // returning the same rejected promise forever
+      console.error('IndexedDB open failed:', err);
+      dbPromise = null;
+      throw err;
     });
   }
   return dbPromise;
