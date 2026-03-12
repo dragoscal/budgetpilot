@@ -4,19 +4,36 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, isChunkError: false };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    // Detect chunk loading errors specifically
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Loading chunk') ||
+      error?.message?.includes('Loading CSS chunk') ||
+      error?.message?.includes('Failed to load page') ||
+      error?.name === 'ChunkLoadError';
+    return { hasError: true, error, isChunkError };
   }
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
+  handleRetry = () => {
+    if (this.state.isChunkError) {
+      // For chunk errors, force a full reload to get fresh assets
+      window.location.reload();
+    } else {
+      this.setState({ hasError: false, error: null, isChunkError: false });
+    }
+  };
+
   render() {
     if (this.state.hasError) {
+      const { isChunkError } = this.state;
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-8">
           <div className="text-center max-w-md space-y-4">
@@ -24,17 +41,19 @@ export default class ErrorBoundary extends Component {
               <AlertTriangle size={32} className="text-red-500" />
             </div>
             <h2 className="text-xl font-bold text-cream-900 dark:text-cream-100">
-              Something went wrong
+              {isChunkError ? 'Page failed to load' : 'Something went wrong'}
             </h2>
             <p className="text-sm text-cream-500">
-              {this.state.error?.message || 'An unexpected error occurred. Please try again.'}
+              {isChunkError
+                ? 'A new version may have been deployed. Refreshing should fix this.'
+                : (this.state.error?.message || 'An unexpected error occurred. Please try again.')}
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
-                onClick={() => this.setState({ hasError: false, error: null })}
+                onClick={this.handleRetry}
                 className="btn-primary flex items-center gap-2"
               >
-                <RefreshCw size={16} /> Try Again
+                <RefreshCw size={16} /> {isChunkError ? 'Refresh Page' : 'Try Again'}
               </button>
               <button
                 onClick={() => { window.location.href = '/'; }}

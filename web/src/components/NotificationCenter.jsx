@@ -110,28 +110,46 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
   return (
     <div className="relative" ref={panelRef}>
       {/* Bell button */}
-      <button
-        onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
-        className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
-        title={t('notifications.title')}
-      >
-        <div className="relative">
+      {mobile ? (
+        <button
+          onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 w-full transition-colors"
+          title={t('notifications.title')}
+        >
+          <div className="relative">
+            <BellIcon size={18} className="shrink-0" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </div>
+          <span>{t('notifications.title')}</span>
+          {unreadCount > 0 && (
+            <span className="ml-auto text-[11px] font-bold text-accent-600 dark:text-accent-400">{unreadCount}</span>
+          )}
+        </button>
+      ) : (
+        <button
+          onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
+          className="relative p-1.5 rounded-lg text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 hover:bg-cream-200/60 dark:hover:bg-cream-700/40 transition-colors"
+          title={t('notifications.title')}
+        >
           <BellIcon size={16} className="shrink-0" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-danger text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-dark-card">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
-        </div>
-        {!collapsed && <span>{t('notifications.title')}</span>}
-      </button>
+        </button>
+      )}
 
       {/* Dropdown panel */}
       {open && (
-        <div className={`absolute z-50 ${
+        <div className={`absolute z-[60] ${
           mobile
             ? 'fixed inset-x-0 top-0 bottom-0 bg-white dark:bg-dark-card'
-            : 'bottom-full left-0 mb-2 w-80 max-h-[70vh] bg-white dark:bg-dark-card rounded-xl border border-cream-200 dark:border-dark-border shadow-lg'
+            : 'top-full left-0 mt-2 w-80 max-h-[70vh] bg-white dark:bg-dark-card rounded-xl border border-cream-200 dark:border-dark-border shadow-xl'
         } overflow-hidden flex flex-col`}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-dark-border shrink-0">

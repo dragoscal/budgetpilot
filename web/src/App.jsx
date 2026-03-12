@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
@@ -12,26 +12,32 @@ import OfflineBanner from './components/OfflineBanner';
 import WhatsNew from './components/WhatsNew';
 import BackgroundJobNotifier from './components/BackgroundJobNotifier';
 import QuickAddFAB from './components/QuickAddFAB';
+import { RefreshCw, AlertTriangle, Home } from 'lucide-react';
 
-// ─── Lazy import with retry (handles chunk failures after deploy) ───
-function lazyRetry(importFn) {
-  return lazy(() =>
-    importFn().catch(() =>
-      // First retry after short delay (chunk may have been re-deployed)
-      new Promise(resolve => setTimeout(resolve, 1000))
-        .then(() => importFn())
-        .catch(() => {
-          // Final fallback: force reload to get new asset manifest
+// ─── Lazy import with robust retry (handles chunk failures after deploy) ───
+function lazyRetry(importFn, retries = 3) {
+  return lazy(() => {
+    const attempt = (retriesLeft) =>
+      importFn().catch((err) => {
+        if (retriesLeft <= 0) {
+          // All retries exhausted — try a full page reload once
           const reloaded = sessionStorage.getItem('chunk_reload');
           if (!reloaded) {
             sessionStorage.setItem('chunk_reload', '1');
             window.location.reload();
+            // Return a never-resolving promise while the page reloads
+            return new Promise(() => {});
           }
-          // If already reloaded once, show the error
-          throw new Error('Failed to load page. Please refresh.');
-        })
-    )
-  );
+          throw err;
+        }
+        // Wait progressively longer between retries (500ms, 1s, 1.5s)
+        const delay = (retries - retriesLeft + 1) * 500;
+        return new Promise((resolve) => setTimeout(resolve, delay)).then(() =>
+          attempt(retriesLeft - 1)
+        );
+      });
+    return attempt(retries);
+  });
 }
 
 // Clear chunk reload flag on successful load
@@ -100,8 +106,47 @@ function AppLayout({ children }) {
   );
 }
 
-// Suspense fallback shown while lazy chunks load
+// Suspense fallback with stuck-loading detection
 function PageFallback() {
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStuck(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (stuck) {
+    return (
+      <div className="min-h-screen bg-cream-100 dark:bg-dark-bg flex items-center justify-center p-8">
+        <div className="text-center max-w-md space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center mx-auto">
+            <AlertTriangle size={32} className="text-warning" />
+          </div>
+          <h2 className="text-xl font-bold text-cream-900 dark:text-cream-100">
+            Page is taking too long to load
+          </h2>
+          <p className="text-sm text-cream-500">
+            This might be a network issue or a stale cache. Try refreshing.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <RefreshCw size={16} /> Refresh
+            </button>
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Home size={16} /> Go Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-dark-bg">
       <div className="md:ml-sidebar transition-all duration-200 pb-20 md:pb-8">

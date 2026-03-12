@@ -665,6 +665,7 @@ const ro = {
   'recurring.typeSubscription': 'Abonament',
   'recurring.billsSection': 'Facturi',
   'recurring.subscriptionsSection': 'Abonamente',
+  'recurring.totalRecurring': 'Total recurente',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',

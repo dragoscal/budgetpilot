@@ -32,7 +32,7 @@ export default function Recurring() {
   const [rates, setRates] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null);
 
-  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'subscriptions', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
+  const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'utilities', billingDay: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
   const [form, setForm] = useState(defaultForm);
 
   const currency = user?.defaultCurrency || 'RON';
@@ -63,8 +63,8 @@ export default function Recurring() {
   const pausedItems = items.filter((i) => i.status !== 'cancelled' && (i.active === false || i.status === 'paused'));
   const cancelledItems = items.filter((i) => i.status === 'cancelled');
 
-  // Frequency-aware monthly total (multi-currency)
-  const monthlyTotal = activeItems.reduce((sum, item) => {
+  // Frequency-aware monthly total (multi-currency) — split by type
+  const calcMonthlyTotal = (itemList) => itemList.reduce((sum, item) => {
     const monthlyAmt = calcMonthlyEquivalent(item.amount, item.frequency || 'monthly');
     const itemCurrency = item.currency || currency;
     if (!rates || itemCurrency === currency) return sum + monthlyAmt;
@@ -73,6 +73,12 @@ export default function Recurring() {
     if (!fromRate || !toRate) return sum + monthlyAmt;
     return sum + (monthlyAmt / fromRate) * toRate;
   }, 0);
+
+  const activeBillsList = activeItems.filter(i => i.recurringType !== 'subscription');
+  const activeSubsList = activeItems.filter(i => i.recurringType === 'subscription');
+  const billsMonthly = calcMonthlyTotal(activeBillsList);
+  const subsMonthly = calcMonthlyTotal(activeSubsList);
+  const monthlyTotal = billsMonthly + subsMonthly;
   const annualTotal = monthlyTotal * 12;
 
   const activeSuggestions = suggestions.filter(
@@ -85,7 +91,7 @@ export default function Recurring() {
       const data = {
         ...form,
         amount: Number(form.amount) || 0,
-        billingDay: Number(form.billingDay) || 1,
+        billingDay: Math.min(31, Math.max(1, Number(form.billingDay) || 1)),
         frequency: form.frequency || 'monthly',
         endDate: form.endDate || null,
         autoDebit: form.autoDebit ? 1 : 0,
@@ -218,19 +224,44 @@ export default function Recurring() {
         </button>
       </div>
 
-      {/* Summary -- frequency-aware */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">{t('recurring.active')}</p>
-          <p className="text-xl font-heading font-bold">{activeItems.length}</p>
+      {/* Summary -- split by type */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Bills card */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Bell size={16} className="text-warning" />
+            </div>
+            <div>
+              <p className="text-[11px] text-cream-500 font-medium">{t('recurring.billsSection')}</p>
+              <p className="text-[10px] text-cream-400">{activeBillsList.length} {t('recurring.active').toLowerCase()}</p>
+            </div>
+          </div>
+          <p className="text-lg font-heading font-bold money">{formatCurrency(Math.round(billsMonthly * 100) / 100, currency)}<span className="text-[10px] text-cream-400 font-normal">{t('recurring.perMo')}</span></p>
+          <p className="text-[11px] text-cream-400 money">{formatCurrency(Math.round(billsMonthly * 12 * 100) / 100, currency)}{t('recurring.perYr')}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">{t('common.monthly')}</p>
-          <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(monthlyTotal * 100) / 100, currency)}</p>
+        {/* Subscriptions card */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+              <RotateCcw size={16} className="text-accent" />
+            </div>
+            <div>
+              <p className="text-[11px] text-cream-500 font-medium">{t('recurring.subscriptionsSection')}</p>
+              <p className="text-[10px] text-cream-400">{activeSubsList.length} {t('recurring.active').toLowerCase()}</p>
+            </div>
+          </div>
+          <p className="text-lg font-heading font-bold money">{formatCurrency(Math.round(subsMonthly * 100) / 100, currency)}<span className="text-[10px] text-cream-400 font-normal">{t('recurring.perMo')}</span></p>
+          <p className="text-[11px] text-cream-400 money">{formatCurrency(Math.round(subsMonthly * 12 * 100) / 100, currency)}{t('recurring.perYr')}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-xs text-cream-500 mb-1">{t('common.yearly')}</p>
-          <p className="text-xl font-heading font-bold money">{formatCurrency(Math.round(annualTotal * 100) / 100, currency)}</p>
+      </div>
+      {/* Total bar */}
+      <div className="card !py-2.5 flex items-center justify-between">
+        <p className="text-xs text-cream-500 font-medium">{t('recurring.totalRecurring')}</p>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-heading font-bold money">{formatCurrency(Math.round(monthlyTotal * 100) / 100, currency)}<span className="text-[10px] text-cream-400 font-normal">{t('recurring.perMo')}</span></span>
+          <span className="text-xs text-cream-400">·</span>
+          <span className="text-sm font-heading font-bold money">{formatCurrency(Math.round(annualTotal * 100) / 100, currency)}<span className="text-[10px] text-cream-400 font-normal">{t('recurring.perYr')}</span></span>
         </div>
       </div>
 
@@ -276,38 +307,32 @@ export default function Recurring() {
       {items.length > 0 ? (
         <>
           {/* Active Bills Section */}
-          {(() => {
-            const activeBills = activeItems.filter(i => i.recurringType !== 'subscription');
-            const activeSubs = activeItems.filter(i => i.recurringType === 'subscription');
-            return (
-              <>
-                {activeBills.length > 0 && (
-                  <div>
-                    <h3 className="section-title flex items-center gap-2">📋 {t('recurring.billsSection')} <span className="text-cream-400 text-xs font-normal">({activeBills.length})</span></h3>
-                    <div className="card p-0">
-                      <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                        {activeBills.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
-                          <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {activeSubs.length > 0 && (
-                  <div>
-                    <h3 className="section-title flex items-center gap-2">📺 {t('recurring.subscriptionsSection')} <span className="text-cream-400 text-xs font-normal">({activeSubs.length})</span></h3>
-                    <div className="card p-0">
-                      <div className="divide-y divide-cream-100 dark:divide-dark-border">
-                        {activeSubs.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
-                          <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          {activeBillsList.length > 0 && (
+            <div>
+              <h3 className="section-title flex items-center gap-2">📋 {t('recurring.billsSection')} <span className="text-cream-400 text-xs font-normal">({activeBillsList.length})</span></h3>
+              <div className="card p-0">
+                <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                  {activeBillsList.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
+                    <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Active Subscriptions Section */}
+          {activeSubsList.length > 0 && (
+            <div>
+              <h3 className="section-title flex items-center gap-2">📺 {t('recurring.subscriptionsSection')} <span className="text-cream-400 text-xs font-normal">({activeSubsList.length})</span></h3>
+              <div className="card p-0">
+                <div className="divide-y divide-cream-100 dark:divide-dark-border">
+                  {activeSubsList.sort((a, b) => (a.billingDay || 1) - (b.billingDay || 1)).map((item) => (
+                    <RecurringRow key={item.id} item={item} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} onCancel={(i) => setCancelConfirm(i)} allTransactions={allTransactions} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Paused Section */}
           {pausedItems.length > 0 && (
@@ -460,7 +485,12 @@ export default function Recurring() {
             </div>
             <div>
               <label className="label">{t('recurring.billingDay')}</label>
-              <input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => setForm((f) => ({ ...f, billingDay: e.target.value }))} />
+              <input type="number" className="input" min="1" max="31" value={form.billingDay} onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') { setForm((f) => ({ ...f, billingDay: '' })); return; }
+                const num = parseInt(val, 10);
+                if (!isNaN(num)) setForm((f) => ({ ...f, billingDay: String(Math.min(31, Math.max(1, num))) }));
+              }} />
             </div>
           </div>
 

@@ -40,14 +40,13 @@ function TransactionChip({ tx, currency, className = '' }) {
   const isIncome = tx.type === 'income';
   const label = tx.merchant || tx.description || cat.name;
   return (
-    <div className={`flex items-center gap-1 px-1.5 py-[3px] rounded-md text-[10px] sm:text-[11px] font-medium truncate w-full leading-tight ${
+    <div className={`flex items-center gap-1 px-1 py-[2px] rounded text-[10px] font-medium truncate w-full leading-tight ${
       isIncome
         ? 'bg-success/10 text-success dark:bg-success/15'
         : 'bg-danger/8 text-danger/90 dark:bg-danger/12 dark:text-danger'
     } ${className}`}>
-      <span className="shrink-0 text-[10px]">{cat.icon}</span>
       <span className="truncate">{label}</span>
-      <span className="ml-auto shrink-0 money text-[9px] sm:text-[10px] font-bold">
+      <span className="ml-auto shrink-0 money text-[9px] font-bold">
         {isIncome ? '+' : ''}{formatCurrency(tx.amount, tx.currency || currency).replace(/\s/g, '')}
       </span>
     </div>
@@ -57,12 +56,11 @@ function TransactionChip({ tx, currency, className = '' }) {
 function BillChip({ bill, currency, className = '' }) {
   const isAuto = !!bill.autoDebit;
   return (
-    <div className={`flex items-center gap-1 px-1.5 py-[3px] rounded-md text-[10px] sm:text-[11px] font-medium truncate w-full leading-tight border border-dashed ${
+    <div className={`flex items-center gap-1 px-1 py-[2px] rounded text-[10px] font-medium truncate w-full leading-tight border border-dashed ${
       isAuto
         ? 'bg-accent/5 border-accent/25 text-accent dark:bg-accent/10'
         : 'bg-warning/5 border-warning/25 text-warning dark:bg-warning/10'
     } ${className}`}>
-      {isAuto ? <Landmark size={9} className="shrink-0" /> : <Bell size={9} className="shrink-0" />}
       <span className="truncate">{bill.name}</span>
       <span className="ml-auto shrink-0 money text-[9px] font-bold">
         {formatCurrency(bill.amount, bill.currency || currency).replace(/\s/g, '')}
@@ -122,14 +120,14 @@ function CalendarStats({ monthStats, currency, t }) {
     { icon: Flame, label: t('calendar.noSpendDays'), value: monthStats.noSpendDays, color: 'text-success' },
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+    <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
       {items.map((item, i) => (
-        <div key={i} className="card !p-2.5 sm:!p-3">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <item.icon size={12} className={item.color || 'text-accent'} />
-            <p className="text-[10px] text-cream-500 uppercase tracking-wider">{item.label}</p>
+        <div key={i} className="card !p-2 sm:!p-3">
+          <div className="flex items-center gap-1 mb-0.5">
+            <item.icon size={11} className={`shrink-0 ${item.color || 'text-accent'}`} />
+            <p className="text-[8px] sm:text-[10px] text-cream-500 uppercase tracking-wider truncate">{item.label}</p>
           </div>
-          <p className={`font-heading font-bold text-sm sm:text-base money ${item.color}`}>{item.value}</p>
+          <p className={`font-heading font-bold text-xs sm:text-base money ${item.color}`}>{item.value}</p>
         </div>
       ))}
     </div>
@@ -392,13 +390,15 @@ export default function CalendarPage() {
   return (
     <div className="space-y-4">
       {/* ─── Header ─── */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <h1 className="page-title mb-0">{t('calendar.title')}</h1>
-          <HelpButton section="calendar" />
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="page-title mb-0">{t('calendar.title')}</h1>
+            <HelpButton section="calendar" />
+          </div>
           <ViewToggle viewMode={viewMode} setViewMode={setViewMode} t={t} />
+        </div>
+        <div className="flex justify-end">
           {viewMode === 'month'
             ? <MonthPicker value={month} onChange={handleMonthChange} />
             : <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
@@ -424,7 +424,7 @@ export default function CalendarPage() {
       <div className="flex gap-4 items-start">
         {/* Calendar grid card */}
         <div className="flex-1 min-w-0">
-          <div className="card p-2 sm:p-4 overflow-hidden">
+          <div className="card p-1.5 sm:p-3 lg:p-4 overflow-hidden">
             {viewMode === 'month' ? (
               <>
                 {/* Day name headers */}
@@ -445,7 +445,7 @@ export default function CalendarPage() {
                       <div key={ri} className="grid grid-cols-7 gap-1">
                         {rowDays.map((day, ci) => {
                           if (!day) {
-                            return <div key={`e-${ri}-${ci}`} className="h-20 sm:h-28 lg:h-32 rounded-xl bg-cream-50/30 dark:bg-dark-border/10" />;
+                            return <div key={`e-${ri}-${ci}`} className="h-16 sm:h-24 lg:h-28 rounded-lg sm:rounded-xl bg-cream-50/30 dark:bg-dark-border/10" />;
                           }
 
                           const key = format(day, 'yyyy-MM-dd');
@@ -489,13 +489,13 @@ export default function CalendarPage() {
                             <button
                               key={key}
                               onClick={() => handleDayClick(key)}
-                              className={`h-20 sm:h-28 lg:h-32 p-1 sm:p-1.5 rounded-xl text-left flex flex-col transition-all duration-150 relative group border ${borderClass} ${bgClass}`}
+                              className={`h-16 sm:h-24 lg:h-28 p-1 sm:p-1.5 rounded-lg sm:rounded-xl text-left flex flex-col transition-all duration-150 relative group border ${borderClass} ${bgClass}`}
                               style={bgStyle}
                             >
                               {/* Day number row */}
-                              <div className="flex items-center justify-between w-full mb-0.5">
+                              <div className="flex items-center justify-between w-full">
                                 {today ? (
-                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent text-white flex items-center justify-center text-[10px] sm:text-xs font-bold leading-none">
+                                  <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-accent text-white flex items-center justify-center text-[9px] sm:text-[11px] font-bold leading-none">
                                     {data.dayNum}
                                   </span>
                                 ) : (
@@ -505,62 +505,60 @@ export default function CalendarPage() {
                                     {data.dayNum}
                                   </span>
                                 )}
-                                <div className="flex items-center gap-0.5">
-                                  {data.autoDebitBills.length > 0 && <Landmark size={9} className="text-accent" />}
-                                  {data.manualBills.length > 0 && <Bell size={9} className="text-warning" />}
-                                </div>
+                                {(data.bills.length > 0) && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
+                                )}
                               </div>
 
-                              {/* Transaction chips */}
-                              <div className="flex-1 space-y-[2px] overflow-hidden w-full">
-                                {/* Chip 1 — always visible */}
-                                {allChips[0] && (
-                                  allChips[0]._type === 'bill'
-                                    ? <BillChip bill={allChips[0]} currency={currency} />
-                                    : <TransactionChip tx={allChips[0]} currency={currency} />
-                                )}
-                                {/* Chip 2 — hidden on mobile */}
-                                {allChips[1] && (
-                                  allChips[1]._type === 'bill'
-                                    ? <BillChip bill={allChips[1]} currency={currency} className="hidden sm:flex" />
-                                    : <TransactionChip tx={allChips[1]} currency={currency} className="hidden sm:flex" />
-                                )}
-                                {/* Chip 3 — desktop only */}
-                                {allChips[2] && (
-                                  allChips[2]._type === 'bill'
-                                    ? <BillChip bill={allChips[2]} currency={currency} className="hidden lg:flex" />
-                                    : <TransactionChip tx={allChips[2]} currency={currency} className="hidden lg:flex" />
-                                )}
-                                {/* Overflow */}
-                                {allChips.length > 1 && (
-                                  <span className="text-[9px] font-medium text-accent sm:hidden">
-                                    +{allChips.length - 1} {t('calendar.more')}
+                              {/* Mobile: compact summary (no chips) */}
+                              <div className="flex-1 flex flex-col justify-end w-full sm:hidden">
+                                {hasExpenses && (
+                                  <span className="text-[9px] text-danger font-bold money leading-tight">
+                                    {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                                   </span>
                                 )}
+                                {data.incomeTotal > 0 && (
+                                  <span className="text-[9px] text-success font-bold money leading-tight">
+                                    +{formatCurrency(data.incomeTotal, currency).replace(/\s/g, '')}
+                                  </span>
+                                )}
+                                {allChips.length > 0 && (
+                                  <span className="text-[8px] text-cream-400 font-medium">
+                                    {allChips.length} {allChips.length === 1 ? 'tx' : 'txs'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Desktop: transaction chips */}
+                              <div className="flex-1 space-y-[2px] overflow-hidden w-full hidden sm:flex sm:flex-col mt-0.5">
+                                {allChips.slice(0, 2).map((chip, ci) => (
+                                  chip._type === 'bill'
+                                    ? <BillChip key={chip.id || ci} bill={chip} currency={currency} />
+                                    : <TransactionChip key={chip.id || ci} tx={chip} currency={currency} />
+                                ))}
+                                {/* Third chip only on lg */}
+                                {allChips[2] && (
+                                  allChips[2]._type === 'bill'
+                                    ? <BillChip key={allChips[2].id || 2} bill={allChips[2]} currency={currency} className="hidden lg:flex" />
+                                    : <TransactionChip key={allChips[2].id || 2} tx={allChips[2]} currency={currency} className="hidden lg:flex" />
+                                )}
                                 {allChips.length > 2 && (
-                                  <span className="text-[9px] font-medium text-accent hidden sm:inline lg:hidden">
-                                    +{allChips.length - 2} {t('calendar.more')}
+                                  <span className="text-[9px] font-medium text-accent lg:hidden">
+                                    +{allChips.length - 2}
                                   </span>
                                 )}
                                 {allChips.length > 3 && (
                                   <span className="text-[9px] font-medium text-accent hidden lg:inline">
-                                    +{allChips.length - 3} {t('calendar.more')}
+                                    +{allChips.length - 3}
                                   </span>
                                 )}
                               </div>
 
                               {/* No-spend indicator */}
                               {isNoSpend && allChips.length === 0 && (
-                                <div className="absolute bottom-1 right-1.5">
-                                  <CheckCircle2 size={11} className="text-success/60" />
+                                <div className="absolute bottom-1 right-1 sm:bottom-1 sm:right-1.5">
+                                  <CheckCircle2 size={10} className="text-success/50" />
                                 </div>
-                              )}
-
-                              {/* Expense total when no chips visible (fallback on mobile for days with >0 chips hidden) */}
-                              {hasExpenses && allChips.length === 0 && (
-                                <span className="text-[10px] text-danger font-bold money mt-auto">
-                                  {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
-                                </span>
                               )}
                             </button>
                           );
@@ -579,16 +577,16 @@ export default function CalendarPage() {
                     const key = format(day, 'yyyy-MM-dd');
                     const today = isToday(day);
                     return (
-                      <div key={key} className="text-center py-1.5">
-                        <p className="text-[10px] uppercase text-cream-400 tracking-wider font-semibold">
+                      <div key={key} className="text-center py-1">
+                        <p className="text-[9px] sm:text-[10px] uppercase text-cream-400 tracking-wider font-semibold">
                           {format(day, 'EEE')}
                         </p>
                         {today ? (
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white text-sm font-bold mt-0.5">
+                          <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent text-white text-xs sm:text-sm font-bold mt-0.5">
                             {format(day, 'd')}
                           </span>
                         ) : (
-                          <p className="text-sm font-bold mt-0.5 text-cream-700 dark:text-cream-200">{format(day, 'd')}</p>
+                          <p className="text-xs sm:text-sm font-bold mt-0.5 text-cream-700 dark:text-cream-200">{format(day, 'd')}</p>
                         )}
                       </div>
                     );
@@ -596,7 +594,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Day columns */}
-                <div className="grid grid-cols-7 gap-1" style={{ minHeight: '22rem' }}>
+                <div className="grid grid-cols-7 gap-1" style={{ minHeight: '18rem' }}>
                   {weekDays.map((day) => {
                     const key = format(day, 'yyyy-MM-dd');
                     const data = dayData[key];
@@ -608,7 +606,7 @@ export default function CalendarPage() {
                     if (!data) {
                       return (
                         <button key={key} onClick={() => handleDayClick(key)}
-                          className="rounded-xl bg-cream-50/30 dark:bg-dark-border/10 p-1 text-left opacity-40">
+                          className="rounded-lg bg-cream-50/30 dark:bg-dark-border/10 p-1 text-left opacity-40">
                           <p className="text-[10px] text-cream-400 text-center">{format(day, 'd')}</p>
                         </button>
                       );
@@ -618,22 +616,36 @@ export default function CalendarPage() {
                       <button
                         key={key}
                         onClick={() => handleDayClick(key)}
-                        className={`rounded-xl p-1.5 text-left flex flex-col gap-[2px] transition-all border ${
+                        className={`rounded-lg p-1 sm:p-1.5 text-left flex flex-col gap-[2px] transition-all border ${
                           isSelected ? 'border-accent/30 bg-accent/5 dark:bg-accent/10' :
                           today ? 'border-accent/15 bg-accent/[0.02]' :
                           isFuture ? 'border-transparent opacity-40' :
                           'border-transparent hover:border-cream-200 dark:hover:border-dark-border bg-white dark:bg-dark-card'
                         }`}
                       >
-                        {/* All chips */}
-                        {data.bills.map((b) => <BillChip key={b.id} bill={b} currency={currency} />)}
-                        {sortByDate(data.transactions, 'date', 'asc').map((tx) => (
-                          <TransactionChip key={tx.id} tx={tx} currency={currency} />
-                        ))}
+                        {/* Chips — hidden on mobile, shown on sm+ */}
+                        <div className="hidden sm:flex sm:flex-col gap-[2px]">
+                          {data.bills.map((b) => <BillChip key={b.id} bill={b} currency={currency} />)}
+                          {sortByDate(data.transactions, 'date', 'asc').map((tx) => (
+                            <TransactionChip key={tx.id} tx={tx} currency={currency} />
+                          ))}
+                        </div>
 
-                        {/* Daily total */}
+                        {/* Mobile summary */}
+                        <div className="sm:hidden flex flex-col items-center justify-center flex-1 gap-0.5">
+                          {data.expenseTotal > 0 && (
+                            <span className="text-[9px] font-bold money text-danger">
+                              {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
+                            </span>
+                          )}
+                          {data.count > 0 && (
+                            <span className="text-[8px] text-cream-400">{data.count} tx</span>
+                          )}
+                        </div>
+
+                        {/* Daily total — desktop */}
                         {data.expenseTotal > 0 && (
-                          <div className="mt-auto pt-1.5 border-t border-cream-100 dark:border-dark-border">
+                          <div className="mt-auto pt-1 border-t border-cream-100 dark:border-dark-border hidden sm:block">
                             <span className="text-[10px] font-bold money text-danger">
                               {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                             </span>
@@ -643,7 +655,7 @@ export default function CalendarPage() {
                         {/* No spend */}
                         {data.expenseTotal === 0 && data.transactions.length === 0 && !isFuture && (
                           <div className="flex items-center justify-center flex-1">
-                            <CheckCircle2 size={14} className="text-success/40" />
+                            <CheckCircle2 size={12} className="text-success/40" />
                           </div>
                         )}
                       </button>

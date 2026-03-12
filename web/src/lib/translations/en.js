@@ -665,6 +665,7 @@ const en = {
   'recurring.typeSubscription': 'Subscription',
   'recurring.billsSection': 'Bills',
   'recurring.subscriptionsSection': 'Subscriptions',
+  'recurring.totalRecurring': 'Total recurring',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',
