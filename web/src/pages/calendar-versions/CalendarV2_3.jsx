@@ -40,19 +40,6 @@ function getHeatColor(intensity) {
   return '#14b8a6';
 }
 
-/* ─── Compact currency — strip trailing ,00 / .00 for whole amounts ─── */
-function fmtAmt(amount, currency, { compact = false } = {}) {
-  const full = formatCurrency(amount, currency);
-  const stripped = full.replace(/[,.]00(?=\s|$)/, '');
-  return compact ? stripped.replace(/\s/g, '') : stripped;
-}
-
-/* ─── Chip amount — number only, no currency symbol (for tight grid cells) ─── */
-function chipAmt(amount, currency) {
-  const full = fmtAmt(amount, currency, { compact: true });
-  return full.replace(/[^\d.,]/g, '');
-}
-
 /* ─── Inline sub-components ──────────────────────────────────── */
 
 function TransactionChip({ tx, currency, className = '' }) {
@@ -62,14 +49,14 @@ function TransactionChip({ tx, currency, className = '' }) {
   const label = tx.merchant || tx.description || cat.name;
   return (
     <div
-      className={`flex items-center gap-1 pr-1 py-[3px] rounded-md text-[11px] sm:text-xs w-full ${className}`}
-      style={{ borderLeft: `3px solid ${color}`, paddingLeft: '6px', backgroundColor: `${color}08` }}
+      className={`flex items-center gap-1.5 pr-1.5 py-[3px] rounded-[4px] text-[11px] sm:text-xs truncate w-full ${className}`}
+      style={{ borderLeft: `3px solid ${color}`, paddingLeft: '6px' }}
     >
-      <span className="truncate min-w-0 text-cream-700 dark:text-cream-200 font-medium hidden lg:inline">{label}</span>
-      <span className={`shrink-0 money text-[10px] sm:text-[11px] font-bold lg:ml-auto ${
+      <span className="truncate text-cream-700 dark:text-cream-200 font-medium">{label}</span>
+      <span className={`ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold ${
         isIncome ? 'text-success' : 'text-cream-900 dark:text-cream-100'
       }`}>
-        {isIncome ? '+' : ''}{chipAmt(tx.amount, tx.currency || currency)}
+        {isIncome ? '+' : ''}{formatCurrency(tx.amount, tx.currency || currency).replace(/\s/g, '')}
       </span>
     </div>
   );
@@ -80,12 +67,12 @@ function BillChip({ bill, currency, className = '' }) {
   const color = isAuto ? '#14b8a6' : '#d97706';
   return (
     <div
-      className={`flex items-center gap-1 pr-1 py-[3px] rounded-md text-[11px] sm:text-xs w-full ${className}`}
-      style={{ borderLeft: `3px dashed ${color}`, paddingLeft: '6px', backgroundColor: `${color}08` }}
+      className={`flex items-center gap-1 pr-1.5 py-[3px] rounded-[4px] text-[11px] sm:text-xs truncate w-full ${className}`}
+      style={{ borderLeft: `3px dashed ${color}`, paddingLeft: '6px' }}
     >
-      <span className="truncate min-w-0 text-cream-600 dark:text-cream-300 font-medium hidden lg:inline">{bill.name}</span>
-      <span className="shrink-0 money text-[10px] sm:text-[11px] font-bold text-cream-800 dark:text-cream-100 lg:ml-auto">
-        {chipAmt(bill.amount, bill.currency || currency)}
+      <span className="truncate text-cream-600 dark:text-cream-300 font-medium">{bill.name}</span>
+      <span className="ml-auto shrink-0 money text-[10px] sm:text-[11px] font-bold text-cream-800 dark:text-cream-100">
+        {formatCurrency(bill.amount, bill.currency || currency).replace(/\s/g, '')}
       </span>
     </div>
   );
@@ -136,25 +123,23 @@ function WeekPicker({ weekStart, onChange }) {
 
 function CalendarStats({ monthStats, currency, t }) {
   const items = [
-    { icon: TrendingDown, label: t('calendar.totalSpent'), value: fmtAmt(monthStats.totalExpenses, currency), color: 'text-danger', iconBg: 'bg-danger/10' },
-    { icon: TrendingUp, label: t('calendar.totalIncome'), value: fmtAmt(monthStats.totalIncome, currency), color: 'text-income', iconBg: 'bg-success/10' },
-    { icon: Zap, label: t('calendar.dailyAvg'), value: fmtAmt(monthStats.pastDayCount > 0 ? monthStats.totalExpenses / monthStats.pastDayCount : 0, currency), color: 'text-accent', iconBg: 'bg-accent/10' },
-    { icon: Flame, label: t('calendar.noSpendDays'), value: monthStats.noSpendDays, color: 'text-success', iconBg: 'bg-success/10' },
+    { icon: TrendingDown, label: t('calendar.totalSpent'), value: formatCurrency(monthStats.totalExpenses, currency), color: 'text-danger' },
+    { icon: TrendingUp, label: t('calendar.totalIncome'), value: formatCurrency(monthStats.totalIncome, currency), color: 'text-income' },
+    { icon: Zap, label: t('calendar.dailyAvg'), value: formatCurrency(monthStats.pastDayCount > 0 ? monthStats.totalExpenses / monthStats.pastDayCount : 0, currency), color: '' },
+    { icon: Flame, label: t('calendar.noSpendDays'), value: monthStats.noSpendDays, color: 'text-success' },
   ];
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+    <div className="card !p-0 !rounded-2xl flex overflow-hidden">
       {items.map((item, i) => (
-        <div key={i} className="card !p-3 sm:!p-4 !rounded-2xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className={`w-6 h-6 rounded-lg ${item.iconBg} flex items-center justify-center shrink-0`}>
-              <item.icon size={13} className={item.color} />
-            </div>
-            <p className="text-[10px] sm:text-[11px] text-cream-400 dark:text-cream-500 uppercase tracking-wider font-semibold">
-              {item.label}
-            </p>
-          </div>
-          <p className={`font-heading font-bold text-lg sm:text-xl money leading-tight ${item.color}`}>
+        <div key={i} className={`flex-1 py-2.5 sm:py-4 px-1.5 sm:px-4 text-center min-w-0 ${
+          i > 0 ? 'border-l border-cream-100 dark:border-dark-border' : ''
+        }`}>
+          <item.icon size={13} className={`mx-auto mb-1 ${item.color || 'text-accent'} opacity-50`} />
+          <p className={`font-heading font-bold text-[11px] sm:text-base lg:text-lg money leading-tight truncate ${item.color}`}>
             {item.value}
+          </p>
+          <p className="text-[7px] sm:text-[9px] text-cream-400 uppercase tracking-[0.12em] mt-0.5 font-semibold truncate">
+            {item.label}
           </p>
         </div>
       ))}
@@ -188,13 +173,13 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
           {dayData.expenseTotal > 0 && (
             <div className="flex-1 p-2.5 rounded-xl bg-danger/5 border border-danger/10">
               <p className="text-[10px] text-cream-500 uppercase">{t('calendar.expenses')}</p>
-              <p className="font-heading font-bold text-base money text-danger">{fmtAmt(dayData.expenseTotal, currency)}</p>
+              <p className="font-heading font-bold text-base money text-danger">{formatCurrency(dayData.expenseTotal, currency)}</p>
             </div>
           )}
           {dayData.incomeTotal > 0 && (
             <div className="flex-1 p-2.5 rounded-xl bg-success/5 border border-success/10">
               <p className="text-[10px] text-cream-500 uppercase">{t('calendar.income')}</p>
-              <p className="font-heading font-bold text-base money text-income">{fmtAmt(dayData.incomeTotal, currency)}</p>
+              <p className="font-heading font-bold text-base money text-income">{formatCurrency(dayData.incomeTotal, currency)}</p>
             </div>
           )}
         </div>
@@ -239,7 +224,7 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
                       </span>
                     )}
                   </span>
-                  <span className="money font-bold text-sm">{fmtAmt(b.amount, b.currency || currency)}</span>
+                  <span className="money font-bold text-sm">{formatCurrency(b.amount, b.currency || currency)}</span>
                 </div>
               );
             })}
@@ -549,15 +534,15 @@ export default function CalendarPage() {
                               </div>
 
                               {/* Mobile: compact amounts */}
-                              <div className="flex-1 flex flex-col justify-center w-full sm:hidden">
+                              <div className="flex-1 flex flex-col justify-center w-full sm:hidden overflow-hidden">
                                 {hasExpenses && (
-                                  <span className="font-heading text-[11px] text-danger font-bold money leading-snug">
-                                    {chipAmt(data.expenseTotal, currency)}
+                                  <span className="font-heading text-[11px] text-danger font-bold money leading-snug truncate">
+                                    {Math.round(data.expenseTotal).toLocaleString()}
                                   </span>
                                 )}
                                 {data.incomeTotal > 0 && (
-                                  <span className="font-heading text-[10px] text-success font-bold money leading-snug">
-                                    +{chipAmt(data.incomeTotal, currency)}
+                                  <span className="font-heading text-[10px] text-success font-bold money leading-snug truncate">
+                                    +{Math.round(data.incomeTotal).toLocaleString()}
                                   </span>
                                 )}
                                 {allChips.length > 0 && !hasExpenses && data.incomeTotal === 0 && (
@@ -685,7 +670,7 @@ export default function CalendarPage() {
                         <div className="sm:hidden flex flex-col items-center justify-center flex-1 gap-0.5">
                           {data.expenseTotal > 0 && (
                             <span className="font-heading text-[10px] font-bold money text-danger">
-                              {chipAmt(data.expenseTotal, currency)}
+                              {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                             </span>
                           )}
                           {data.count > 0 && (
@@ -697,7 +682,7 @@ export default function CalendarPage() {
                         {data.expenseTotal > 0 && (
                           <div className="mt-auto pt-1 border-t border-cream-100 dark:border-dark-border hidden sm:block">
                             <span className="font-heading text-[11px] font-bold money text-danger">
-                              {fmtAmt(data.expenseTotal, currency, { compact: true })}
+                              {formatCurrency(data.expenseTotal, currency).replace(/\s/g, '')}
                             </span>
                           </div>
                         )}

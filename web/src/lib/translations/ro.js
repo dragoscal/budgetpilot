@@ -2205,7 +2205,10 @@ const ro = {
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
-  // v2.1.1
+  // v2.4.0
+  'changelog.v240currencyFormat': 'Format monedă inteligent — ascunde ,00 la sume rotunde (470 lei în loc de 470,00 lei)',
+  'changelog.v240calendarPolish': 'Calendar rafinat — statistici 2×2 (fără trunchiere), sume compacte pe chip-uri, nume comercianți responsive',
+  // v2.3.0
   'changelog.v230calendarEditorial': 'Calendar redesign editorial — statistici tip registru, borduri colorate pe chip-uri, bare de intensitate cheltuieli, numere de zi Fraunces, efecte hover',
   'changelog.v220importConsistency': 'Importul folosește acum analiză AI deterministă (temperature=0), cu detalii exacte despre tranzacțiile omise',
   'changelog.v220calendarRedesign': 'Calendar reproiectat — celule mai mari, text mai mare, iconițe categorii în chip-uri, puncte colorate pe mobil, spațiere și aliniere îmbunătățite',

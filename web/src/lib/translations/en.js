@@ -2206,6 +2206,8 @@ const en = {
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
   // v2.1.1
+  'changelog.v240currencyFormat': 'Smart currency — hide ,00 for round amounts (470 lei instead of 470,00 lei)',
+  'changelog.v240calendarPolish': 'Calendar polish — 2×2 stats grid (no more truncation), compact chip amounts, responsive merchant names',
   'changelog.v230calendarEditorial': 'Calendar editorial redesign — ledger-style stats ribbon, category color-coded chip borders, spending heat bars, Fraunces serif day numbers, hover lift interactions',
   'changelog.v220importConsistency': 'Import now uses deterministic AI analysis (temperature=0), with detailed breakdown showing exactly where transactions were dropped',
   'changelog.v220calendarRedesign': 'Calendar redesigned — larger day cells, bigger text, category icons in chips, colored category dots on mobile, better spacing and alignment',
