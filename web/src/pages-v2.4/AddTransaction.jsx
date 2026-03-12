@@ -534,10 +534,10 @@ export default function AddTransaction() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab.id
-                ? 'bg-gold-50 text-gold-800 border border-gold-300 shadow-sm dark:bg-gold-500/10 dark:text-gold-300 dark:border-gold-500/30'
-                : 'bg-cream-100 text-cream-600 hover:bg-cream-200 border border-transparent dark:bg-dark-border dark:text-cream-500 dark:hover:bg-dark-border/80'
+                ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
+                : 'bg-cream-200 text-cream-700 hover:bg-cream-300 dark:bg-dark-border dark:text-cream-500'
             }`}
           >
             <tab.icon size={14} className="sm:w-4 sm:h-4" />
@@ -548,7 +548,7 @@ export default function AddTransaction() {
 
       {/* Saved Drafts */}
       {drafts.length > 0 && (
-        <div className="card-elevated border-info/20 bg-info/5">
+        <div className="card border-info/20 bg-info/5">
           <button
             onClick={() => setShowDrafts(!showDrafts)}
             className="flex items-center justify-between w-full"
@@ -599,32 +599,32 @@ export default function AddTransaction() {
 
       {/* Quick Add */}
       {activeTab === 'quick' && (
-        <div className="card-elevated">
-          <h3 className="section-title">{t('addTransaction.naturalLanguageInput')}</h3>
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.naturalLanguageInput')}</h3>
           <QuickAdd onResult={handleAIResult} onError={handleError} initialValue={sharedText} />
         </div>
       )}
 
       {/* Receipt Scanner */}
       {activeTab === 'receipt' && (
-        <div className="card-elevated">
-          <h3 className="section-title">{t('addTransaction.scanReceipt')}</h3>
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.scanReceipt')}</h3>
           <ReceiptScanner onResult={handleAIResult} onError={handleError} />
         </div>
       )}
 
       {/* Bank Statement Upload */}
       {activeTab === 'bank' && (
-        <div className="card-elevated">
-          <h3 className="section-title">{t('addTransaction.importStatement')}</h3>
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.importStatement')}</h3>
           <BankStatementUpload onResult={handleAIResult} onError={handleError} />
         </div>
       )}
 
       {/* CSV Import */}
       {activeTab === 'csv' && (
-        <div className="card-elevated">
-          <h3 className="section-title">{t('addTransaction.csvImport')}</h3>
+        <div className="card">
+          <h3 className="text-sm font-semibold mb-3">{t('addTransaction.csvImport')}</h3>
           <CSVImport onResult={handleAIResult} onError={handleError} />
         </div>
       )}
@@ -633,7 +633,7 @@ export default function AddTransaction() {
       {receiptMeta && (
         <div className="space-y-3">
           {receiptMeta.receipt?.store && (
-            <div className="card-elevated">
+            <div className="card bg-cream-50 dark:bg-dark-card border border-cream-200 dark:border-dark-border">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🧾</span>
                 <div>
@@ -645,7 +645,7 @@ export default function AddTransaction() {
                   </p>
                 </div>
                 {receiptMeta.receipt.total && (
-                  <p className="ml-auto stat-value text-lg">
+                  <p className="ml-auto font-heading font-bold money">
                     {formatCurrency(receiptMeta.receipt.total, receiptMeta.receipt.currency || 'RON')}
                   </p>
                 )}
@@ -699,7 +699,7 @@ export default function AddTransaction() {
 
       {/* AI REVIEW WITH ENHANCED RECEIPT */}
       {pendingResults && pendingResults.length > 0 && (
-        <div className="card-elevated border-success/30 bg-success/5">
+        <div className="card border-success/30 bg-success-light/30">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('addTransaction.reviewConfirm')}</h3>
             <div className="flex gap-2">
@@ -777,7 +777,7 @@ export default function AddTransaction() {
                   {/* Transaction header - editable */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}>{cat.icon}</div>
+                      <span className="text-lg shrink-0">{cat.icon}</span>
                       <div className="min-w-0">
                         <div className="text-sm font-medium flex items-center gap-1.5">
                           {renderEditableText(idx, 'merchant', tx.merchant || t('addTransaction.unknown'))}
@@ -793,7 +793,7 @@ export default function AddTransaction() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <div className={`stat-value ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
+                      <div className={`font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
                         {tx.type === 'income' ? '+' : '-'}
                         {renderEditableText(idx, 'amount', tx.amount, 'text-sm font-bold w-20 text-right')}
                         {!isEditing(idx, 'amount') && (
@@ -1043,7 +1043,7 @@ export default function AddTransaction() {
 
       {/* Recently Added */}
       {recentlyAdded.length > 0 && (
-        <div className="card-elevated border-success/20 bg-success/5">
+        <div className="card border-success/20 bg-success/5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-success">
               <CheckCircle2 size={16} />
@@ -1064,12 +1064,12 @@ export default function AddTransaction() {
               const cat = getCategoryById(tx.category);
               return (
                 <div key={tx.id || i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}>{cat.icon}</div>
+                  <span className="text-lg shrink-0">{cat.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{tx.merchant || getCategoryLabel(cat, t)}</p>
                     <p className="text-[11px] text-cream-500">{tx.date}</p>
                   </div>
-                  <span className={`text-sm stat-value ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
+                  <span className={`text-sm font-heading font-bold money ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
                   </span>
                 </div>
@@ -1085,7 +1085,7 @@ export default function AddTransaction() {
       )}
 
       {/* Manual entry */}
-      <div className="card-elevated">
+      <div className="card">
         <button
           onClick={() => setShowManual(!showManual)}
           className="flex items-center justify-between w-full text-sm font-semibold"

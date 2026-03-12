@@ -572,13 +572,13 @@ export default function Transactions() {
       </div>
 
       {/* Quick Add */}
-      <div className="card-elevated !p-3">
+      <div className="card !p-3">
         <button
           onClick={() => setShowQuickAdd(prev => !prev)}
           className="flex items-center justify-between w-full"
         >
           <div className="flex items-center gap-2">
-            <Zap size={16} className="text-accent-600" />
+            <Zap size={16} className="text-success" />
             <span className="text-sm font-medium">{t('quickAdd.title')}</span>
           </div>
           <ChevronDown size={14} className={`text-cream-400 transition-transform ${showQuickAdd ? 'rotate-180' : ''}`} />
@@ -610,7 +610,7 @@ export default function Transactions() {
 
       {/* Audit Results */}
       {auditResult && (
-        <div className="card-elevated !p-4 space-y-4 border-2 border-accent/20">
+        <div className="card !p-4 space-y-4 border-2 border-accent/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Search size={16} className="text-accent" />
@@ -739,7 +739,7 @@ export default function Transactions() {
 
       {/* Correlation Results */}
       {correlationResult && (
-        <div className="card-elevated !p-4 space-y-4 border-2 border-info/20">
+        <div className="card !p-4 space-y-4 border-2 border-info/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Link size={16} className="text-info" />
@@ -821,9 +821,9 @@ export default function Transactions() {
             <button
               key={s.id}
               onClick={() => setScopeFilter(s.id)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors flex items-center gap-1 ${
                 scopeFilter === s.id
-                  ? 'bg-gold-50 dark:bg-gold-500/10 border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 shadow-sm'
+                  ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                   : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
               }`}
             >
@@ -869,7 +869,7 @@ export default function Transactions() {
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-cream-500 shrink-0">{t('transactions.period')}</span>
-        <div className="flex rounded-2xl border border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide bg-cream-50/50 dark:bg-dark-card/50">
+        <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-x-auto scrollbar-hide">
           {[
             { id: 'all', label: t('common.all') },
             { id: 'thisMonth', label: t('transactions.thisMonth') },
@@ -881,9 +881,9 @@ export default function Transactions() {
             <button
               key={f.id}
               onClick={() => setDateFilter(f.id)}
-              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-xl m-0.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                 dateFilter === f.id
-                  ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900 shadow-sm'
+                  ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
                   : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
               }`}
             >
@@ -953,7 +953,7 @@ export default function Transactions() {
       </div>
 
       {/* Transaction list */}
-      <div className="card-elevated p-0">
+      <div className="card p-0">
         {loading ? (
           <div>{[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}</div>
         ) : paginated.length > 0 ? (

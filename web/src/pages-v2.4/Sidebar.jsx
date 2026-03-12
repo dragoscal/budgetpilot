@@ -88,9 +88,9 @@ export default function Sidebar() {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-all duration-150 relative ${
+    `flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-100 ${
       isActive
-        ? 'bg-gold-50/60 text-cream-900 dark:bg-gold-500/10 dark:text-gold-200 font-semibold'
+        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
         : 'text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 hover:text-cream-800 dark:hover:text-cream-200'
     } ${collapsed ? 'justify-center px-2' : ''}`;
 
@@ -106,7 +106,7 @@ export default function Sidebar() {
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 h-14 shrink-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-accent-500 to-accent-700 shadow-md">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-accent-600">
             <svg viewBox="0 0 512 512" className="w-5 h-5" aria-hidden="true">
               <polygon points="256,80 160,280 352,280" fill="#115e59" opacity="0.9"/>
               <polygon points="200,160 104,360 296,360" fill="#5eead4" opacity="0.7"/>
@@ -114,22 +114,19 @@ export default function Sidebar() {
             </svg>
           </div>
           {!collapsed && (
-            <div className="flex items-baseline gap-1">
-              <span className="font-heading font-bold text-[16px] tracking-tight">LUMET</span>
-              <span className="text-[8px] font-semibold text-gold-500 tracking-wider">PRO</span>
-            </div>
+            <span className="font-heading font-bold text-[15px] tracking-tight">LUMET</span>
           )}
         </div>
 
         {/* User card */}
         {!collapsed && user && (
           <div className="px-3 pb-1 shrink-0">
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-cream-50 dark:bg-cream-800/30 border border-cream-200/50 dark:border-cream-700/30">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cream-50 dark:bg-cream-800/30">
+              <div className="w-7 h-7 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 flex items-center justify-center text-xs font-bold shrink-0">
                 {user.avatar || user.name?.charAt(0)?.toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold truncate leading-tight">{user.name}</p>
+                <p className="text-[13px] font-medium truncate leading-tight">{user.name}</p>
                 <p className="text-[10px] text-cream-400 truncate">{user.email}</p>
               </div>
             </div>
@@ -145,18 +142,14 @@ export default function Sidebar() {
         <FamilyPicker collapsed={collapsed} />
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-1 px-3 space-y-2">
-          {NAV_SECTIONS.map((section, idx) => (
+        <nav className="flex-1 overflow-y-auto py-1 px-3 space-y-3">
+          {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
               {!collapsed && (
-                <>
-                  {idx > 0 && <div className="divider-gold mx-2 mb-2" />}
-                  <p className="px-3 mb-1 text-[10px] font-bold text-cream-400 dark:text-cream-500 uppercase tracking-[0.12em]">
-                    {section.label}
-                  </p>
-                </>
+                <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
+                  {section.label}
+                </p>
               )}
-              {collapsed && idx > 0 && <div className="divider-gold mx-1 mb-1" />}
               <div className="space-y-px">
                 {section.items.map((item) => (
                   <NavLink
@@ -176,8 +169,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom controls */}
-        <div className="px-3 py-2 space-y-px shrink-0">
-          <div className="divider-gold mb-2" />
+        <div className="border-t border-cream-200 dark:border-dark-border px-3 py-2 space-y-px shrink-0">
           <SyncIndicator collapsed={collapsed} />
 
           <button
@@ -372,7 +364,7 @@ export default function Sidebar() {
       )}
 
       {/* Mobile bottom tab bar */}
-      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-dark-card/95 backdrop-blur-xl border-t border-cream-200/60 dark:border-dark-border/60 z-40 flex items-center justify-around px-0.5 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-cream-200 dark:border-dark-border z-40 flex items-center justify-around px-0.5 py-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { to: '/', icon: LayoutDashboard, label: t('nav.home') },
           { to: '/transactions', icon: Receipt, label: t('nav.history') },
@@ -387,24 +379,24 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
                 isActive
-                  ? 'text-cream-900 dark:text-cream-100'
+                  ? 'text-accent-600 dark:text-accent-400'
                   : 'text-cream-400'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && !item.special && (
-                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gold-400" />
-                )}
                 {item.special ? (
-                  <div className="w-11 h-11 -mt-5 rounded-full bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center shadow-lg shadow-accent-500/25">
+                  <div className="w-10 h-10 -mt-4 rounded-full bg-accent-600 flex items-center justify-center shadow-lg animate-pulse-add">
                     <item.icon size={20} className="text-white" />
                   </div>
                 ) : (
                   <item.icon size={20} />
                 )}
                 <span className="truncate max-w-full">{item.label}</span>
+                {isActive && !item.special && (
+                  <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
+                )}
               </>
             )}
           </NavLink>
@@ -415,14 +407,14 @@ export default function Sidebar() {
           aria-label={t('nav.openMenu') || 'Open menu'}
           aria-expanded={mobileMenuOpen}
           className={`relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
-            mobileMenuOpen ? 'text-cream-900 dark:text-cream-100' : 'text-cream-400'
+            mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400'
           }`}
         >
-          {mobileMenuOpen && (
-            <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gold-400" />
-          )}
           <Menu size={20} />
           <span className="truncate max-w-full">{t('nav.more')}</span>
+          {mobileMenuOpen && (
+            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-[3px] rounded-full bg-accent-600 dark:bg-accent-400" />
+          )}
           {/* Sync indicator dot */}
           {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
             <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${

@@ -348,7 +348,7 @@ export default function Budgets() {
               <p className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase tracking-wide">
                 {t('budgets.toBeBudgeted')}
               </p>
-              <p className={`text-2xl stat-value ${
+              <p className={`text-2xl font-bold money ${
                 Math.abs(toBeBudgeted) <= 1
                   ? 'text-success'
                   : toBeBudgeted > 0
@@ -374,26 +374,23 @@ export default function Budgets() {
 
       {/* Overall progress */}
       {budgetData.length > 0 && (
-        <div className="card-hero">
+        <div className="card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">{t('budgets.overallBudget')}</span>
-            <span className="text-sm stat-value">
+            <span className="text-sm text-cream-500">
               {formatCurrency(totalSpent, currency)} / {formatCurrency(totalBudget, currency)}
             </span>
           </div>
           <div className="h-3 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? '' : 'bg-success'
+                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? 'bg-warning' : 'bg-success'
               }`}
-              style={{
-                width: `${Math.min(overallPct, 100)}%`,
-                ...(overallPct >= 80 && overallPct < 100 ? { background: 'linear-gradient(90deg, #14b8a6, #f59e0b)' } : {}),
-              }}
+              style={{ width: `${Math.min(overallPct, 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-xs text-cream-500">
-            <span className={`font-heading font-bold ${overallPct >= 80 ? 'text-gold-600 dark:text-gold-400' : ''}`}>{t('budgets.pctUsed', { pct: overallPct })}</span>
+            <span>{t('budgets.pctUsed', { pct: overallPct })}</span>
             <span>{t('budgets.daysRemaining', { count: daysLeft })}</span>
           </div>
           {totalBudget > totalSpent && daysLeft > 0 && (
@@ -464,7 +461,7 @@ export default function Budgets() {
 
       {/* Unbudgeted categories with quick-add */}
       {budgetData.length > 0 && toBeBudgeted > 1 && availableCategories.length > 0 && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('budgets.quickAllocate')}</h3>
           <p className="text-xs text-cream-500 mb-3">
             {t('budgets.categoriesWithoutBudgets', { count: availableCategories.length })}
@@ -498,7 +495,7 @@ export default function Budgets() {
 
       {/* Fully allocated message */}
       {budgetData.length > 0 && Math.abs(toBeBudgeted) <= 1 && (
-        <div className="card-elevated border border-success/20 bg-success/5">
+        <div className="card border border-success/20 bg-success/5">
           <p className="text-sm text-success font-medium text-center">
             {t('budgets.fullyAllocated')}
           </p>
@@ -556,10 +553,10 @@ export default function Budgets() {
               <button
                 key={tmpl.id}
                 onClick={() => handleSelectTemplate(tmpl)}
-                className={`w-full text-left p-3 rounded-2xl border transition-all ${
+                className={`w-full text-left p-3 rounded-xl border transition-colors ${
                   selectedTemplate?.id === tmpl.id
-                    ? 'border-gold-400 bg-gold-50/50 shadow-sm dark:border-gold-500/50 dark:bg-gold-500/5'
-                    : 'border-cream-200 hover:border-gold-300 dark:border-dark-border dark:hover:border-gold-500/30'
+                    ? 'border-cream-900 bg-cream-900/5 dark:border-cream-100 dark:bg-cream-100/5'
+                    : 'border-cream-200 hover:border-cream-400 dark:border-dark-border'
                 }`}
               >
                 <p className="text-sm font-semibold">{tmpl.name}</p>

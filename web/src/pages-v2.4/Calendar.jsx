@@ -93,20 +93,20 @@ function BillChip({ bill, currency, className = '' }) {
 
 function ViewToggle({ viewMode, setViewMode, t }) {
   return (
-    <div className="flex rounded-2xl border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
+    <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
       <button onClick={() => setViewMode('month')}
-        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-all flex items-center gap-1 ${
+        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${
           viewMode === 'month'
-            ? 'bg-gold-50 text-gold-800 dark:bg-gold-500/10 dark:text-gold-300'
+            ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
             : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
         }`}>
         <CalendarDays size={13} />
         <span className="hidden sm:inline">{t('calendar.monthView')}</span>
       </button>
       <button onClick={() => setViewMode('week')}
-        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-all flex items-center gap-1 ${
+        className={`px-2.5 sm:px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${
           viewMode === 'week'
-            ? 'bg-gold-50 text-gold-800 dark:bg-gold-500/10 dark:text-gold-300'
+            ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
             : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
         }`}>
         <CalendarRange size={13} />
@@ -144,7 +144,7 @@ function CalendarStats({ monthStats, currency, t }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {items.map((item, i) => (
-        <div key={i} className="card-elevated !p-3 sm:!p-4 !rounded-2xl">
+        <div key={i} className="card !p-3 sm:!p-4 !rounded-2xl">
           <div className="flex items-center gap-2 mb-1.5">
             <div className={`w-6 h-6 rounded-lg ${item.iconBg} flex items-center justify-center shrink-0`}>
               <item.icon size={13} className={item.color} />
@@ -153,7 +153,7 @@ function CalendarStats({ monthStats, currency, t }) {
               {item.label}
             </p>
           </div>
-          <p className={`stat-value text-lg sm:text-xl leading-tight ${item.color}`}>
+          <p className={`font-heading font-bold text-lg sm:text-xl money leading-tight ${item.color}`}>
             {item.value}
           </p>
         </div>
@@ -170,7 +170,7 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
   const topAccent = dayData.categories.length > 0 ? getCatColor(dayData.categories[0]) : '#14b8a6';
 
   return (
-    <div className="card-elevated p-4 space-y-4 animate-fadeUp" style={{ borderTop: `3px solid ${topAccent}` }}>
+    <div className="card p-4 space-y-4 animate-fadeUp" style={{ borderTop: `3px solid ${topAccent}` }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -188,13 +188,13 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
           {dayData.expenseTotal > 0 && (
             <div className="flex-1 p-2.5 rounded-xl bg-danger/5 border border-danger/10">
               <p className="text-[10px] text-cream-500 uppercase">{t('calendar.expenses')}</p>
-              <p className="stat-value text-base text-danger">{fmtAmt(dayData.expenseTotal, currency)}</p>
+              <p className="font-heading font-bold text-base money text-danger">{fmtAmt(dayData.expenseTotal, currency)}</p>
             </div>
           )}
           {dayData.incomeTotal > 0 && (
             <div className="flex-1 p-2.5 rounded-xl bg-success/5 border border-success/10">
               <p className="text-[10px] text-cream-500 uppercase">{t('calendar.income')}</p>
-              <p className="stat-value text-base text-income">{fmtAmt(dayData.incomeTotal, currency)}</p>
+              <p className="font-heading font-bold text-base money text-income">{fmtAmt(dayData.incomeTotal, currency)}</p>
             </div>
           )}
         </div>
@@ -468,7 +468,7 @@ export default function CalendarPage() {
       <div className="flex gap-4 items-start">
         {/* Calendar grid card */}
         <div className="flex-1 min-w-0">
-          <div className="card-elevated p-2 sm:p-3 lg:p-4 overflow-hidden">
+          <div className="card p-2 sm:p-3 lg:p-4 overflow-hidden">
             {viewMode === 'month' ? (
               <>
                 {/* Day name headers */}
@@ -511,15 +511,15 @@ export default function CalendarPage() {
                           ];
 
                           const borderClass = today
-                            ? 'border-gold-400/50 ring-2 ring-gold-300/20'
+                            ? 'border-accent/40 ring-2 ring-accent/15'
                             : isSelected
-                              ? 'border-gold-300/50'
+                              ? 'border-accent/30'
                               : 'border-cream-200/50 dark:border-dark-border/50 hover:border-cream-300 dark:hover:border-dark-border';
 
                           const bgClass = today
-                            ? 'bg-gold-50/40 dark:bg-gold-500/[0.06]'
+                            ? 'bg-accent/[0.04] dark:bg-accent/[0.08]'
                             : isSelected
-                              ? 'bg-gold-50/30 dark:bg-gold-500/[0.04]'
+                              ? 'bg-accent/[0.06] dark:bg-accent/10'
                               : isFuture
                                 ? 'opacity-30'
                                 : 'bg-white/80 dark:bg-dark-card/40';
@@ -533,7 +533,7 @@ export default function CalendarPage() {
                               {/* Day number */}
                               <div className="flex items-center justify-between w-full mb-0.5 sm:mb-1 shrink-0">
                                 {today ? (
-                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gold-500 text-white flex items-center justify-center font-heading text-[11px] sm:text-xs font-bold shadow-sm">
+                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent text-white flex items-center justify-center font-heading text-[11px] sm:text-xs font-bold">
                                     {data.dayNum}
                                   </span>
                                 ) : (
@@ -632,7 +632,7 @@ export default function CalendarPage() {
                           {format(day, 'EEE')}
                         </p>
                         {today ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gold-500 text-white text-xs sm:text-sm font-bold mt-0.5 shadow-sm">
+                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent text-white text-xs sm:text-sm font-bold mt-0.5">
                             {format(day, 'd')}
                           </span>
                         ) : (

@@ -797,9 +797,9 @@ export default function Dashboard() {
           <button
             key={s.id}
             onClick={() => handleScopeChange(s.id)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
               scopeFilter === s.id
-                ? 'bg-gold-50 dark:bg-gold-500/10 border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 shadow-sm'
+                ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                 : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >
@@ -832,8 +832,8 @@ export default function Dashboard() {
 
       {/* Welcome Card — shown once for new users */}
       {showWelcome && (
-        <div className="card-hero relative overflow-hidden border-accent/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-gold-50/60 via-transparent to-accent-50/40 dark:from-gold-900/20 dark:to-accent-900/20" />
+        <div className="card relative overflow-hidden border-accent/20">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-success/5 dark:from-accent/10 dark:to-success/10" />
           <button onClick={dismissWelcome} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 hover:text-cream-600 transition-colors z-10">
             <X size={16} />
           </button>
@@ -995,16 +995,16 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
-        <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-colors shrink-0">
           <Zap size={16} /> {t('dashboard.quickAdd')}
         </Link>
-        <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <Camera size={16} /> {t('dashboard.scanReceipt')}
         </Link>
-        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <RotateCcw size={16} /> {t('dashboard.recurring')}
         </Link>
-        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-gold-200 dark:border-gold-700/30 text-gold-700 dark:text-gold-300 text-sm font-medium whitespace-nowrap hover:bg-gold-50 dark:hover:bg-gold-900/20 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <TrendingUp size={16} /> {t('dashboard.analytics')}
         </Link>
       </div>
@@ -1111,8 +1111,8 @@ export default function Dashboard() {
                 )}
 
                 {/* In My Pocket + Month Comparison + No-spend days */}
-                <div className="mt-4 card-hero relative overflow-hidden border-success/20 !p-3 md:!p-5">
-                  <div className="absolute inset-0 bg-gradient-to-r from-success/5 via-transparent to-gold-50/30 dark:from-success/8 dark:to-gold-900/10" />
+                <div className="mt-4 card relative overflow-hidden border-success/20 !p-3 md:!p-5">
+                  <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent dark:from-success/8" />
                   <div className="relative flex items-center justify-between gap-2">
                     <div className="min-w-0 shrink-0">
                       <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">{t('dashboard.inMyPocket')}</p>
@@ -1142,7 +1142,7 @@ export default function Dashboard() {
 
           case 'healthScore':
             return (
-              <div key="healthScore" className={`card-hero !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
+              <div key="healthScore" className={`card !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
                 <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 shrink-0">
                     <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
@@ -1175,7 +1175,7 @@ export default function Dashboard() {
           case 'spendingChart':
             return (
               <div key="spendingChart" className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="card-elevated !p-3 md:!p-5">
+                <div className="card !p-3 md:!p-5">
                   <h3 className="section-title">{t('dashboard.spendingTrend')}</h3>
                   {spendingChartData.length > 0 ? (
                     <div className="h-[140px] md:h-[200px]">
@@ -1204,7 +1204,7 @@ export default function Dashboard() {
 
                 {/* Goals & Bills previews alongside chart */}
                 <div className="space-y-4">
-                  <div className={`card-elevated !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
+                  <div className={`card !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
                     <div className="flex items-center justify-between mb-3 md:mb-4">
                       <h3 className="section-title mb-0">{t('dashboard.savingsGoals')}</h3>
                       <Link to="/goals" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1231,7 +1231,7 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <div className={`card-elevated !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
+                  <div className={`card !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
                     <div className="flex items-center justify-between mb-3 md:mb-4">
                       <h3 className="section-title mb-0">{t('dashboard.upcomingBills')}</h3>
                       <Link to="/recurring" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1262,7 +1262,7 @@ export default function Dashboard() {
 
           case 'topCategories':
             return (
-              <div key="topCategories" className="card-elevated !p-3 md:!p-5">
+              <div key="topCategories" className="card !p-3 md:!p-5">
                 <h3 className="section-title">{t('dashboard.byCategory')}</h3>
                 {categoryData.length > 0 ? (
                   <div className="flex items-center gap-3 md:gap-4">
@@ -1295,7 +1295,7 @@ export default function Dashboard() {
 
           case 'budgetOverview':
             return budgetProgress.length > 0 ? (
-              <div key="budgetOverview" className="card-elevated !p-3 md:!p-5">
+              <div key="budgetOverview" className="card !p-3 md:!p-5">
                 <div className="flex items-center justify-between mb-3 md:mb-4">
                   <h3 className="section-title mb-0">{t('dashboard.budgetProgress')}</h3>
                   <Link to="/budgets" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1312,7 +1312,7 @@ export default function Dashboard() {
 
           case 'predictions':
             return predictions ? (
-              <div key="predictions" className="card-elevated !p-3 md:!p-5">
+              <div key="predictions" className="card !p-3 md:!p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Target size={14} className="text-accent-600 dark:text-accent-400" />
                   <h3 className="section-title mb-0">{t('dashboard.predictions')}</h3>
@@ -1368,7 +1368,7 @@ export default function Dashboard() {
 
           case 'billSuggestions':
             return billSuggestions.length > 0 ? (
-              <div key="billSuggestions" className="card-elevated !p-3 md:!p-5">
+              <div key="billSuggestions" className="card !p-3 md:!p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb size={14} className="text-warning" />
                   <h3 className="section-title mb-0">{t('dashboard.billSuggestions')}</h3>
@@ -1405,7 +1405,7 @@ export default function Dashboard() {
 
           case 'recentTransactions':
             return (
-              <div key="recentTransactions" className="card-elevated !p-3 md:!p-5">
+              <div key="recentTransactions" className="card !p-3 md:!p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="section-title mb-0">{t('dashboard.recentTransactions')}</h3>
                   <Link to="/transactions" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>

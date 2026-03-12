@@ -2205,7 +2205,12 @@ const en = {
   'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
-  // v2.1.1
+  // v3.0.0
+  'changelog.v300refinedLuxury': 'Refined Luxury redesign — gold accent palette, 3-tier card hierarchy, Fraunces serif stat values, glass effects',
+  'changelog.v300designSystem': 'New design system — card-elevated/card-hero tiers, gradient progress bars, gold section title dots, page title underlines',
+  'changelog.v300sidebarRedesign': 'Sidebar upgraded — gold active indicators, luxury typography, gradient avatar, mobile gold dot navigation',
+
+  // v2.4.0
   'changelog.v240currencyFormat': 'Smart currency — hide ,00 for round amounts (470 lei instead of 470,00 lei)',
   'changelog.v240calendarPolish': 'Calendar polish — 2×2 stats grid (no more truncation), compact chip amounts, responsive merchant names',
   'changelog.v230calendarEditorial': 'Calendar editorial redesign — ledger-style stats ribbon, category color-coded chip borders, spending heat bars, Fraunces serif day numbers, hover lift interactions',

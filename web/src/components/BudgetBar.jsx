@@ -12,6 +12,12 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
   const remaining = budgeted - spent;
   const barColor = pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-warning' : 'bg-success';
 
+  // Gradient bar style for high-usage budgets
+  const barStyle = {
+    width: `${Math.min(pct, 100)}%`,
+    ...(pct >= 80 && pct < 100 ? { background: 'linear-gradient(90deg, #14b8a6, #f59e0b)' } : {}),
+  };
+
   if (compact) {
     return (
       <div className="space-y-1">
@@ -20,20 +26,25 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
             <span>{cat.icon}</span>
             <span className="font-medium">{getCategoryLabel(cat, t)}</span>
           </span>
-          <span className="text-cream-500">{pct}%</span>
+          <span className={`font-heading font-bold ${pct >= 80 ? 'text-gold-600 dark:text-gold-400' : 'text-cream-500'}`}>{pct}%</span>
         </div>
         <div className="h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-          <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
+          <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={barStyle} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card">
+    <div className={`card-elevated ${pct >= 100 ? 'ring-1 ring-danger/30' : ''}`}>
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{cat.icon}</span>
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
+            style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}
+          >
+            {cat.icon}
+          </div>
           <div>
             <p className="font-medium text-sm">{getCategoryLabel(cat, t)}</p>
             <p className="text-xs text-cream-500">
@@ -41,12 +52,14 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
             </p>
           </div>
         </div>
-        <span className={`text-sm font-heading font-bold ${pct >= 100 ? 'text-danger' : pct >= 80 ? 'text-warning' : 'text-success'}`}>
+        <span className={`text-sm stat-value px-2 py-0.5 rounded-full ${
+          pct >= 100 ? 'bg-danger/10 text-danger' : pct >= 80 ? 'bg-gold-50 text-gold-700 dark:bg-gold-500/10 dark:text-gold-400' : 'bg-success/10 text-success'
+        }`}>
           {pct}%
         </span>
       </div>
-      <div className="h-2 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-        <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
+        <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={barStyle} />
       </div>
       <p className="text-xs text-cream-500 mt-2">
         {remaining >= 0

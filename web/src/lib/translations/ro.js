@@ -2205,6 +2205,11 @@ const ro = {
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
+  // v3.0.0
+  'changelog.v300refinedLuxury': 'Redesign Refined Luxury — paletă de accente aurii, ierarhie de card-uri pe 3 nivele, valori în Fraunces serif, efecte de sticlă',
+  'changelog.v300designSystem': 'Sistem de design nou — card-elevated/card-hero, bare de progres gradient, puncte aurii pe titluri de secțiune, subliniere pagini',
+  'changelog.v300sidebarRedesign': 'Bara laterală modernizată — indicatoare aurii active, tipografie de lux, avatar gradient, navigare mobilă cu puncte aurii',
+
   // v2.4.0
   'changelog.v240currencyFormat': 'Format monedă inteligent — ascunde ,00 la sume rotunde (470 lei în loc de 470,00 lei)',
   'changelog.v240calendarPolish': 'Calendar rafinat — statistici 2×2 (fără trunchiere), sume compacte pe chip-uri, nume comercianți responsive',

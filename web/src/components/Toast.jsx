@@ -12,12 +12,12 @@ const ICONS = {
 };
 
 const COLORS = {
-  success: 'bg-success/10 text-success border-success/20',
-  error: 'bg-danger/10 text-danger border-danger/20',
-  warning: 'bg-warning/10 text-warning border-warning/20',
-  info: 'bg-info/10 text-info border-info/20',
+  success: 'bg-white/90 dark:bg-dark-card/90 text-success border-success/20 border-l-success',
+  error: 'bg-white/90 dark:bg-dark-card/90 text-danger border-danger/20 border-l-danger',
+  warning: 'bg-white/90 dark:bg-dark-card/90 text-warning border-warning/20 border-l-gold-400',
+  info: 'bg-white/90 dark:bg-dark-card/90 text-info border-info/20 border-l-info',
   undo: 'bg-cream-900/90 text-white border-cream-700/30 dark:bg-cream-100/90 dark:text-cream-900 dark:border-cream-300/30',
-  action: 'bg-accent/10 text-accent border-accent/20',
+  action: 'bg-white/90 dark:bg-dark-card/90 text-accent border-accent/20 border-l-accent',
 };
 
 export default function ToastContainer() {
@@ -31,7 +31,7 @@ export default function ToastContainer() {
         return (
           <div
             key={item.id}
-            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm ${COLORS[item.type] || COLORS.info}`}
+            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-2xl border border-l-[3px] shadow-lg backdrop-blur-xl ${COLORS[item.type] || COLORS.info}`}
           >
             <Icon size={18} className="mt-0.5 shrink-0" />
             <p className="text-sm flex-1">{item.message}</p>

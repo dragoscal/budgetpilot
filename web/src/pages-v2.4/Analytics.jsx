@@ -141,9 +141,9 @@ export default function Analytics() {
           <button
             key={s.id}
             onClick={() => setScopeFilter(s.id)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all flex items-center gap-1 ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
               scopeFilter === s.id
-                ? 'bg-gold-50 border-gold-300 text-gold-700 shadow-sm dark:bg-gold-500/10 dark:border-gold-500/30 dark:text-gold-300'
+                ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                 : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >
@@ -154,13 +154,13 @@ export default function Analytics() {
       </div>
 
       {/* Smart summary */}
-      <div className="card-hero">
+      <div className="card">
         <h3 className="section-title">{t('analytics.smartSummary')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-cream-500 text-xs">{t('analytics.totalTransactions')}</p><p className="stat-value text-lg">{monthTx.length}</p></div>
-          <div><p className="text-cream-500 text-xs">{t('analytics.totalSpent')}</p><p className="stat-value text-lg">{formatCurrency(totalSpent, currency)}</p></div>
-          <div><p className="text-cream-500 text-xs">{t('analytics.dailyAvg')}</p><p className="stat-value text-lg">{formatCurrency(dailyAvg, currency)}</p></div>
-          <div><p className="text-cream-500 text-xs">{t('analytics.projectedTotal')}</p><p className="stat-value text-lg">{formatCurrency(projected, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.totalTransactions')}</p><p className="font-heading font-bold text-lg">{monthTx.length}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.totalSpent')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(totalSpent, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.dailyAvg')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(dailyAvg, currency)}</p></div>
+          <div><p className="text-cream-500 text-xs">{t('analytics.projectedTotal')}</p><p className="font-heading font-bold text-lg money">{formatCurrency(projected, currency)}</p></div>
         </div>
         {totalBudget > 0 && (
           <p className="text-xs text-cream-500 mt-3">
@@ -177,7 +177,7 @@ export default function Analytics() {
       </div>
 
       {/* Category vs budget */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.categoryVsBudget')}</h3>
         <p className="text-xs text-cream-400 mb-2">{t('analytics.clickCategory')}</p>
         {categoryBudgetData.length > 0 ? (
@@ -213,7 +213,7 @@ export default function Analytics() {
         const totalCatSpent = subcatData.reduce((s, d) => s + d.spent, 0);
 
         return (
-          <div className="card-elevated">
+          <div className="card">
             <div className="flex items-center justify-between mb-3">
               <h3 className="section-title mb-0">
                 {getCategoryById(selectedCategory)?.icon} {t('categories.' + selectedCategory)} — {t('analytics.subcategories')}
@@ -246,7 +246,7 @@ export default function Analytics() {
       })()}
 
       {/* Daily spending pattern */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.dailySpending')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dailySpending}>
@@ -260,7 +260,7 @@ export default function Analytics() {
 
       {/* Smart Insights */}
       {insights.length > 0 && (
-        <div className="card-elevated border-info/20 bg-info/5">
+        <div className="card border-info/20 bg-info-light/20">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={16} className="text-info" />
             <h3 className="section-title mb-0">{t('analytics.smartInsights')}</h3>
@@ -280,7 +280,7 @@ export default function Analytics() {
       )}
 
       {/* Top merchants */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.topMerchants')}</h3>
         {topMerchants.length > 0 ? (
           <div className="space-y-2">
@@ -291,7 +291,7 @@ export default function Analytics() {
                   <span className="font-medium">{m.merchant}</span>
                   <span className="text-xs text-cream-400">({m.count}x)</span>
                 </span>
-                <span className="stat-value text-sm">{formatCurrency(m.total, currency)}</span>
+                <span className="money font-medium">{formatCurrency(m.total, currency)}</span>
               </div>
             ))}
           </div>
@@ -300,7 +300,7 @@ export default function Analytics() {
 
       {/* Spending by tag */}
       {tagStats.length > 0 && (
-        <div className="card-elevated">
+        <div className="card">
           <div className="flex items-center gap-2 mb-3">
             <Hash size={16} className="text-accent" />
             <h3 className="section-title mb-0">{t('analytics.spendingByTag')}</h3>

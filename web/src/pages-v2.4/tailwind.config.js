@@ -36,18 +36,6 @@ export default {
           800: '#115e59',
           900: '#134e4a',
         },
-        gold: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
-        },
         success: { DEFAULT: '#059669', light: '#d1fae5' },
         warning: { DEFAULT: '#d97706', light: '#fef3c7' },
         danger: { DEFAULT: '#e11d48', light: '#ffe4e6' },
@@ -81,12 +69,8 @@ export default {
       boxShadow: {
         card: '0 1px 3px rgba(28,25,23,.04), 0 6px 24px rgba(28,25,23,.06)',
         'card-hover': '0 2px 8px rgba(28,25,23,.06), 0 12px 32px rgba(28,25,23,.10)',
-        'card-elevated': '0 4px 12px rgba(28,25,23,.03), 0 16px 40px rgba(28,25,23,.08)',
-        'card-float': '0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.12)',
         'card-dark': '0 1px 3px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.2)',
-        'inner-glow': 'inset 0 1px 0 rgba(255,255,255,.1)',
         glow: '0 0 20px rgba(13,148,136,.15)',
-        'gold-glow': '0 0 20px rgba(245,158,11,.15)',
       },
       animation: {
         fadeUp: 'fadeUp 0.3s ease-out',
@@ -96,9 +80,6 @@ export default {
         'pulse-slow': 'pulse 3s infinite',
         float: 'float 6s ease-in-out infinite',
         'pulse-add': 'pulseAdd 2s ease-in-out 0.5s 1',
-        scaleIn: 'scaleIn 0.2s ease-out',
-        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
-        countUp: 'countUp 0.4s ease-out',
       },
       keyframes: {
         fadeUp: {
@@ -125,18 +106,6 @@ export default {
           '0%': { boxShadow: '0 0 0 0 rgba(13,148,136,.5)' },
           '50%': { boxShadow: '0 0 0 8px rgba(13,148,136,0)' },
           '100%': { boxShadow: '0 0 0 0 rgba(13,148,136,0)' },
-        },
-        scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-        glowPulse: {
-          '0%, 100%': { opacity: '0.6' },
-          '50%': { opacity: '1' },
-        },
-        countUp: {
-          '0%': { opacity: '0', transform: 'translateY(4px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

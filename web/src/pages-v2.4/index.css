@@ -77,10 +77,10 @@ textarea:-webkit-autofill {
 }
 
 @layer components {
-  /* ─── Cards — 3-Tier Hierarchy ───────────────────────── */
+  /* ─── Cards ─────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-[16px] p-5 transition-all duration-200;
-    border: 1px solid rgba(214, 211, 209, 0.5);
+    @apply bg-white rounded-[16px] p-5 transition-shadow duration-200;
+    border: 1px solid rgba(214, 211, 209, 0.6);
     box-shadow: 0 1px 3px rgba(28,25,23,.04), 0 6px 24px rgba(28,25,23,.06);
   }
   .card:hover {
@@ -95,64 +95,15 @@ textarea:-webkit-autofill {
     box-shadow: 0 2px 8px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.25);
   }
 
-  .card-elevated {
-    @apply bg-white rounded-[18px] p-5 transition-all duration-200;
-    border: 1px solid rgba(214, 211, 209, 0.4);
-    border-top: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(28,25,23,.03), 0 16px 40px rgba(28,25,23,.08);
-  }
-  .card-elevated:hover {
-    box-shadow: 0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.12);
-    transform: translateY(-1px);
-  }
-  .dark .card-elevated {
-    background: #1c1917;
-    border-color: rgba(41, 37, 36, 0.8);
-    border-top-color: rgba(68, 64, 60, 0.5);
-    box-shadow: 0 4px 12px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.2);
-  }
-  .dark .card-elevated:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 24px 48px rgba(0,0,0,.25);
-  }
-
-  .card-hero {
-    @apply bg-white rounded-[20px] p-6 transition-all duration-300 relative overflow-hidden;
-    border: 1px solid rgba(214, 211, 209, 0.3);
-    box-shadow: 0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.10);
-  }
-  .card-hero::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
-    opacity: 0.8;
-  }
-  .card-hero:hover {
-    box-shadow: 0 12px 32px rgba(28,25,23,.07), 0 32px 56px rgba(28,25,23,.14);
-    transform: translateY(-2px);
-  }
-  .dark .card-hero {
-    background: linear-gradient(135deg, #1c1917, #211f1d);
-    border-color: rgba(41, 37, 36, 0.6);
-    box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 24px 48px rgba(0,0,0,.25);
-  }
-  .dark .card-hero::before {
-    background: linear-gradient(90deg, #d97706, #fbbf24, #d97706);
-    opacity: 0.6;
-  }
-
   /* ─── Primary Button (accent gradient) ──────────────── */
   .btn-primary {
-    @apply text-white px-5 py-2.5 rounded-2xl font-medium text-sm transition-all duration-200;
+    @apply text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200;
     background: linear-gradient(135deg, #14b8a6, #0d9488);
-    box-shadow: 0 2px 8px rgba(13,148,136,.25), inset 0 1px 0 rgba(255,255,255,.15);
+    box-shadow: 0 2px 8px rgba(13,148,136,.25);
   }
   .btn-primary:hover {
     background: linear-gradient(135deg, #2dd4bf, #14b8a6);
-    box-shadow: 0 4px 16px rgba(13,148,136,.35), inset 0 1px 0 rgba(255,255,255,.15);
+    box-shadow: 0 4px 16px rgba(13,148,136,.35);
     transform: translateY(-1px);
   }
   .btn-primary:active {
@@ -161,36 +112,16 @@ textarea:-webkit-autofill {
   }
   .dark .btn-primary {
     background: linear-gradient(135deg, #2dd4bf, #14b8a6);
-    box-shadow: 0 2px 8px rgba(13,148,136,.2), inset 0 1px 0 rgba(255,255,255,.1);
+    box-shadow: 0 2px 8px rgba(13,148,136,.2);
   }
   .dark .btn-primary:hover {
     background: linear-gradient(135deg, #5eead4, #2dd4bf);
-    box-shadow: 0 4px 16px rgba(13,148,136,.3), inset 0 1px 0 rgba(255,255,255,.1);
-  }
-
-  /* ─── Gold Button (luxury accent) ─────────────────── */
-  .btn-gold {
-    @apply px-5 py-2.5 rounded-2xl font-medium text-sm transition-all duration-200;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    box-shadow: 0 2px 8px rgba(245,158,11,.25), inset 0 1px 0 rgba(255,255,255,.2);
-  }
-  .btn-gold:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    box-shadow: 0 4px 16px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.2);
-    transform: translateY(-1px);
-  }
-  .btn-gold:active {
-    transform: translateY(0) scale(0.98);
-  }
-  .dark .btn-gold {
-    background: linear-gradient(135deg, #fbbf24, #d97706);
-    box-shadow: 0 2px 8px rgba(245,158,11,.2);
+    box-shadow: 0 4px 16px rgba(13,148,136,.3);
   }
 
   /* ─── Secondary Button ──────────────────────────────── */
   .btn-secondary {
-    @apply px-5 py-2.5 rounded-2xl font-medium text-sm transition-all duration-200;
+    @apply px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200;
     background: #f5f5f4;
     color: #1c1917;
     border: 1px solid #e7e5e4;
@@ -214,7 +145,7 @@ textarea:-webkit-autofill {
 
   /* ─── Ghost Button ──────────────────────────────────── */
   .btn-ghost {
-    @apply px-3 py-2 rounded-2xl text-sm transition-all duration-200;
+    @apply px-3 py-2 rounded-xl text-sm transition-all duration-200;
     color: #57534e;
   }
   .btn-ghost:hover {
@@ -234,7 +165,7 @@ textarea:-webkit-autofill {
 
   /* ─── Danger Button ─────────────────────────────────── */
   .btn-danger {
-    @apply px-5 py-2.5 rounded-2xl font-medium text-sm transition-all duration-200;
+    @apply px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200;
     background: rgba(225, 29, 72, 0.08);
     color: #e11d48;
     border: 1px solid rgba(225, 29, 72, 0.15);
@@ -314,46 +245,21 @@ textarea:-webkit-autofill {
 
   /* ─── Page / Section Titles ─────────────────────────── */
   .page-title {
-    @apply text-3xl font-bold mb-6 relative inline-block;
+    @apply text-2xl font-bold mb-6;
     font-family: 'Fraunces', serif;
     color: #1c1917;
-  }
-  .page-title::after {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    width: 32px;
-    height: 3px;
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-    border-radius: 2px;
   }
   .dark .page-title {
     color: #fafaf9;
   }
-  .dark .page-title::after {
-    background: linear-gradient(90deg, #d97706, #fbbf24);
-  }
 
   .section-title {
-    @apply text-[11px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5;
+    @apply text-[11px] font-bold uppercase tracking-wider mb-3;
     color: #78716c;
     letter-spacing: 0.1em;
   }
-  .section-title::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #d97706;
-    flex-shrink: 0;
-  }
   .dark .section-title {
     color: #a8a29e;
-  }
-  .dark .section-title::before {
-    background: #fbbf24;
   }
 
   /* ─── Shimmer loading ───────────────────────────────── */
@@ -373,44 +279,6 @@ textarea:-webkit-autofill {
   .money {
     font-family: 'Fraunces', serif;
     font-variant-numeric: tabular-nums;
-  }
-
-  .stat-value {
-    font-family: 'Fraunces', serif;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-  .dark .glass {
-    background: rgba(28, 25, 23, 0.7);
-    border-color: rgba(68, 64, 60, 0.3);
-  }
-
-  .gradient-text {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .dark .gradient-text {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-
-  .divider-gold {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #fde68a, transparent);
-  }
-  .dark .divider-gold {
-    background: linear-gradient(90deg, transparent, rgba(251,191,36,0.3), transparent);
   }
 
   /* Hide scrollbar but keep scrollable */
