@@ -250,10 +250,10 @@ export default function Dashboard() {
     const runNotificationChecks = async () => {
       try {
         // Check budget alerts and send OS notifications
-        await checkAndNotifyBudgetAlerts(transactions);
+        await checkAndNotifyBudgetAlerts(transactions, effectiveUserId);
         // Store budget alerts in notification center
         const { checkBudgetAlerts } = await import('../lib/smartFeatures');
-        const alerts = await checkBudgetAlerts(transactions);
+        const alerts = await checkBudgetAlerts(transactions, effectiveUserId);
         for (const alert of alerts) {
           await addNotification({
             type: alert.type === 'over' ? 'budget_exceeded' : alert.type === 'pace' ? 'pace_alert' : 'budget_warning',

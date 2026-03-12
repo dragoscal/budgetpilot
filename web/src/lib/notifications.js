@@ -38,7 +38,7 @@ export function sendNotification(title, body, options = {}) {
 }
 
 // Check budget alerts and send OS notifications (deduped per day)
-export async function checkAndNotifyBudgetAlerts(transactions) {
+export async function checkAndNotifyBudgetAlerts(transactions, userId) {
   const { getSetting, setSetting } = await import('./storage.js');
   const enabled = await getSetting('notificationsEnabled');
   if (!enabled || Notification.permission !== 'granted') return;
@@ -49,7 +49,7 @@ export async function checkAndNotifyBudgetAlerts(transactions) {
 
   // Import and run budget alert check
   const { checkBudgetAlerts } = await import('./smartFeatures.js');
-  const alerts = await checkBudgetAlerts(transactions);
+  const alerts = await checkBudgetAlerts(transactions, userId);
 
   if (alerts.length > 0) {
     const alert = alerts[0]; // Send the most critical one

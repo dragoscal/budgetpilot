@@ -347,9 +347,9 @@ export function registerCrudRoutes(router) {
     let query = `SELECT * FROM ${table} WHERE ${userCol} = ?`;
     const params = [userId];
 
-    // Soft delete filter for transactions
+    // Soft delete filter for transactions (match sync pull behavior: exclude both NULL and empty string)
     if (table === 'transactions') {
-      query += ' AND deletedAt IS NULL';
+      query += ' AND (deletedAt IS NULL OR deletedAt = "")';
     }
 
     // Date range filter
@@ -376,7 +376,22 @@ export function registerCrudRoutes(router) {
     const result = await ctx.env.DB.prepare(query).bind(...params).all();
     const rows = (result.results || []).map((r) => deserializeRow(table, r));
 
-    return json({ data: rows, meta: { total: rows.length, limit, offset } });
+    // Get total count for pagination (without LIMIT/OFFSET)
+    let countQuery = `SELECT COUNT(*) as cnt FROM ${table} WHERE ${userCol} = ?`;
+    const countParams = [userId];
+    if (table === 'transactions') countQuery += ' AND (deletedAt IS NULL OR deletedAt = "")';
+    if (ctx.query.startDate && ctx.query.endDate) {
+      countQuery += ' AND date >= ? AND date <= ?';
+      countParams.push(ctx.query.startDate, ctx.query.endDate);
+    }
+    if (ctx.query.category) {
+      countQuery += ' AND category = ?';
+      countParams.push(ctx.query.category);
+    }
+    const countResult = await ctx.env.DB.prepare(countQuery).bind(...countParams).first();
+    const total = countResult?.cnt || rows.length;
+
+    return json({ data: rows, meta: { total, limit, offset } });
   });
 
   // GET /api/:table/:id — get single record

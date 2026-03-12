@@ -281,6 +281,12 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
       break;
 
     case '/today': {
+      // Fetch user's default currency
+      const currRow = await ctx.env.DB.prepare(
+        `SELECT value FROM settings WHERE userId = ? AND key = 'defaultCurrency'`
+      ).bind(userId).first();
+      const cur = currRow?.value ? JSON.parse(currRow.value) : 'RON';
+
       const today = new Date().toISOString().split('T')[0];
       const result = await ctx.env.DB.prepare(
         `SELECT * FROM transactions WHERE userId = ? AND date = ? AND deletedAt IS NULL ORDER BY createdAt DESC`
@@ -295,18 +301,27 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
         for (const tx of txns.slice(0, 10)) {
           const emoji = CAT_EMOJI[tx.category] || '📦';
           const sign = tx.type === 'income' ? '+' : '-';
-          msg += `${emoji} ${sign}${formatAmount(tx.amount, tx.currency)} — ${tx.merchant}\n`;
+          msg += `${emoji} ${sign}${formatAmount(tx.amount, tx.currency || cur)} — ${tx.merchant}\n`;
         }
-        msg += `\n<b>Total expenses: ${formatAmount(total, 'RON')}</b>`;
+        msg += `\n<b>Total expenses: ${formatAmount(total, cur)}</b>`;
         await sendTelegramMessage(botToken, chatId, msg);
       }
       break;
     }
 
     case '/month': {
+      // Fetch user's default currency
+      const currRow2 = await ctx.env.DB.prepare(
+        `SELECT value FROM settings WHERE userId = ? AND key = 'defaultCurrency'`
+      ).bind(userId).first();
+      const cur2 = currRow2?.value ? JSON.parse(currRow2.value) : 'RON';
+
       const now = new Date();
-      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`;
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfMonth = `${now.getFullYear()}-${mm}-01`;
+      // Use actual last day of month instead of hardcoded 31
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const endOfMonth = `${now.getFullYear()}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
       const result = await ctx.env.DB.prepare(
         `SELECT type, SUM(amount) as total, COUNT(*) as count FROM transactions WHERE userId = ? AND date >= ? AND date <= ? AND deletedAt IS NULL GROUP BY type`
@@ -321,18 +336,26 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
       const net = income - expenses;
       await sendTelegramMessage(botToken, chatId,
         `📅 <b>Month Summary</b>\n\n` +
-        `💰 Income: ${formatAmount(income, 'RON')}\n` +
-        `💸 Expenses: ${formatAmount(expenses, 'RON')}\n` +
-        `📊 Net: ${net >= 0 ? '+' : ''}${formatAmount(net, 'RON')}\n` +
+        `💰 Income: ${formatAmount(income, cur2)}\n` +
+        `💸 Expenses: ${formatAmount(expenses, cur2)}\n` +
+        `📊 Net: ${net >= 0 ? '+' : ''}${formatAmount(net, cur2)}\n` +
         `📝 ${count} transactions`
       );
       break;
     }
 
     case '/budget': {
+      // Fetch user's default currency
+      const currRow3 = await ctx.env.DB.prepare(
+        `SELECT value FROM settings WHERE userId = ? AND key = 'defaultCurrency'`
+      ).bind(userId).first();
+      const cur3 = currRow3?.value ? JSON.parse(currRow3.value) : 'RON';
+
       const now = new Date();
-      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`;
+      const mm2 = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfMonth = `${now.getFullYear()}-${mm2}-01`;
+      const lastDay2 = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const endOfMonth = `${now.getFullYear()}-${mm2}-${String(lastDay2).padStart(2, '0')}`;
 
       const [budgets, txResult] = await Promise.all([
         ctx.env.DB.prepare(`SELECT * FROM budgets WHERE userId = ?`).bind(userId).all(),
@@ -352,10 +375,10 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
       let msg = `📋 <b>Budget Status</b>\n\n`;
       for (const b of budgets.results) {
         const spent = spending[b.category] || 0;
-        const pct = Math.round((spent / b.amount) * 100);
+        const pct = b.amount > 0 ? Math.round((spent / b.amount) * 100) : 0;
         const bar = progressBar(pct);
         const emoji = CAT_EMOJI[b.category] || '📦';
-        msg += `${emoji} ${b.category}: ${bar} ${pct}%\n   ${formatAmount(spent, 'RON')} / ${formatAmount(b.amount, 'RON')}\n`;
+        msg += `${emoji} ${b.category}: ${bar} ${pct}%\n   ${formatAmount(spent, cur3)} / ${formatAmount(b.amount, cur3)}\n`;
       }
       await sendTelegramMessage(botToken, chatId, msg);
       break;
@@ -378,8 +401,10 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
       break;
 
     default:
-      // Treat as expense text
-      return; // let it fall through to expense parsing
+      await sendTelegramMessage(botToken, chatId,
+        "❓ Unknown command. Try /help for available commands."
+      );
+      break;
   }
 
   return json({ ok: true });

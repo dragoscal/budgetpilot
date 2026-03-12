@@ -228,7 +228,7 @@ router.put('/api/auth/password', async (ctx) => {
 // ─── Delete Own Account ──────────────────────────────────
 router.delete('/api/auth/account', async (ctx) => {
   const userId = ctx.user.id;
-  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback', 'challenges', 'receipts'];
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback', 'challenges', 'receipts', 'settlement_history'];
   for (const table of tables) {
     await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
   }
@@ -245,7 +245,7 @@ router.delete('/api/auth/account', async (ctx) => {
 // ─── Clear All User Data (keep account) ───────────────────
 router.delete('/api/data/clear', async (ctx) => {
   const userId = ctx.user.id;
-  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'settings', 'sync_log', 'loans', 'loan_payments', 'challenges', 'receipts'];
+  const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'settings', 'sync_log', 'loans', 'loan_payments', 'challenges', 'receipts', 'settlement_history'];
   for (const table of tables) {
     await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
   }

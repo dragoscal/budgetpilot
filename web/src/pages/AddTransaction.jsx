@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
@@ -25,6 +26,7 @@ export default function AddTransaction() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
   const { t } = useTranslation();
   const sharedText = searchParams.get('text') || searchParams.get('title') || '';
   const tabParam = searchParams.get('tab');
@@ -152,7 +154,7 @@ export default function AddTransaction() {
     // Check duplicates for each transaction
     const enriched = [];
     for (const tx of txns) {
-      const dupes = await checkDuplicate(tx);
+      const dupes = await checkDuplicate(tx, effectiveUserId);
       enriched.push({
         ...tx,
         _duplicate: dupes.length > 0 && dupes[0].confidence >= 0.6 ? dupes[0] : null,
@@ -239,7 +241,7 @@ export default function AddTransaction() {
     try {
       const { start, end } = getMonthRange(new Date());
       const monthTx = await getTransactionsByDateRange(formatDateISO(start), formatDateISO(end));
-      const alerts = await checkBudgetAlerts(monthTx);
+      const alerts = await checkBudgetAlerts(monthTx, effectiveUserId);
       for (const alert of alerts) {
         if (alert.type === 'over') toast.error(alert.message);
         else toast.warning(alert.message);

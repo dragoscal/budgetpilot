@@ -134,13 +134,14 @@ function createCrud(storeName) {
         if (!navigator.onLine) throw new Error('You are offline. Cannot save right now.');
         const serverRecord = { ...record };
         if (serverRecord.userId === 'local') delete serverRecord.userId;
-        await apiFetch(apiUrl, `/api/${apiTable}`, {
+        const result = await apiFetch(apiUrl, `/api/${apiTable}`, {
           method: 'POST',
           body: JSON.stringify(serverRecord),
         });
-        // Server succeeded — update local cache
-        await storage.add(storeName, record);
-        return record;
+        // Cache server-returned record (may have server-modified fields like updatedAt)
+        const cacheRecord = (result && typeof result === 'object' && result.id) ? result : record;
+        await storage.add(storeName, cacheRecord);
+        return cacheRecord;
       }
       // Local-only mode
       return storage.add(storeName, record);
