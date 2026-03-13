@@ -521,8 +521,8 @@ export default function Dashboard() {
   const healthLabel = useMemo(() => {
     if (healthScore >= 80) return { key: 'dashboard.healthExcellent', color: 'text-success', bg: 'bg-success/10', ring: 'ring-success/30', strokeColor: '#059669' };
     if (healthScore >= 60) return { key: 'dashboard.healthGood', color: 'text-info', bg: 'bg-info/10', ring: 'ring-info/30', strokeColor: '#0ea5e9' };
-    if (healthScore >= 40) return { key: 'dashboard.healthFair', color: 'text-warning', bg: 'bg-warning/10', ring: 'ring-warning/30', strokeColor: '#d97706' };
-    return { key: 'dashboard.healthPoor', color: 'text-danger', bg: 'bg-danger/10', ring: 'ring-danger/30', strokeColor: '#e11d48' };
+    if (healthScore >= 40) return { key: 'dashboard.healthFair', color: 'text-warning', bg: 'bg-warning/10', ring: 'ring-warning/30', strokeColor: '#D97706' };
+    return { key: 'dashboard.healthPoor', color: 'text-danger', bg: 'bg-danger/10', ring: 'ring-danger/30', strokeColor: '#DC2626' };
   }, [healthScore]);
 
   // Month comparison text (uses scoped prev transactions to match stats)
@@ -1015,12 +1015,12 @@ export default function Dashboard() {
         switch (w.id) {
           case 'quickStats': {
             const STAT_CARDS = {
-              totalSpent: { label: t('dashboard.totalSpent'), value: formatCurrency(stats.totalSpent, currency), trend: stats.spentTrend, icon: TrendingDown, accent: '#e11d48' },
+              totalSpent: { label: t('dashboard.totalSpent'), value: formatCurrency(stats.totalSpent, currency), trend: stats.spentTrend, icon: TrendingDown, accent: '#DC2626' },
               totalIncome: { label: t('dashboard.totalIncome'), value: formatCurrency(stats.totalIncome, currency), icon: TrendingUp, accent: '#059669' },
-              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#14b8a6' },
-              budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#d97706' },
-              dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0ea5e9' },
-              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#14b8a6' },
+              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#4F46E5' },
+              budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#D97706' },
+              dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0EA5E9' },
+              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#4F46E5' },
             };
             return (
               <div key="quickStats">
@@ -1268,7 +1268,7 @@ export default function Dashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={categoryData} dataKey="value" innerRadius="55%" outerRadius="90%" paddingAngle={2} stroke="none">
-                            {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#e7e5e4' : d.color} />)}
+                            {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#E2E8F0' : d.color} />)}
                           </Pie>
                         </PieChart>
                       </ResponsiveContainer>
@@ -1277,7 +1277,7 @@ export default function Dashboard() {
                       {categoryData.slice(0, 5).map((d) => (
                         <div key={d.name} className="flex items-center justify-between text-xs">
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? '#e7e5e4' : d.color }} />
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? '#E2E8F0' : d.color }} />
                             {d.name}
                           </span>
                           <span className="font-medium money">{hidden ? '••••••' : formatCurrency(d.value, currency)}</span>

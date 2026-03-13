@@ -258,10 +258,10 @@ function OverviewTab({ stats }) {
           {stats.apiCallsByDay.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={stats.apiCallsByDay}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d?.slice(5)} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)' }} />
                 <Area type="monotone" dataKey="count" stroke="#059669" fill="#059669" fillOpacity={0.15} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -274,10 +274,10 @@ function OverviewTab({ stats }) {
           {stats.featureUsage.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={stats.featureUsage.slice(0, 8)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis dataKey="action" type="category" tick={{ fontSize: 10 }} width={100} tickFormatter={a => ACTION_LABEL_KEYS[a] ? t(ACTION_LABEL_KEYS[a]) : a} />
-                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)' }} />
                 <Bar dataKey="count" fill="#059669" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -451,11 +451,11 @@ function AiCostsTab({ data }) {
           <h3 className="section-title mb-4">{t('admin.costByUser')}</h3>
           <ResponsiveContainer width="100%" height={Math.max(120, users.length * 45)}>
             <BarChart data={users} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
               <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `$${v.toFixed(3)}`} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={100} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)' }}
                 formatter={(v) => [`$${v.toFixed(4)}`, t('admin.costUsd')]}
               />
               <Bar dataKey="totalCostUSD" fill="#059669" radius={[0, 4, 4, 0]} />
@@ -615,10 +615,10 @@ function PerformanceTab({ performance }) {
         {performance.byPath.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(200, performance.byPath.length * 30)}>
             <BarChart data={performance.byPath} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
               <XAxis type="number" tick={{ fontSize: 10 }} unit="ms" />
               <YAxis dataKey="path" type="category" tick={{ fontSize: 10 }} width={180} />
-              <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)' }}
                 formatter={(v, name) => [`${v}ms`, name === 'avgTime' ? t('admin.avg') : name === 'maxTime' ? t('admin.max') : name]} />
               <Bar dataKey="avgTime" fill="#059669" radius={[0, 4, 4, 0]} name={t('admin.avg')} />
               <Bar dataKey="maxTime" fill="#059669" fillOpacity={0.3} radius={[0, 4, 4, 0]} name={t('admin.max')} />
@@ -632,10 +632,10 @@ function PerformanceTab({ performance }) {
         {performance.hourly.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={performance.hourly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e7e5e4)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
               <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={h => `${h}:00`} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)' }}
                 formatter={(v, name) => [name === 'avgTime' ? `${v}ms` : v, name === 'avgTime' ? t('admin.avgTime') : t('admin.requests')]} />
               <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name={t('admin.requests')} />
             </BarChart>

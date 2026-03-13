@@ -76,6 +76,10 @@ textarea:-webkit-autofill {
   color: #F8FAFC;
 }
 
+/* ─── Calendar grid lines ──────────────────────────────────── */
+:root { --grid-line: #f1f5f9; }
+.dark { --grid-line: #1e293b; }
+
 @layer components {
   /* ─── Cards — Single tier (Nordic: borders > shadows) ── */
   .card {

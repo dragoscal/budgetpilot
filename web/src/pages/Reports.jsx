@@ -13,7 +13,7 @@ import { getCachedRates } from '../lib/exchangeRates';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 
-const PIE_COLORS = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c', '#14b8a6'];
+const PIE_COLORS = ['#4F46E5', '#059669', '#D97706', '#2563EB', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#EA580C', '#DC2626'];
 
 export default function Reports() {
   const { effectiveUserId, user } = useAuth();
@@ -319,11 +319,11 @@ export default function Reports() {
           <h3 className="section-title">{t('reports.monthlyComparison')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyTrends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-              <Bar dataKey="expenses" fill="#e11d48" name={t('reports.expenses')} radius={[4, 4, 0, 0]} />
+              <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
+              <Bar dataKey="expenses" fill="#DC2626" name={t('reports.expenses')} radius={[4, 4, 0, 0]} />
               <Bar dataKey="income" fill="#059669" name={t('reports.income')} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

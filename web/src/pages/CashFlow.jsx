@@ -163,12 +163,12 @@ export default function CashFlow() {
         <h3 className="section-title">{t('cashflow.incomeVsExpenses6m')}</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
             <Bar dataKey="income" fill="#059669" radius={[4, 4, 0, 0]} name={t('cashflow.income')} />
-            <Bar dataKey="expenses" fill="#e11d48" radius={[4, 4, 0, 0]} name={t('cashflow.expenses')} />
+            <Bar dataKey="expenses" fill="#DC2626" radius={[4, 4, 0, 0]} name={t('cashflow.expenses')} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -180,8 +180,8 @@ export default function CashFlow() {
           <LineChart data={chartData}>
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} />
             <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
-            <Line type="monotone" dataKey="net" stroke="#14b8a6" strokeWidth={2} dot={{ r: 4 }} name={t('cashflow.net')} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
+            <Line type="monotone" dataKey="net" stroke="#4F46E5" strokeWidth={2} dot={{ r: 4 }} name={t('cashflow.net')} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -302,19 +302,19 @@ export default function CashFlow() {
             <AreaChart data={forecastChartData}>
               <defs>
                 <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e7e5e4)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} />
               <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: 12 }}
+                contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }}
                 formatter={(v) => formatCurrency(v, currency)}
               />
-              <ReferenceLine y={0} stroke="#e11d48" strokeDasharray="4 4" />
-              <Area type="monotone" dataKey="balance" stroke="#14b8a6" fill="url(#balanceGrad)" strokeWidth={2} name={t('cashflow.balance')} />
+              <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="4 4" />
+              <Area type="monotone" dataKey="balance" stroke="#4F46E5" fill="url(#balanceGrad)" strokeWidth={2} name={t('cashflow.balance')} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
