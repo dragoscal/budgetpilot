@@ -441,25 +441,37 @@ function deduplicateSuggestions(suggestions) {
 
 // ─── VARIABLE RECURRING DETECTION ────────────────────────
 
-function detectVariableRecurring(clustered, existingNormalized, standardSuggestions) {
+function detectVariableRecurring(clustered, existingRecurring, standardSuggestions) {
   const variableSuggestions = [];
 
-  // Merchants already in standard suggestions — skip them
+  // Merchants already in standard suggestions — skip at cluster level
+  // (prevents duplicate fixed + variable suggestion for same merchant)
   const standardMerchants = new Set(
     standardSuggestions.map(s => normalizeMerchantName(s.merchant))
   );
 
+  // Per-suggestion tracking check (same logic as in detectRecurringPatterns)
+  function isVariableTracked(suggestion) {
+    for (const r of existingRecurring) {
+      if (r.status === 'cancelled' || r.deletedAt) continue;
+      const rNorm = normalizeMerchantName(r.merchant || r.name);
+      if (merchantSimilarity(normalizeMerchantName(suggestion.merchant), rNorm) < 0.6) continue;
+      // For variable: just check merchant + billing day (amount varies by design)
+      const rDay = Number(r.billingDay) || 1;
+      const sDay = Number(suggestion.billingDay) || 1;
+      const dayDiff = Math.abs(rDay - sDay);
+      if (dayDiff <= 3 || dayDiff >= 28) return true;
+    }
+    return false;
+  }
+
   for (const [normalizedKey, txns] of Object.entries(clustered)) {
-    if (existingNormalized.has(normalizedKey)) continue;
-    let alreadyHandled = false;
-    for (const em of existingNormalized) {
-      if (merchantSimilarity(normalizedKey, em) >= 0.6) { alreadyHandled = true; break; }
-    }
-    if (alreadyHandled) continue;
+    // Only skip at cluster level for standard suggestions (not existing recurring)
+    let hasStandard = false;
     for (const sm of standardMerchants) {
-      if (merchantSimilarity(normalizedKey, sm) >= 0.6) { alreadyHandled = true; break; }
+      if (merchantSimilarity(normalizedKey, sm) >= 0.6) { hasStandard = true; break; }
     }
-    if (alreadyHandled) continue;
+    if (hasStandard) continue;
     if (txns.length < 3) continue;
 
     // Split by currency
@@ -532,7 +544,7 @@ function detectVariableRecurring(clustered, existingNormalized, standardSuggesti
       const monthBonus = Math.min(maxConsecutive * 0.1, 0.3);
       const recencyBonus = daysSinceLast < 45 ? 0.1 : 0;
 
-      variableSuggestions.push({
+      const varSuggestion = {
         merchant: displayMerchant,
         amount: Math.round(avgAmt * 100) / 100,
         amountMin: Math.round(minAmt * 100) / 100,
@@ -547,7 +559,8 @@ function detectVariableRecurring(clustered, existingNormalized, standardSuggesti
         confidence: Math.min(0.85, base + monthBonus + recencyBonus),
         lastDate,
         transactionCount: currTxns.length,
-      });
+      };
+      if (!isVariableTracked(varSuggestion)) variableSuggestions.push(varSuggestion);
     }
   }
 
@@ -582,14 +595,29 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
     existingRecurring.map(r => normalizeMerchantName(r.merchant || r.name))
   );
 
-  for (const [normalizedKey, txns] of Object.entries(clustered)) {
-    // Skip if already tracked as recurring (exact or fuzzy match)
-    if (existingNormalized.has(normalizedKey)) continue;
-    let alreadyTracked = false;
-    for (const em of existingNormalized) {
-      if (merchantSimilarity(normalizedKey, em) >= 0.6) { alreadyTracked = true; break; }
+  // Per-suggestion tracking check: ensures only the EXACT subscription
+  // (same merchant + similar amount + similar billing day) is excluded,
+  // NOT the entire merchant cluster.
+  function isSuggestionTracked(suggestion) {
+    for (const r of existingRecurring) {
+      if (r.status === 'cancelled' || r.deletedAt) continue;
+      const rNorm = normalizeMerchantName(r.merchant || r.name);
+      if (merchantSimilarity(normalizeMerchantName(suggestion.merchant), rNorm) < 0.6) continue;
+      // Merchant matches — also check amount + billing day
+      const rAmt = Number(r.amount) || 0;
+      const sAmt = Number(suggestion.amount) || 0;
+      const avgAmt = (rAmt + sAmt) / 2;
+      const amtClose = avgAmt <= 0 || Math.abs(rAmt - sAmt) / avgAmt <= 0.30;
+      const rDay = Number(r.billingDay) || 1;
+      const sDay = Number(suggestion.billingDay) || 1;
+      const dayDiff = Math.abs(rDay - sDay);
+      const dayClose = dayDiff <= 3 || dayDiff >= 28; // handles month-wrap (e.g., day 1 vs 30)
+      if (amtClose && dayClose) return true;
     }
-    if (alreadyTracked) continue;
+    return false;
+  }
+
+  for (const [normalizedKey, txns] of Object.entries(clustered)) {
     if (txns.length < 2) continue;
 
     // Phase 2.5: Split by currency
@@ -614,32 +642,32 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
         for (const slotTxns of billingSlots) {
           if (slotTxns.length < 2) continue;
           const s = buildSuggestion(slotTxns, normalizedKey, 'monthly', 90);
-          if (s) suggestions.push(s);
+          if (s && !isSuggestionTracked(s)) suggestions.push(s);
         }
 
         // === Quarterly detection ===
         if (subTxns.length >= 2) {
           const s = buildSuggestion(subTxns, normalizedKey, 'quarterly', 120);
-          if (s) suggestions.push(s);
+          if (s && !isSuggestionTracked(s)) suggestions.push(s);
         }
 
         // === Annual detection ===
         if (subTxns.length >= 2) {
           const s = buildSuggestion(subTxns, normalizedKey, 'annual', 400);
-          if (s) suggestions.push(s);
+          if (s && !isSuggestionTracked(s)) suggestions.push(s);
         }
 
         // === Weekly detection ===
         if (subTxns.length >= 4) {
           const s = detectWeeklyPattern(subTxns, normalizedKey);
-          if (s) suggestions.push(s);
+          if (s && !isSuggestionTracked(s)) suggestions.push(s);
         }
       }
     }
   }
 
   // Variable recurring detection (separate pass — relaxed amount tolerance)
-  const variableSuggestions = detectVariableRecurring(clustered, existingNormalized, suggestions);
+  const variableSuggestions = detectVariableRecurring(clustered, existingRecurring, suggestions);
   suggestions.push(...variableSuggestions);
 
   // De-duplicate and sort by confidence

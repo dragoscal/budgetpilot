@@ -2385,6 +2385,7 @@ const ro = {
   'recurring.weeksInRow': '{count} săptămâni consecutive',
   'recurring.quartersInRow': '{count} trimestre consecutive',
   'recurring.yearsInRow': '{count} ani consecutivi',
+  'changelog.v441suggestionFix': 'Rezolvat: acceptarea unei sugestii recurente nu mai ascunde celelalte sugestii de la același comerciant',
   'changelog.v440multiFreq': 'Detectarea recurentelor găsește acum tipare săptămânale, trimestriale și anuale',
   'changelog.v440robustness': 'Normalizare comercianți îmbunătățită, suport multi-valută și detecție duplicate',
   'changelog.v440persistDismiss': 'Sugestiile respinse sunt memorate între sesiuni',

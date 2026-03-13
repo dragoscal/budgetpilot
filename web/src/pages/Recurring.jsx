@@ -94,7 +94,7 @@ export default function Recurring() {
       if (loadVersion.current !== version) return;
       setItems(data);
       setAllTransactions(txData);
-      const patterns = await detectRecurringPatterns(effectiveUserId);
+      const patterns = await detectRecurringPatterns(effectiveUserId, txData, data);
       if (loadVersion.current !== version) return;
       setSuggestions(patterns);
       getCachedRates().then(setRates).catch(() => {});
@@ -128,8 +128,12 @@ export default function Recurring() {
   const monthlyTotal = billsMonthly + subsMonthly;
   const annualTotal = monthlyTotal * 12;
 
+  // Composite key for dismissed suggestions: merchant + amount + billingDay
+  // This ensures dismissing one "Orange 15 RON" doesn't dismiss "Orange 25 RON"
+  const getSuggestionKey = (s) => `${(s.merchant || '').toLowerCase()}|${s.amount}|${s.billingDay}`;
+
   const activeSuggestions = suggestions.filter(
-    (s) => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6
+    (s) => s.merchant && !dismissedSuggestions.has(getSuggestionKey(s)) && s.confidence >= 0.6
   );
 
   const handleSave = async () => {
@@ -249,15 +253,15 @@ export default function Recurring() {
         createdAt: new Date().toISOString(),
       });
       toast.success(t('recurring.addedAsRecurring', { name: suggestion.merchant }));
-      const next = new Set([...dismissedSuggestions, suggestion.merchant.toLowerCase()]);
-      setDismissedSuggestions(next);
-      setSetting('dismissedRecurringSuggestions', [...next]);
+      // Don't add to dismissed set — the detection engine's isSuggestionTracked()
+      // will naturally exclude this now that it exists as a recurring item.
+      // This way, if the user deletes the recurring item later, the suggestion reappears.
       loadItems();
     } catch (err) { toast.error(err.message); }
   };
 
   const dismissSuggestion = (suggestion) => {
-    const next = new Set([...dismissedSuggestions, suggestion.merchant.toLowerCase()]);
+    const next = new Set([...dismissedSuggestions, getSuggestionKey(suggestion)]);
     setDismissedSuggestions(next);
     setSetting('dismissedRecurringSuggestions', [...next]);
   };
@@ -275,7 +279,7 @@ export default function Recurring() {
       const patterns = await detectRecurringPatterns(effectiveUserId, freshTx, freshRecurring);
       setSuggestions(patterns);
       setShowScanResults(true);
-      const filtered = patterns.filter(s => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6);
+      const filtered = patterns.filter(s => s.merchant && !dismissedSuggestions.has(getSuggestionKey(s)) && s.confidence >= 0.6);
       if (filtered.length === 0) {
         toast.info(t('recurring.scanNoResults'));
       }

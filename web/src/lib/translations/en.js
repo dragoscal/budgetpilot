@@ -2385,6 +2385,7 @@ const en = {
   'recurring.weeksInRow': '{count} weeks in a row',
   'recurring.quartersInRow': '{count} quarters in a row',
   'recurring.yearsInRow': '{count} years in a row',
+  'changelog.v441suggestionFix': 'Fixed: accepting one recurring suggestion no longer hides other suggestions from the same merchant',
   'changelog.v440multiFreq': 'Recurring detection now finds weekly, quarterly, and annual patterns',
   'changelog.v440robustness': 'Better merchant normalization, multi-currency support, and duplicate detection',
   'changelog.v440persistDismiss': 'Dismissed recurring suggestions are remembered across sessions',
