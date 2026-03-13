@@ -14,7 +14,7 @@ const ICONS = {
 const COLORS = {
   success: 'bg-white/90 dark:bg-dark-card/90 text-success border-success/20 border-l-success',
   error: 'bg-white/90 dark:bg-dark-card/90 text-danger border-danger/20 border-l-danger',
-  warning: 'bg-white/90 dark:bg-dark-card/90 text-warning border-warning/20 border-l-gold-400',
+  warning: 'bg-white/90 dark:bg-dark-card/90 text-warning border-warning/20 border-l-accent-400',
   info: 'bg-white/90 dark:bg-dark-card/90 text-info border-info/20 border-l-info',
   undo: 'bg-cream-900/90 text-white border-cream-700/30 dark:bg-cream-100/90 dark:text-cream-900 dark:border-cream-300/30',
   action: 'bg-white/90 dark:bg-dark-card/90 text-accent border-accent/20 border-l-accent',

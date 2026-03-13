@@ -143,7 +143,7 @@ export default function Analytics() {
             onClick={() => setScopeFilter(s.id)}
             className={`px-3 py-1 rounded-full text-xs font-medium border transition-all flex items-center gap-1 ${
               scopeFilter === s.id
-                ? 'bg-gold-50 border-gold-300 text-gold-700 shadow-sm dark:bg-gold-500/10 dark:border-gold-500/30 dark:text-gold-300'
+                ? 'bg-accent-50 border-accent-300 text-accent-700 shadow-sm dark:bg-accent-500/10 dark:border-accent-500/30 dark:text-accent-300'
                 : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >

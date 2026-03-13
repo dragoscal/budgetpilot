@@ -93,40 +93,6 @@ textarea:-webkit-autofill {
     border-color: #334155;
   }
 
-  /* Legacy aliases → map to single .card */
-  .card-elevated {
-    @apply bg-white rounded-[12px] p-5 transition-colors duration-150;
-    border: 1px solid #E2E8F0;
-  }
-  .card-elevated:hover {
-    border-color: #CBD5E1;
-  }
-  .dark .card-elevated {
-    background: #111827;
-    border-color: #1E293B;
-  }
-  .dark .card-elevated:hover {
-    border-color: #334155;
-  }
-
-  .card-hero {
-    @apply bg-white rounded-[12px] p-6 transition-colors duration-150 relative;
-    border: 1px solid #E2E8F0;
-  }
-  .card-hero::before {
-    display: none; /* Remove gold gradient bar */
-  }
-  .card-hero:hover {
-    border-color: #CBD5E1;
-  }
-  .dark .card-hero {
-    background: #111827;
-    border-color: #1E293B;
-  }
-  .dark .card-hero:hover {
-    border-color: #334155;
-  }
-
   /* ─── Primary Button (solid indigo) ───────────────────── */
   .btn-primary {
     @apply text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-150;
@@ -309,11 +275,6 @@ textarea:-webkit-autofill {
     color: #94A3B8;
   }
 
-  /* ─── Budget bar (solid colors, no gradients) ─────── */
-  .bar-gradient-warning {
-    background: #D97706;
-  }
-
   /* ─── Shimmer loading ───────────────────────────────── */
   .shimmer {
     @apply relative overflow-hidden;
@@ -339,15 +300,6 @@ textarea:-webkit-autofill {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     letter-spacing: -0.02em;
-  }
-
-  /* Legacy — map to simple border */
-  .divider-gold {
-    height: 1px;
-    background: #E2E8F0;
-  }
-  .dark .divider-gold {
-    background: #1E293B;
   }
 
   /* Hide scrollbar but keep scrollable */

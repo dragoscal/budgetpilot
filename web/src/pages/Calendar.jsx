@@ -97,7 +97,7 @@ function ViewToggle({ viewMode, setViewMode, t }) {
       <button onClick={() => setViewMode('month')}
         className={`px-2.5 sm:px-3 py-1.5 font-medium transition-all flex items-center gap-1 ${
           viewMode === 'month'
-            ? 'bg-gold-50 text-gold-800 dark:bg-gold-500/10 dark:text-gold-300'
+            ? 'bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300'
             : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
         }`}>
         <CalendarDays size={13} />
@@ -106,7 +106,7 @@ function ViewToggle({ viewMode, setViewMode, t }) {
       <button onClick={() => setViewMode('week')}
         className={`px-2.5 sm:px-3 py-1.5 font-medium transition-all flex items-center gap-1 ${
           viewMode === 'week'
-            ? 'bg-gold-50 text-gold-800 dark:bg-gold-500/10 dark:text-gold-300'
+            ? 'bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300'
             : 'text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-dark-border'
         }`}>
         <CalendarRange size={13} />
@@ -511,15 +511,15 @@ export default function CalendarPage() {
                           ];
 
                           const borderClass = today
-                            ? 'border-gold-400/50 ring-2 ring-gold-300/20'
+                            ? 'border-accent-400/50 ring-2 ring-accent-300/20'
                             : isSelected
-                              ? 'border-gold-300/50'
+                              ? 'border-accent-300/50'
                               : 'border-cream-200/50 dark:border-dark-border/50 hover:border-cream-300 dark:hover:border-dark-border';
 
                           const bgClass = today
-                            ? 'bg-gold-50/40 dark:bg-gold-500/[0.06]'
+                            ? 'bg-accent-50/40 dark:bg-accent-500/[0.06]'
                             : isSelected
-                              ? 'bg-gold-50/30 dark:bg-gold-500/[0.04]'
+                              ? 'bg-accent-50/30 dark:bg-accent-500/[0.04]'
                               : isFuture
                                 ? 'opacity-30'
                                 : 'bg-white/80 dark:bg-dark-card/40';
@@ -533,11 +533,11 @@ export default function CalendarPage() {
                               {/* Day number */}
                               <div className="flex items-center justify-between w-full mb-0.5 sm:mb-1 shrink-0">
                                 {today ? (
-                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gold-500 text-white flex items-center justify-center font-heading text-[11px] sm:text-xs font-bold shadow-sm">
+                                  <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent-500 text-white flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-sm">
                                     {data.dayNum}
                                   </span>
                                 ) : (
-                                  <span className={`font-heading text-xs sm:text-sm font-bold ${
+                                  <span className={`text-xs sm:text-sm font-bold ${
                                     hasExpenses ? 'text-cream-800 dark:text-cream-100' : isNoSpend ? 'text-success/60' : 'text-cream-400'
                                   }`}>
                                     {data.dayNum}
@@ -551,12 +551,12 @@ export default function CalendarPage() {
                               {/* Mobile: compact amounts */}
                               <div className="flex-1 flex flex-col justify-center w-full sm:hidden">
                                 {hasExpenses && (
-                                  <span className="font-heading text-[11px] text-danger font-bold money leading-snug">
+                                  <span className="text-[11px] text-danger font-bold money leading-snug">
                                     {chipAmt(data.expenseTotal, currency)}
                                   </span>
                                 )}
                                 {data.incomeTotal > 0 && (
-                                  <span className="font-heading text-[10px] text-success font-bold money leading-snug">
+                                  <span className="text-[10px] text-success font-bold money leading-snug">
                                     +{chipAmt(data.incomeTotal, currency)}
                                   </span>
                                 )}
@@ -632,7 +632,7 @@ export default function CalendarPage() {
                           {format(day, 'EEE')}
                         </p>
                         {today ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gold-500 text-white text-xs sm:text-sm font-bold mt-0.5 shadow-sm">
+                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent-500 text-white text-xs sm:text-sm font-bold mt-0.5 shadow-sm">
                             {format(day, 'd')}
                           </span>
                         ) : (
@@ -684,7 +684,7 @@ export default function CalendarPage() {
                         {/* Mobile summary */}
                         <div className="sm:hidden flex flex-col items-center justify-center flex-1 gap-0.5">
                           {data.expenseTotal > 0 && (
-                            <span className="font-heading text-[10px] font-bold money text-danger">
+                            <span className="text-[10px] font-bold money text-danger">
                               {chipAmt(data.expenseTotal, currency)}
                             </span>
                           )}
@@ -696,7 +696,7 @@ export default function CalendarPage() {
                         {/* Daily total — desktop */}
                         {data.expenseTotal > 0 && (
                           <div className="mt-auto pt-1 border-t border-cream-100 dark:border-dark-border hidden sm:block">
-                            <span className="font-heading text-[11px] font-bold money text-danger">
+                            <span className="text-[11px] font-bold money text-danger">
                               {fmtAmt(data.expenseTotal, currency, { compact: true })}
                             </span>
                           </div>

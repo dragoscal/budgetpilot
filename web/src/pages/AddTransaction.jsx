@@ -536,7 +536,7 @@ export default function AddTransaction() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab.id
-                ? 'bg-gold-50 text-gold-800 border border-gold-300 shadow-sm dark:bg-gold-500/10 dark:text-gold-300 dark:border-gold-500/30'
+                ? 'bg-accent-50 text-accent-800 border border-accent-300 shadow-sm dark:bg-accent-500/10 dark:text-accent-300 dark:border-accent-500/30'
                 : 'bg-cream-100 text-cream-600 hover:bg-cream-200 border border-transparent dark:bg-dark-border dark:text-cream-500 dark:hover:bg-dark-border/80'
             }`}
           >

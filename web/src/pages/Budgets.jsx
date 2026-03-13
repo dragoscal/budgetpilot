@@ -384,13 +384,13 @@ export default function Budgets() {
           <div className="h-3 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? 'bar-gradient-warning' : 'bg-success'
+                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? 'bg-warning' : 'bg-accent-600 dark:bg-accent-500'
               }`}
               style={{ width: `${Math.min(overallPct, 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-xs text-cream-500">
-            <span className={`font-heading font-bold ${overallPct >= 80 ? 'text-gold-600 dark:text-gold-400' : ''}`}>{t('budgets.pctUsed', { pct: overallPct })}</span>
+            <span className={`font-body font-bold ${overallPct >= 100 ? 'text-danger' : overallPct >= 80 ? 'text-warning' : ''}`}>{t('budgets.pctUsed', { pct: overallPct })}</span>
             <span>{t('budgets.daysRemaining', { count: daysLeft })}</span>
           </div>
           {totalBudget > totalSpent && daysLeft > 0 && (
@@ -555,8 +555,8 @@ export default function Budgets() {
                 onClick={() => handleSelectTemplate(tmpl)}
                 className={`w-full text-left p-3 rounded-lg border transition-all ${
                   selectedTemplate?.id === tmpl.id
-                    ? 'border-gold-400 bg-gold-50/50 shadow-sm dark:border-gold-500/50 dark:bg-gold-500/5'
-                    : 'border-cream-200 hover:border-gold-300 dark:border-dark-border dark:hover:border-gold-500/30'
+                    ? 'border-accent-400 bg-accent-50/50 shadow-sm dark:border-accent-500/50 dark:bg-accent-500/5'
+                    : 'border-cream-200 hover:border-accent-300 dark:border-dark-border dark:hover:border-accent-500/30'
                 }`}
               >
                 <p className="text-sm font-semibold">{tmpl.name}</p>

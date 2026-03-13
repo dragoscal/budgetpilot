@@ -799,7 +799,7 @@ export default function Dashboard() {
             onClick={() => handleScopeChange(s.id)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
               scopeFilter === s.id
-                ? 'bg-gold-50 dark:bg-gold-500/10 border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 shadow-sm'
+                ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300 shadow-sm'
                 : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
             }`}
           >
