@@ -352,7 +352,7 @@ function OverviewTab({ stats, onCleanup }) {
           <div className="relative w-14 h-14">
             <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3" className="text-cream-200 dark:text-dark-border" />
-              <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" strokeDasharray={`${healthScore} ${100 - healthScore}`} strokeLinecap="round"
+              <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" strokeDasharray={`${(healthScore / 100) * (2 * Math.PI * 15.5)} ${2 * Math.PI * 15.5}`} strokeLinecap="round"
                 className={healthScore >= 70 ? 'text-emerald-500' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'} />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-sm font-heading font-bold text-cream-900 dark:text-dark-text">{healthScore}</span>
@@ -566,16 +566,16 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
     }
   };
 
-  const handleBulkSuspend = () => {
+  const handleBulkSuspend = async () => {
     const targets = filtered.filter(u => selectedIds.has(u.id) && !u.suspended);
-    targets.forEach(u => onToggle(u));
+    for (const u of targets) await onToggle(u);
     setSelectedIds(new Set());
     setBulkMode(false);
   };
 
-  const handleBulkActivate = () => {
+  const handleBulkActivate = async () => {
     const targets = filtered.filter(u => selectedIds.has(u.id) && u.suspended);
-    targets.forEach(u => onToggle(u));
+    for (const u of targets) await onToggle(u);
     setSelectedIds(new Set());
     setBulkMode(false);
   };
@@ -1130,14 +1130,12 @@ function ErrorsTab({ errors }) {
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
 
-  const clientErrors = errors.filter(e => e.status >= 400 && e.status < 500);
-  const serverErrors = errors.filter(e => e.status >= 500);
-
-  const filtered = useMemo(() => {
-    if (filter === 'client') return clientErrors;
-    if (filter === 'server') return serverErrors;
-    return errors;
-  }, [errors, filter, clientErrors, serverErrors]);
+  const { clientErrors, serverErrors, filtered } = useMemo(() => {
+    const client = errors.filter(e => e.status >= 400 && e.status < 500);
+    const server = errors.filter(e => e.status >= 500);
+    const list = filter === 'client' ? client : filter === 'server' ? server : errors;
+    return { clientErrors: client, serverErrors: server, filtered: list };
+  }, [errors, filter]);
 
   const handleExport = () => {
     const headers = ['Timestamp', 'Method', 'Path', 'Status', 'User', 'Response Time (ms)'];

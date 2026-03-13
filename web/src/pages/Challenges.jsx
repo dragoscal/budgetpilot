@@ -25,13 +25,13 @@ function getProgress(challenge, transactions, t) {
   const start = new Date(challenge.startDate);
   const end = new Date(challenge.endDate);
   const now = new Date();
-  const relevant = transactions.filter(t => {
-    const d = new Date(t.date);
-    return d >= start && d <= end && t.type === 'expense' &&
-      (!challenge.category || t.category === challenge.category);
+  const relevant = transactions.filter(tx => {
+    const d = new Date(tx.date);
+    return d >= start && d <= end && tx.type === 'expense' &&
+      (!challenge.category || tx.category === challenge.category);
   });
 
-  const totalSpent = relevant.reduce((s, t) => s + t.amount, 0);
+  const totalSpent = relevant.reduce((s, tx) => s + tx.amount, 0);
   const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
   const daysPassed = Math.max(0, Math.ceil((Math.min(now, end) - start) / (1000 * 60 * 60 * 24)));
   const daysRemaining = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
@@ -64,10 +64,10 @@ function getProgress(challenge, transactions, t) {
       statusLabel = t ? t('challenges.remainingForDays', { amount: Math.round(remaining), days: daysRemaining }) : `${Math.round(remaining)} remaining for ${daysRemaining} days`;
     }
   } else if (challenge.type === 'savings') {
-    const income = transactions.filter(tx => {
-      const d = new Date(tx.date);
-      return d >= start && d <= end && tx.type === 'income';
-    }).reduce((s, tx) => s + tx.amount, 0);
+    const income = transactions.filter(itx => {
+      const d = new Date(itx.date);
+      return d >= start && d <= end && itx.type === 'income';
+    }).reduce((s, itx) => s + itx.amount, 0);
     const saved = income - totalSpent;
     percent = income > 0 ? Math.round((saved / income) * 100) : 0;
     if (now > end) {
@@ -214,8 +214,8 @@ export default function Challenges() {
   const streakDays = (() => {
     // Calculate current no-spend streak
     const sorted = allTx
-      .filter(t => t.type === 'expense')
-      .map(t => t.date)
+      .filter(tx => tx.type === 'expense')
+      .map(tx => tx.date)
       .sort((a, b) => b.localeCompare(a));
 
     if (sorted.length === 0) return 0;

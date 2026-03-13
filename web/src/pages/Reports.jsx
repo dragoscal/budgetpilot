@@ -32,7 +32,7 @@ export default function Reports() {
   // Check if user has 12+ months of data for YoY
   const hasYoYData = useMemo(() => {
     if (allTx.length === 0) return false;
-    const dates = allTx.map((t) => new Date(t.date));
+    const dates = allTx.map((tx) => new Date(tx.date));
     const earliest = Math.min(...dates);
     const diffMs = Date.now() - earliest;
     return diffMs > 365 * 24 * 60 * 60 * 1000;
@@ -73,11 +73,11 @@ export default function Reports() {
 
   // Filter by date range
   const filtered = useMemo(() => {
-    return allTx.filter((t) => t.date >= dateFrom && t.date <= dateTo);
+    return allTx.filter((tx) => tx.date >= dateFrom && tx.date <= dateTo);
   }, [allTx, dateFrom, dateTo]);
 
-  const expenses = filtered.filter((t) => t.type === 'expense');
-  const income = filtered.filter((t) => t.type === 'income');
+  const expenses = filtered.filter((tx) => tx.type === 'expense');
+  const income = filtered.filter((tx) => tx.type === 'income');
   const totalExpenses = sumAmountsMultiCurrency(expenses, currency, rates);
   const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
 
@@ -94,8 +94,8 @@ export default function Reports() {
 
   // Tax-filtered transactions
   const taxFiltered = useMemo(() => {
-    return expenses.filter((t) =>
-      (t.tags || []).some((tag) => taxTags.includes(tag.toLowerCase()))
+    return expenses.filter((tx) =>
+      (tx.tags || []).some((tag) => taxTags.includes(tag.toLowerCase()))
     );
   }, [expenses, taxTags]);
 
@@ -106,14 +106,14 @@ export default function Reports() {
       const m = subMonths(new Date(), i);
       const start = startOfMonth(m);
       const end = endOfMonth(m);
-      const monthTx = allTx.filter((t) => {
-        const d = new Date(t.date);
+      const monthTx = allTx.filter((tx) => {
+        const d = new Date(tx.date);
         return d >= start && d <= end;
       });
       months.push({
         month: format(m, 'MMM yy'),
-        expenses: sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'expense'), currency, rates),
-        income: sumAmountsMultiCurrency(monthTx.filter((t) => t.type === 'income'), currency, rates),
+        expenses: sumAmountsMultiCurrency(monthTx.filter((tx) => tx.type === 'expense'), currency, rates),
+        income: sumAmountsMultiCurrency(monthTx.filter((tx) => tx.type === 'income'), currency, rates),
       });
     }
     return months;
@@ -133,8 +133,8 @@ export default function Reports() {
       const lyEnd = endOfMonth(lyStart);
       // Skip future months
       if (cyStart > now && lyStart > now) continue;
-      const cyTx = allTx.filter((t) => { const d = new Date(t.date); return d >= cyStart && d <= cyEnd && t.type === 'expense'; });
-      const lyTx = allTx.filter((t) => { const d = new Date(t.date); return d >= lyStart && d <= lyEnd && t.type === 'expense'; });
+      const cyTx = allTx.filter((tx) => { const d = new Date(tx.date); return d >= cyStart && d <= cyEnd && tx.type === 'expense'; });
+      const lyTx = allTx.filter((tx) => { const d = new Date(tx.date); return d >= lyStart && d <= lyEnd && tx.type === 'expense'; });
       const cyTotal = sumAmountsMultiCurrency(cyTx, currency, rates);
       const lyTotal = sumAmountsMultiCurrency(lyTx, currency, rates);
       if (cyTotal > 0 || lyTotal > 0) {

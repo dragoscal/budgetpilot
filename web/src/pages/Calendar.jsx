@@ -3,6 +3,7 @@ import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, getCategoryById, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
 import MonthPicker from '../components/MonthPicker';
 import TransactionRow from '../components/TransactionRow';
@@ -211,7 +212,7 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
             const cat = getCategoryById(catId);
             return (
               <span key={i} className="text-[11px] px-2 py-0.5 rounded-md bg-cream-100 dark:bg-cream-800 text-cream-600 dark:text-cream-400">
-                {cat.icon} {cat.name}
+                {cat.icon} {getCategoryLabel(cat, t)}
               </span>
             );
           })}
@@ -268,7 +269,7 @@ export default function CalendarPage() {
         if (loadVersion.current !== version) return;
         const start = startOfMonth(month);
         const end = endOfMonth(month);
-        setTransactions(allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; }));
+        setTransactions(allTx.filter((tx) => { const d = new Date(tx.date); return d >= start && d <= end; }));
         setRecurring(rec.filter((r) => r.active !== false));
         getCachedRates().then(setRates).catch(() => {});
       } catch (err) { if (loadVersion.current === version) console.error(err); }
@@ -284,7 +285,7 @@ export default function CalendarPage() {
     for (const day of days) {
       const key = format(day, 'yyyy-MM-dd');
       const dayNum = day.getDate();
-      const dayTx = transactions.filter((t) => t.date === key);
+      const dayTx = transactions.filter((tx) => tx.date === key);
       const currentMonthNum = month.getMonth();
       const dayBills = recurringItems.filter((r) => {
         if ((r.billingDay || 1) !== dayNum) return false;
@@ -296,10 +297,10 @@ export default function CalendarPage() {
         }
         return true;
       });
-      const expenses = dayTx.filter((t) => t.type === 'expense');
+      const expenses = dayTx.filter((tx) => tx.type === 'expense');
       const expenseTotal = sumAmountsMultiCurrency(expenses, currency, rates);
-      const incomeTotal = sumAmountsMultiCurrency(dayTx.filter((t) => t.type === 'income'), currency, rates);
-      const categories = [...new Set(expenses.map((t) => t.category))];
+      const incomeTotal = sumAmountsMultiCurrency(dayTx.filter((tx) => tx.type === 'income'), currency, rates);
+      const categories = [...new Set(expenses.map((tx) => tx.category))];
       map[key] = {
         day, dayNum, transactions: dayTx,
         bills: dayBills,
@@ -312,9 +313,9 @@ export default function CalendarPage() {
   }, [days, transactions, recurringItems, currency, rates]);
 
   const monthStats = useMemo(() => {
-    const expenses = transactions.filter((t) => t.type === 'expense');
+    const expenses = transactions.filter((tx) => tx.type === 'expense');
     const totalExpenses = sumAmountsMultiCurrency(expenses, currency, rates);
-    const totalIncome = sumAmountsMultiCurrency(transactions.filter((t) => t.type === 'income'), currency, rates);
+    const totalIncome = sumAmountsMultiCurrency(transactions.filter((tx) => tx.type === 'income'), currency, rates);
     const now = new Date();
     const pastDays = days.filter((d) => d <= now);
     const noSpendDays = pastDays.filter((d) => {

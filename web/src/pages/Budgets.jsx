@@ -71,18 +71,18 @@ export default function Budgets() {
 
       // In family mode, aggregate all family members' expenses
       const familyUserIds = isFamily ? new Set(members.map((m) => m.userId)) : null;
-      const filterByRange = (t, s, e) => {
-        const d = new Date(t.date);
+      const filterByRange = (tx, s, e) => {
+        const d = new Date(tx.date);
         const inRange = d >= s && d <= e;
         if (!inRange) return false;
-        if (isFamily && familyUserIds) return familyUserIds.has(t.userId);
-        return t.userId === effectiveUserId;
+        if (isFamily && familyUserIds) return familyUserIds.has(tx.userId);
+        return tx.userId === effectiveUserId;
       };
-      const filterExpense = (t, s, e) => filterByRange(t, s, e) && t.type === 'expense';
+      const filterExpense = (tx, s, e) => filterByRange(tx, s, e) && tx.type === 'expense';
 
-      const monthTx = allTx.filter((t) => filterExpense(t, start, end));
-      const allMonthTx = allTx.filter((t) => filterByRange(t, start, end));
-      const prevTx = allTx.filter((t) => filterExpense(t, prevStart, prevEnd));
+      const monthTx = allTx.filter((tx) => filterExpense(tx, start, end));
+      const allMonthTx = allTx.filter((tx) => filterByRange(tx, start, end));
+      const prevTx = allTx.filter((tx) => filterExpense(tx, prevStart, prevEnd));
 
       // Store all budgets for cross-month features (copy last month)
       allBudgetsRef.current = budgets;
@@ -109,13 +109,13 @@ export default function Budgets() {
   const budgetData = useMemo(() => {
     return budgetsList.map((b) => {
       const budgetCurrency = b.currency || currency;
-      const catTx = transactions.filter((t) => t.category === b.category);
+      const catTx = transactions.filter((tx) => tx.category === b.category);
       const spent = sumAmountsMultiCurrency(catTx, budgetCurrency, rates);
 
       // Rollover: carry over unused budget from previous month
       let rolloverAmount = 0;
       if (b.rollover) {
-        const prevCatTx = prevMonthTransactions.filter((t) => t.category === b.category);
+        const prevCatTx = prevMonthTransactions.filter((tx) => tx.category === b.category);
         const prevSpent = sumAmountsMultiCurrency(prevCatTx, budgetCurrency, rates);
         const prevRemaining = b.amount - prevSpent;
         rolloverAmount = prevRemaining > 0 ? prevRemaining : 0;
@@ -140,7 +140,7 @@ export default function Budgets() {
 
   // Compute total income for the selected month
   const totalIncome = useMemo(() => {
-    return sumAmountsMultiCurrency(allMonthTransactions.filter((t) => t.type === 'income'), currency, rates);
+    return sumAmountsMultiCurrency(allMonthTransactions.filter((tx) => tx.type === 'income'), currency, rates);
   }, [allMonthTransactions, currency, rates]);
 
   const toBeBudgeted = totalIncome - totalBudget;
