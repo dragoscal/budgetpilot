@@ -54,6 +54,16 @@ export function FamilyProvider({ children }) {
         allMembers.filter((m) => m.userId === effectiveUserId).map((m) => m.familyId)
       );
       const userFamilies = allFamilies.filter((f) => myMembershipIds.has(f.id));
+
+      // Self-heal: generate invite codes for families that are missing them
+      for (const fam of userFamilies) {
+        if (!fam.inviteCode && fam.createdBy === effectiveUserId) {
+          const code = generateInviteCode();
+          fam.inviteCode = code;
+          familiesApi.update(fam.id, { inviteCode: code }).catch(() => {});
+        }
+      }
+
       setMyFamilies(userFamilies);
 
       // Restore active family from sessionStorage (default to personal mode)
@@ -157,33 +167,24 @@ export function FamilyProvider({ children }) {
   }, [effectiveUserId, user]);
 
   const joinFamily = useCallback(async (inviteCode) => {
-    // Find family by invite code
-    const allFamilies = await familiesApi.getAll();
-    const family = allFamilies.find((f) => f.inviteCode === inviteCode.toUpperCase().trim());
-    if (!family) throw new Error('Invalid invite code');
+    // Use server-side join endpoint (searches ALL families, not just user's)
+    const displayName = user?.name || 'Member';
+    const emoji = MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)];
 
-    // Check if already a member
-    const allMembers = await membersApi.getAll();
-    const existing = allMembers.find((m) => m.familyId === family.id && m.userId === effectiveUserId);
-    if (existing) throw new Error('You are already a member of this family');
+    const result = await familyApi.joinByCode(inviteCode, displayName, emoji);
+    const { family, member } = result;
 
-    // Add as member
-    const member = {
-      id: generateId(),
-      familyId: family.id,
-      userId: effectiveUserId,
-      role: 'member',
-      displayName: user?.name || 'Me',
-      emoji: MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)],
-      monthlyIncome: 0,
-      joinedAt: new Date().toISOString(),
-    };
-    await membersApi.create(member);
+    // Load full members list for this family
+    let familyMembers = [member];
+    try {
+      familyMembers = await familyApi.getAllMembers(family.id);
+    } catch {
+      // Fallback — just use the new member
+    }
 
-    const familyMembers = allMembers.filter((m) => m.familyId === family.id);
     setMyFamilies((prev) => [...prev, family]);
     setActiveFamily(family);
-    setMembers([...familyMembers, member]);
+    setMembers(familyMembers);
     sessionStorage.setItem('bp_activeFamily', family.id);
 
     return family;

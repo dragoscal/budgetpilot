@@ -212,6 +212,50 @@ export function registerCrudRoutes(router) {
     return json({ success: true, linkedTo: realMemberId });
   });
 
+  // POST /api/families/join — join a family by invite code (searches ALL families, not just user's)
+  router.post('/api/families/join', async (ctx) => {
+    const { inviteCode } = ctx.body;
+    if (!inviteCode?.trim()) return json({ error: 'Invite code is required' }, 400);
+
+    const code = inviteCode.toUpperCase().trim();
+
+    // Look up family by invite code (no ownership filter — any user can join)
+    const family = await ctx.env.DB.prepare(
+      'SELECT * FROM families WHERE inviteCode = ?'
+    ).bind(code).first();
+    if (!family) return json({ error: 'Invalid invite code' }, 404);
+
+    // Check if already a member
+    const existing = await ctx.env.DB.prepare(
+      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(family.id, ctx.user.id).first();
+    if (existing) return json({ error: 'You are already a member of this family' }, 409);
+
+    // Add as member
+    const now = new Date().toISOString();
+    const member = {
+      id: generateId(),
+      familyId: family.id,
+      userId: ctx.user.id,
+      role: 'member',
+      isVirtual: 0,
+      displayName: ctx.body.displayName || ctx.user.name || 'Member',
+      emoji: ctx.body.emoji || '😊',
+      joinedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const columns = Object.keys(member);
+    const placeholders = columns.map(() => '?').join(', ');
+    await ctx.env.DB.prepare(
+      `INSERT INTO family_members (${columns.join(', ')}) VALUES (${placeholders})`
+    ).bind(...columns.map((c) => member[c])).run();
+
+    ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'join_family', { familyId: family.id }));
+    return json({ data: { family: deserializeRow('families', family), member } }, 201);
+  });
+
   // POST /api/sync/push — bulk push from client
   router.post('/api/sync/push', async (ctx) => {
     const { changes } = ctx.body; // [{ table, action, data }]

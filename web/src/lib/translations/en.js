@@ -2205,6 +2205,10 @@ const en = {
   'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
+  // v3.1.0
+  'changelog.v310familyInviteFix': 'Fixed family invite codes showing as NULL — backfilled existing codes and added self-healing',
+  'changelog.v310serverJoin': 'Family join now uses server-side lookup — members can join families created by other users',
+
   // v3.0.0
   'changelog.v300refinedLuxury': 'Refined Luxury redesign — gold accent palette, 3-tier card hierarchy, Fraunces serif stat values, glass effects',
   'changelog.v300designSystem': 'New design system — card-elevated/card-hero tiers, gradient progress bars, gold section title dots, page title underlines',

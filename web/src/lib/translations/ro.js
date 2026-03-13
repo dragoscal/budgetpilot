@@ -2205,6 +2205,10 @@ const ro = {
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
+  // v3.1.0
+  'changelog.v310familyInviteFix': 'Codurile de invitație familie arătau NULL — s-au regenerat codurile existente și s-a adăugat auto-reparare',
+  'changelog.v310serverJoin': 'Alăturarea la familie folosește acum căutare pe server — membrii pot intra în familii create de alți utilizatori',
+
   // v3.0.0
   'changelog.v300refinedLuxury': 'Redesign Refined Luxury — paletă de accente aurii, ierarhie de card-uri pe 3 nivele, valori în Fraunces serif, efecte de sticlă',
   'changelog.v300designSystem': 'Sistem de design nou — card-elevated/card-hero, bare de progres gradient, puncte aurii pe titluri de secțiune, subliniere pagini',

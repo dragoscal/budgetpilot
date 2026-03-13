@@ -246,6 +246,20 @@ export const familyApi = {
     await storage.remove('familyMembers', memberId);
   },
 
+  /** Join a family by invite code (server-side lookup across ALL families) */
+  async joinByCode(inviteCode, displayName, emoji) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to join a family.');
+    const result = await apiFetch(apiUrl, '/api/families/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode, displayName, emoji }),
+    });
+    // Cache family + member locally
+    if (result.family) await storage.add('families', result.family).catch(() => {});
+    if (result.member) await storage.add('familyMembers', result.member).catch(() => {});
+    return result;
+  },
+
   /** Link a virtual member to a real account (merges them) */
   async linkVirtualToReal(familyId, virtualMemberId, realMemberId) {
     const apiUrl = await getApiUrl();

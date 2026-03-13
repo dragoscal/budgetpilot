@@ -11,6 +11,17 @@ function InviteCodeDisplay({ family }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
+  if (!family.inviteCode) {
+    return (
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-cream-50 dark:bg-dark-bg border border-cream-200 dark:border-dark-border">
+        <div className="flex-1">
+          <p className="text-xs text-cream-500 mb-1">{t('family.inviteCode')}</p>
+          <p className="text-sm text-cream-400">{t('family.inviteCodeGenerating') || 'Generating...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(family.inviteCode);
