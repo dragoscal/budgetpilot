@@ -88,9 +88,9 @@ export default function Sidebar() {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-all duration-150 relative ${
+    `flex items-center gap-2.5 px-2 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-150 ${
       isActive
-        ? 'bg-gold-50/60 text-cream-900 dark:bg-gold-500/10 dark:text-gold-200 font-semibold'
+        ? 'bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-400 font-semibold'
         : 'text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 hover:text-cream-800 dark:hover:text-cream-200'
     } ${collapsed ? 'justify-center px-2' : ''}`;
 
@@ -104,34 +104,24 @@ export default function Sidebar() {
           collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'
         }`}
       >
-        {/* Logo */}
+        {/* Logo — clean wordmark */}
         <div className="flex items-center gap-2.5 px-4 h-14 shrink-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-accent-500 to-accent-700 shadow-md">
-            <svg viewBox="0 0 512 512" className="w-5 h-5" aria-hidden="true">
-              <polygon points="256,80 160,280 352,280" fill="#115e59" opacity="0.9"/>
-              <polygon points="200,160 104,360 296,360" fill="#5eead4" opacity="0.7"/>
-              <polygon points="312,160 216,360 408,360" fill="#ffffff" opacity="0.5"/>
-            </svg>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-accent-600 dark:bg-accent-500">
+            <span className="text-white font-bold text-[13px] leading-none">L</span>
           </div>
           {!collapsed && (
-            <div className="flex items-baseline gap-1">
-              <span className="font-heading font-bold text-[16px] tracking-tight">LUMET</span>
-              <span className="text-[8px] font-semibold text-gold-500 tracking-wider">PRO</span>
-            </div>
+            <span className="font-body font-bold text-[15px] tracking-[-0.01em] text-cream-900 dark:text-cream-50">LUMET</span>
           )}
         </div>
 
-        {/* User card */}
+        {/* User — minimal */}
         {!collapsed && user && (
-          <div className="px-3 pb-1 shrink-0">
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-cream-50 dark:bg-cream-800/30 border border-cream-200/50 dark:border-cream-700/30">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
+          <div className="px-4 pb-2 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-400 flex items-center justify-center text-xs font-bold shrink-0">
                 {user.avatar || user.name?.charAt(0)?.toUpperCase()}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold truncate leading-tight">{user.name}</p>
-                <p className="text-[10px] text-cream-400 truncate">{user.email}</p>
-              </div>
+              <p className="text-[13px] font-semibold truncate text-cream-900 dark:text-cream-50">{user.name}</p>
             </div>
           </div>
         )}
@@ -145,18 +135,15 @@ export default function Sidebar() {
         <FamilyPicker collapsed={collapsed} />
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-1 px-3 space-y-2">
+        <nav className="flex-1 overflow-y-auto py-1 px-2 space-y-3">
           {NAV_SECTIONS.map((section, idx) => (
             <div key={section.label}>
               {!collapsed && (
-                <>
-                  {idx > 0 && <div className="divider-gold mx-2 mb-2" />}
-                  <p className="px-3 mb-1 text-[10px] font-bold text-cream-400 dark:text-cream-500 uppercase tracking-[0.12em]">
-                    {section.label}
-                  </p>
-                </>
+                <p className={`px-2 mb-1 text-[11px] font-semibold text-cream-400 dark:text-cream-500 uppercase tracking-[0.06em] ${idx > 0 ? 'mt-1' : ''}`}>
+                  {section.label}
+                </p>
               )}
-              {collapsed && idx > 0 && <div className="divider-gold mx-1 mb-1" />}
+              {collapsed && idx > 0 && <div className="h-px bg-cream-200 dark:bg-cream-800 mx-1 my-1" />}
               <div className="space-y-px">
                 {section.items.map((item) => (
                   <NavLink
@@ -166,7 +153,7 @@ export default function Sidebar() {
                     className={navLinkClass}
                     title={collapsed ? item.label : undefined}
                   >
-                    <item.icon size={16} className="shrink-0" />
+                    <item.icon size={18} strokeWidth={1.5} className="shrink-0" />
                     {!collapsed && <span>{item.label}</span>}
                   </NavLink>
                 ))}
@@ -176,65 +163,54 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom controls */}
-        <div className="px-3 py-2 space-y-px shrink-0">
-          <div className="divider-gold mb-2" />
+        <div className="px-2 py-2 space-y-px shrink-0 border-t border-cream-200 dark:border-cream-800">
           <SyncIndicator collapsed={collapsed} />
 
           <button
             onClick={toggleTheme}
             aria-label={dark ? t('nav.lightMode') : t('nav.darkMode')}
-            className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-cream-600 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
+            className={`flex items-center gap-2.5 px-2 py-[7px] rounded-lg text-[13px] font-medium text-cream-500 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-cream-800/50 hover:text-cream-800 dark:hover:text-cream-200 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
             title={dark ? t('nav.lightMode') : t('nav.darkMode')}
           >
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
+            {dark ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
             {!collapsed && <span>{dark ? t('nav.light') : t('nav.dark')}</span>}
           </button>
 
           {user?.role === 'admin' && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-100 ${
-                  isActive
-                    ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
-                    : 'text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20'
-                } ${collapsed ? 'justify-center px-2' : ''}`
-              }
-              title={collapsed ? t('nav.admin') : undefined}
-            >
-              <Shield size={16} className="shrink-0" />
+            <NavLink to="/admin" className={navLinkClass} title={collapsed ? t('nav.admin') : undefined}>
+              <Shield size={18} strokeWidth={1.5} className="shrink-0" />
               {!collapsed && <span>{t('nav.admin')}</span>}
             </NavLink>
           )}
 
           <NavLink to="/feedback" className={navLinkClass} title={collapsed ? t('nav.feedback') : undefined}>
-            <MessageSquare size={16} className="shrink-0" />
+            <MessageSquare size={18} strokeWidth={1.5} className="shrink-0" />
             {!collapsed && <span>{t('nav.feedback')}</span>}
           </NavLink>
 
           <NavLink to="/guide" className={navLinkClass} title={collapsed ? t('nav.guide') : undefined}>
-            <HelpCircle size={16} className="shrink-0" />
+            <HelpCircle size={18} strokeWidth={1.5} className="shrink-0" />
             {!collapsed && <span>{t('nav.guide')}</span>}
           </NavLink>
 
           <NavLink to="/settings" className={navLinkClass}>
-            <Settings size={16} className="shrink-0" />
+            <Settings size={18} strokeWidth={1.5} className="shrink-0" />
             {!collapsed && <span>{t('nav.settings')}</span>}
           </NavLink>
 
           <button
             onClick={handleLogout}
             aria-label={t('nav.signOut')}
-            className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-danger hover:bg-danger/8 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
+            className={`flex items-center gap-2.5 px-2 py-[7px] rounded-lg text-[13px] font-medium text-danger hover:bg-danger-light w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
           >
-            <LogOut size={16} />
+            <LogOut size={18} strokeWidth={1.5} />
             {!collapsed && <span>{t('nav.signOut')}</span>}
           </button>
 
           <button
             onClick={toggleCollapsed}
             aria-label={collapsed ? (t('nav.expandSidebar') || 'Expand sidebar') : (t('nav.collapseSidebar') || 'Collapse sidebar')}
-            className="flex items-center justify-center w-full py-1 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-colors"
+            className="flex items-center justify-center w-full py-1.5 mt-1 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300 transition-colors"
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
@@ -250,10 +226,10 @@ export default function Sidebar() {
           {/* Panel */}
           <nav aria-label={t('nav.mobileNavigation') || 'Mobile navigation'} className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-2xl max-h-[80vh] overflow-y-auto animate-slide-up safe-bottom">
             {/* Handle + close */}
-            <div className="sticky top-0 bg-white dark:bg-dark-card z-10 pt-3 pb-2 px-4 border-b border-cream-100 dark:border-dark-border">
-              <div className="w-8 h-1 bg-cream-300 dark:bg-cream-600 rounded-full mx-auto mb-3" />
+            <div className="sticky top-0 bg-white dark:bg-dark-card z-10 pt-3 pb-2 px-4 border-b border-cream-200 dark:border-cream-800">
+              <div className="w-8 h-1 bg-cream-300 dark:bg-cream-700 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between">
-                <span className="text-sm font-heading font-bold">{t('nav.menu')}</span>
+                <span className="text-sm font-body font-bold">{t('nav.menu')}</span>
                 <button onClick={() => setMobileMenuOpen(false)} aria-label={t('nav.closeMenu') || 'Close menu'} className="p-1.5 rounded-lg hover:bg-cream-100 dark:hover:bg-cream-800/50">
                   <X size={18} className="text-cream-500" />
                 </button>
@@ -264,7 +240,7 @@ export default function Sidebar() {
             <div className="px-3 py-2 space-y-3">
               {NAV_SECTIONS.map((section) => (
                 <div key={section.label}>
-                  <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
+                  <p className="px-3 mb-1 text-[11px] font-semibold text-cream-400 dark:text-cream-500 uppercase tracking-[0.06em]">
                     {section.label}
                   </p>
                   <div className="space-y-px">
@@ -293,7 +269,7 @@ export default function Sidebar() {
 
               {/* Extras */}
               <div>
-                <p className="px-3 mb-1 text-[10px] font-semibold text-cream-400 dark:text-cream-600 uppercase tracking-widest">
+                <p className="px-3 mb-1 text-[11px] font-semibold text-cream-400 dark:text-cream-500 uppercase tracking-[0.06em]">
                   {t('nav.settings')}
                 </p>
                 <div className="space-y-px">
@@ -372,7 +348,7 @@ export default function Sidebar() {
       )}
 
       {/* Mobile bottom tab bar */}
-      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-dark-card/95 backdrop-blur-xl border-t border-cream-200/60 dark:border-dark-border/60 z-40 flex items-center justify-around px-0.5 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      <nav aria-label={t('nav.tabBar') || 'Tab bar'} className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-dark-card/95 backdrop-blur-xl border-t border-cream-200 dark:border-cream-800 z-40 flex items-center justify-around px-0.5 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { to: '/', icon: LayoutDashboard, label: t('nav.home') },
           { to: '/transactions', icon: Receipt, label: t('nav.history') },
@@ -387,22 +363,19 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
                 isActive
-                  ? 'text-cream-900 dark:text-cream-100'
-                  : 'text-cream-400'
+                  ? 'text-accent-600 dark:text-accent-400'
+                  : 'text-cream-400 dark:text-cream-500'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && !item.special && (
-                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gold-400" />
-                )}
                 {item.special ? (
-                  <div className="w-11 h-11 -mt-5 rounded-full bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center shadow-lg shadow-accent-500/25">
-                    <item.icon size={20} className="text-white" />
+                  <div className="w-11 h-11 -mt-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                    <item.icon size={20} strokeWidth={1.5} className="text-white" />
                   </div>
                 ) : (
-                  <item.icon size={20} />
+                  <item.icon size={20} strokeWidth={isActive ? 2 : 1.5} />
                 )}
                 <span className="truncate max-w-full">{item.label}</span>
               </>
@@ -415,13 +388,10 @@ export default function Sidebar() {
           aria-label={t('nav.openMenu') || 'Open menu'}
           aria-expanded={mobileMenuOpen}
           className={`relative flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium flex-1 min-w-0 transition-colors ${
-            mobileMenuOpen ? 'text-cream-900 dark:text-cream-100' : 'text-cream-400'
+            mobileMenuOpen ? 'text-accent-600 dark:text-accent-400' : 'text-cream-400 dark:text-cream-500'
           }`}
         >
-          {mobileMenuOpen && (
-            <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gold-400" />
-          )}
-          <Menu size={20} />
+          <Menu size={20} strokeWidth={1.5} />
           <span className="truncate max-w-full">{t('nav.more')}</span>
           {/* Sync indicator dot */}
           {hasBackend && (syncing || pendingChanges > 0 || syncError) && (
