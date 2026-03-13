@@ -86,7 +86,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
               {daysUntil === 0 ? t('recurring.todayLabel') : t('recurring.inDays', { count: daysUntil })}
             </span>
           )}
-          {item.isVariable && (
+          {!!item.isVariable && (
             <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[10px] font-medium">
               {t('recurring.variable')}
             </span>

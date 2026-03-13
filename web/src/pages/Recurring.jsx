@@ -15,6 +15,14 @@ import EmptyState from '../components/EmptyState';
 import { RotateCcw, Plus, Sparkles, Check, X, Search, AlertTriangle, TrendingUp, Landmark, Bell, XCircle } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 
+// Categories that indicate a subscription (vs. a bill)
+const SUBSCRIPTION_CATEGORIES = new Set([
+  'subscriptions', 'entertainment',
+  'subscriptions:streaming', 'subscriptions:music', 'subscriptions:software',
+  'subscriptions:gaming', 'subscriptions:news',
+  'entertainment:movies', 'entertainment:games',
+]);
+
 export default function Recurring() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
@@ -230,6 +238,7 @@ export default function Recurring() {
         active: true,
         userId: effectiveUserId,
         autoDetected: true,
+        recurringType: SUBSCRIPTION_CATEGORIES.has(suggestion.category) ? 'subscription' : 'bill',
         createdAt: new Date().toISOString(),
       });
       toast.success(t('recurring.addedAsRecurring', { name: suggestion.merchant }));
@@ -673,7 +682,7 @@ export default function Recurring() {
               <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform flex items-center justify-center ${
                 form.autoDebit ? 'translate-x-6' : 'translate-x-0.5'
               }`}>
-                {form.autoDebit && (
+                {!!form.autoDebit && (
                   <Check size={12} className="text-success" />
                 )}
               </span>

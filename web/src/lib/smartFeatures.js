@@ -25,6 +25,10 @@ export function normalizeMerchantName(name) {
   // 2. Strip payment method prefixes from bank statements
   s = s.replace(/\b(pos|plata|transfer|payment|card|debit|direct\s+debit|incasare|tranzactie)\b/g, '');
 
+  // 2b. Strip payment processor prefixes (PAYPAL *, SQ *, GOOGLE *, AMZN*, etc.)
+  s = s.replace(/^(paypal|sq|square|google|amzn?|amazon)\s*\*\s*/i, '');
+  s = s.replace(/^apple\.com\s*\/?\s*bill\s*/i, 'apple ');
+
   // 3. Strip transaction IDs and card masks (but KEEP phone numbers — they differentiate subscriptions)
   s = s.replace(/\b(?=[a-z]*\d)(?=\d*[a-z])[a-z0-9]{12,}\b/g, ''); // long mixed alphanumeric codes (12+ chars, must have both letters AND digits)
   s = s.replace(/\b\d{12,}\b/g, '');              // very long pure digit numbers (bank account numbers, IBANs)
@@ -160,8 +164,9 @@ function splitByBillingSlot(txns) {
   const countFreq = {};
   counts.forEach(c => { countFreq[c] = (countFreq[c] || 0) + 1; });
   const mode = parseInt(Object.entries(countFreq).sort((a, b) => b[1] - a[1])[0][0]);
+  const modeCount = countFreq[mode] || 0;
 
-  if (mode <= 1) return [txns]; // Only 1 per month — no splitting needed
+  if (mode <= 1 || modeCount < 2) return [txns]; // Need 2+ months with same count to be confident
 
   // Build slot arrays: 1st tx of each month → slot 0, 2nd → slot 1, etc.
   const slots = Array.from({ length: mode }, () => []);
@@ -189,6 +194,7 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
   const byMerchant = {};
   for (const tx of transactions) {
     if (tx.type !== 'expense' || !tx.merchant || !tx.date) continue;
+    if (tx.amount <= 0 || tx.deletedAt) continue; // Skip refunds, reversals, soft-deleted
     const key = normalizeMerchantName(tx.merchant);
     if (!key) continue;
     if (!byMerchant[key]) byMerchant[key] = [];
@@ -275,15 +281,34 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
         }
         const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
 
+        // Pick the most common category (not just first transaction — may be miscategorized)
+        const catFreq = {};
+        for (const tx of slotTxns) {
+          if (tx.category) catFreq[tx.category] = (catFreq[tx.category] || 0) + 1;
+        }
+        const bestCategory = Object.entries(catFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || slotTxns[0].category;
+
+        const lastDate = slotTxns.sort((a, b) => b.date?.localeCompare(a.date))[0].date;
+
+        // Recency check — only suggest if last transaction is within 90 days
+        const daysSinceLast = (Date.now() - new Date(lastDate).getTime()) / 86400000;
+        if (daysSinceLast > 90) continue;
+
+        // Refined confidence: base + months bonus + amount consistency + recency
+        const base = 0.4;
+        const monthBonus = Math.min(maxConsecutive * 0.12, 0.36);
+        const amountBonus = amountConsistent ? 0.15 : 0;
+        const recencyBonus = daysSinceLast < 45 ? 0.1 : 0;
+
         suggestions.push({
           merchant: displayMerchant,
           amount: Math.round(avgAmount * 100) / 100,
           currency: slotTxns[0].currency || 'RON',
-          category: slotTxns[0].category,
+          category: bestCategory,
           consecutiveMonths: maxConsecutive,
           billingDay,
-          confidence: Math.min(0.95, 0.5 + (maxConsecutive * 0.15) + (amountConsistent ? 0.2 : 0)),
-          lastDate: slotTxns.sort((a, b) => b.date?.localeCompare(a.date))[0].date,
+          confidence: Math.min(0.95, base + monthBonus + amountBonus + recencyBonus),
+          lastDate,
           transactionCount: slotTxns.length,
         });
       }
