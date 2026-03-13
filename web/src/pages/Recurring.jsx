@@ -8,6 +8,7 @@ import { RECURRING_FREQUENCIES } from '../lib/constants';
 import { generateId, formatCurrency, getCategoryById, calcMonthlyEquivalent } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { detectRecurringPatterns, auditSubscriptions } from '../lib/smartFeatures';
+import { getSetting, setSetting } from '../lib/storage';
 import RecurringRow from '../components/RecurringRow';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
@@ -54,6 +55,10 @@ export default function Recurring() {
     const load = async () => {
       setLoading(true);
       try {
+        // Load persisted dismissed suggestions
+        const dismissed = await getSetting('dismissedRecurringSuggestions');
+        if (dismissed?.length) setDismissedSuggestions(new Set(dismissed));
+
         const [data, txData] = await Promise.all([
           recurringApi.getAll({ userId: effectiveUserId }),
           txApi.getAll({ userId: effectiveUserId }),
@@ -234,21 +239,27 @@ export default function Recurring() {
         currency: suggestion.currency,
         category: suggestion.category,
         billingDay: suggestion.billingDay,
-        frequency: 'monthly',
+        billingMonth: suggestion.billingMonth || 1,
+        frequency: suggestion.frequency || 'monthly',
         active: true,
         userId: effectiveUserId,
         autoDetected: true,
+        isVariable: suggestion.isVariable ? 1 : 0,
         recurringType: SUBSCRIPTION_CATEGORIES.has(suggestion.category) ? 'subscription' : 'bill',
         createdAt: new Date().toISOString(),
       });
       toast.success(t('recurring.addedAsRecurring', { name: suggestion.merchant }));
-      setDismissedSuggestions((prev) => new Set([...prev, suggestion.merchant.toLowerCase()]));
+      const next = new Set([...dismissedSuggestions, suggestion.merchant.toLowerCase()]);
+      setDismissedSuggestions(next);
+      setSetting('dismissedRecurringSuggestions', [...next]);
       loadItems();
     } catch (err) { toast.error(err.message); }
   };
 
   const dismissSuggestion = (suggestion) => {
-    setDismissedSuggestions((prev) => new Set([...prev, suggestion.merchant.toLowerCase()]));
+    const next = new Set([...dismissedSuggestions, suggestion.merchant.toLowerCase()]);
+    setDismissedSuggestions(next);
+    setSetting('dismissedRecurringSuggestions', [...next]);
   };
 
   const handleScanTransactions = async () => {
@@ -380,14 +391,33 @@ export default function Recurring() {
                 </div>
                 {activeSuggestions.map((s, i) => {
                   const cat = getCategoryById(s.category);
+                  const freqLabel = s.frequency === 'weekly' ? t('recurring.weeksInRow', { count: s.consecutiveMonths })
+                    : s.frequency === 'quarterly' ? t('recurring.quartersInRow', { count: s.consecutiveMonths })
+                    : s.frequency === 'annual' ? t('recurring.yearsInRow', { count: s.consecutiveMonths })
+                    : t('recurring.monthsInRow', { count: s.consecutiveMonths });
                   return (
                     <div key={i} className="flex items-center justify-between bg-white dark:bg-dark-card rounded-lg p-3 border border-cream-200 dark:border-dark-border">
                       <div className="flex items-center gap-2">
                         <span>{cat.icon}</span>
                         <div>
-                          <p className="text-sm font-medium">{s.merchant}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium">{s.merchant}</p>
+                            {s.frequency && s.frequency !== 'monthly' && (
+                              <span className="px-1.5 py-0.5 rounded bg-cream-200 dark:bg-dark-border text-cream-600 dark:text-cream-400 text-[10px] font-medium">
+                                {t(`frequencies.${s.frequency}`)}
+                              </span>
+                            )}
+                            {!!s.isVariable && (
+                              <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[10px] font-medium">
+                                {t('recurring.variable')}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-cream-500">
-                            ~{formatCurrency(s.amount, s.currency)} · {t('recurring.dayBilling', { day: s.billingDay })} · {t('recurring.monthsInRow', { count: s.consecutiveMonths })}
+                            {s.isVariable
+                              ? `${formatCurrency(s.amountMin, s.currency)} – ${formatCurrency(s.amountMax, s.currency)}`
+                              : `~${formatCurrency(s.amount, s.currency)}`}
+                            {' · '}{t('recurring.dayBilling', { day: s.billingDay })} · {freqLabel}
                           </p>
                         </div>
                       </div>

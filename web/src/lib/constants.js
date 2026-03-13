@@ -332,6 +332,7 @@ export const DEFAULT_SETTINGS = {
   weeklyDigest: false,
   notificationsEnabled: false,
   locale: 'ro-RO',
+  dismissedRecurringSuggestions: [],
 };
 
 export const BUDGET_TEMPLATES = [
