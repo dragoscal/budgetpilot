@@ -96,7 +96,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
         {milestones.map((m) => (
           <div
             key={m}
-            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
+            className="absolute top-1/2 flex items-center justify-center"
             style={{ left: `${m}%`, transform: 'translate(-50%, -50%)' }}
           >
             {pct >= m ? (

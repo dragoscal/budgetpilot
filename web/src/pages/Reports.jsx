@@ -76,10 +76,10 @@ export default function Reports() {
     return allTx.filter((tx) => tx.date >= dateFrom && tx.date <= dateTo);
   }, [allTx, dateFrom, dateTo]);
 
-  const expenses = filtered.filter((tx) => tx.type === 'expense');
-  const income = filtered.filter((tx) => tx.type === 'income');
-  const totalExpenses = sumAmountsMultiCurrency(expenses, currency, rates);
-  const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
+  const expenses = useMemo(() => filtered.filter((tx) => tx.type === 'expense'), [filtered]);
+  const income = useMemo(() => filtered.filter((tx) => tx.type === 'income'), [filtered]);
+  const totalExpenses = useMemo(() => sumAmountsMultiCurrency(expenses, currency, rates), [expenses, currency, rates]);
+  const totalIncome = useMemo(() => sumAmountsMultiCurrency(income, currency, rates), [income, currency, rates]);
 
   // Category breakdown
   const categoryData = useMemo(() => {
@@ -304,14 +304,14 @@ export default function Reports() {
               {['business', 'medical', 'charity', 'education', 'work'].map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => setTaxTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                  onClick={() => setTaxTags((prev) => prev.includes(tag) ? prev.filter((tg) => tg !== tag) : [...prev, tag])}
                   className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                     taxTags.includes(tag)
                       ? 'bg-accent-50 dark:bg-accent-500/15 border-accent text-accent-700 dark:text-accent-300'
                       : 'border-cream-300 dark:border-dark-border text-cream-500'
                   }`}
                 >
-                  #{tag}
+                  #{t(`reports.tag.${tag}`) || tag}
                 </button>
               ))}
             </div>

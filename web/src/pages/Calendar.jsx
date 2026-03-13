@@ -293,7 +293,11 @@ export default function CalendarPage() {
           const bm = (r.billingMonth || 1) - 1;
           if (r.frequency === 'annual' && currentMonthNum !== bm) return false;
           if (r.frequency === 'semiannual' && currentMonthNum !== bm && currentMonthNum !== (bm + 6) % 12) return false;
-          if (r.frequency === 'biannual' && currentMonthNum !== bm && currentMonthNum !== (bm + 24) % 12) return false;
+          if (r.frequency === 'biannual') {
+            if (currentMonthNum !== bm) return false;
+            const startYear = r.startDate ? new Date(r.startDate).getFullYear() : month.getFullYear();
+            if ((month.getFullYear() - startYear) % 2 !== 0) return false;
+          }
         }
         return true;
       });

@@ -151,17 +151,17 @@ export default function Challenges() {
   const active = useMemo(() => items.filter(c => {
     const p = getProgress(c, allTx, t);
     return p.status === 'active';
-  }), [items, allTx]);
+  }), [items, allTx, t]);
 
   const completed = useMemo(() => items.filter(c => {
     const p = getProgress(c, allTx, t);
     return p.status === 'completed';
-  }), [items, allTx]);
+  }), [items, allTx, t]);
 
   const failed = useMemo(() => items.filter(c => {
     const p = getProgress(c, allTx, t);
     return p.status === 'failed';
-  }), [items, allTx]);
+  }), [items, allTx, t]);
 
   const handleCreate = async (preset = null) => {
     const data = preset || form;
@@ -184,18 +184,26 @@ export default function Challenges() {
       createdAt: new Date().toISOString(),
     };
 
-    await challengeApi.create(challenge);
-    toast.success(t('challenges.started', { title: challenge.title }));
-    setShowForm(false);
-    setShowPresets(false);
-    setForm({ type: 'budget_cap', title: '', target: '', category: '', durationDays: '30' });
-    loadData();
+    try {
+      await challengeApi.create(challenge);
+      toast.success(t('challenges.started', { title: challenge.title }));
+      setShowForm(false);
+      setShowPresets(false);
+      setForm({ type: 'budget_cap', title: '', target: '', category: '', durationDays: '30' });
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleDelete = async (id) => {
-    await challengeApi.remove(id);
-    toast.success(t('challenges.deleted'));
-    loadData();
+    try {
+      await challengeApi.remove(id);
+      toast.success(t('challenges.deleted'));
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleRetry = (challenge) => {

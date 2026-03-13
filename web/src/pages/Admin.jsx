@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -93,6 +93,7 @@ export default function Admin() {
   const [deleteModal, setDeleteModal] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const loadVersion = useRef(0);
 
   const TABS = useMemo(() => [
     { id: 'overview', label: t('admin.tabOverview'), icon: Shield },
@@ -109,30 +110,31 @@ export default function Admin() {
     setSearchParams({ tab: id }, { replace: true });
   }, [setSearchParams]);
 
-  useEffect(() => { loadTabData(); }, [tab]);
-
-  const loadTabData = async () => {
+  const loadTabData = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       switch (tab) {
-        case 'overview': setStats(await adminApi.getStats()); break;
-        case 'users': setUsers(await adminApi.getUsers()); break;
-        case 'activity': setActivity(await adminApi.getActivity({ limit: 100 })); break;
-        case 'ai-costs': setAiCosts(await adminApi.getAiCosts()); break;
-        case 'errors': setErrors(await adminApi.getErrors()); break;
-        case 'performance': setPerformance(await adminApi.getPerformance()); break;
+        case 'overview': { const d = await adminApi.getStats(); if (loadVersion.current === version) setStats(d); break; }
+        case 'users': { const d = await adminApi.getUsers(); if (loadVersion.current === version) setUsers(d); break; }
+        case 'activity': { const d = await adminApi.getActivity({ limit: 100 }); if (loadVersion.current === version) setActivity(d); break; }
+        case 'ai-costs': { const d = await adminApi.getAiCosts(); if (loadVersion.current === version) setAiCosts(d); break; }
+        case 'errors': { const d = await adminApi.getErrors(); if (loadVersion.current === version) setErrors(d); break; }
+        case 'performance': { const d = await adminApi.getPerformance(); if (loadVersion.current === version) setPerformance(d); break; }
         case 'feedback': {
           const fb = await adminApi.getFeedback();
-          setFeedback({ data: fb.data || [], counts: fb.counts || [] });
+          if (loadVersion.current === version) setFeedback({ data: fb.data || [], counts: fb.counts || [] });
           break;
         }
       }
     } catch (err) {
-      toast.error(err.message);
+      if (loadVersion.current === version) toast.error(err.message);
     } finally {
-      setLoading(false);
+      if (loadVersion.current === version) setLoading(false);
     }
-  };
+  }, [tab, toast]);
+
+  useEffect(() => { loadTabData(); }, [loadTabData]);
 
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 8) {

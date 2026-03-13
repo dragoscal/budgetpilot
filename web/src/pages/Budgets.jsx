@@ -102,7 +102,7 @@ export default function Budgets() {
     } finally {
       if (loadVersion.current === version) setLoading(false);
     }
-  }, [month, viewMode, effectiveUserId]);
+  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -309,7 +309,7 @@ export default function Budgets() {
       if (isFamily) return b.familyId === activeFamily?.id && b.month === prevMonthKey;
       return !b.familyId && b.month === prevMonthKey;
     });
-  }, [allBudgetsRef.current, viewMode, isFamilyMode, activeFamily, prevMonthKey]);
+  }, [budgetsList, viewMode, isFamilyMode, activeFamily, prevMonthKey]);
 
   const canCopyLastMonth = prevMonthBudgets.length > 0 && prevMonthBudgets.some((b) => !usedCategories.has(b.category));
 
