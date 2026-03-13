@@ -53,7 +53,7 @@ export default function FamilyPicker({ collapsed }) {
       </button>
 
       {open && (
-        <div className="absolute z-50 left-3 right-3 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden" style={{ minWidth: '180px' }}>
+        <div className="absolute z-50 left-3 right-3 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg overflow-hidden" style={{ minWidth: '180px' }}>
           {/* Personal mode */}
           <button
             onClick={() => { switchFamily(null); setOpen(false); }}

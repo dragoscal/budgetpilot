@@ -86,7 +86,7 @@ export default function ReceiptScanner({ onResult, onError }) {
     <div className="space-y-3">
       {!image ? (
         <div
-          className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer ${
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
             dragging
               ? 'border-success bg-success/5'
               : 'border-cream-300 dark:border-dark-border hover:border-cream-400'

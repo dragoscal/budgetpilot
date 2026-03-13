@@ -48,7 +48,7 @@ export default function WhatsNew() {
   return (
     <Modal open={open} onClose={handleDismiss} title="" wide>
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center mx-auto mb-3">
+        <div className="w-14 h-14 rounded-lg bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center mx-auto mb-3">
           <Sparkles size={28} className="text-accent" />
         </div>
         <h2 className="text-xl font-heading font-bold">{t('changelog.whatsNew')}</h2>

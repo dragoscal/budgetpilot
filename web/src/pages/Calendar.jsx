@@ -93,7 +93,7 @@ function BillChip({ bill, currency, className = '' }) {
 
 function ViewToggle({ viewMode, setViewMode, t }) {
   return (
-    <div className="flex rounded-2xl border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
+    <div className="flex rounded-lg border border-cream-300 dark:border-dark-border overflow-hidden text-xs">
       <button onClick={() => setViewMode('month')}
         className={`px-2.5 sm:px-3 py-1.5 font-medium transition-all flex items-center gap-1 ${
           viewMode === 'month'
@@ -144,7 +144,7 @@ function CalendarStats({ monthStats, currency, t }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {items.map((item, i) => (
-        <div key={i} className="card-elevated !p-3 sm:!p-4 !rounded-2xl">
+        <div key={i} className="card !p-3 sm:!p-4 !rounded-lg">
           <div className="flex items-center gap-2 mb-1.5">
             <div className={`w-6 h-6 rounded-lg ${item.iconBg} flex items-center justify-center shrink-0`}>
               <item.icon size={13} className={item.color} />
@@ -170,7 +170,7 @@ function DayDetailPanel({ dayData, selectedDay, currency, t, onClose }) {
   const topAccent = dayData.categories.length > 0 ? getCatColor(dayData.categories[0]) : '#14b8a6';
 
   return (
-    <div className="card-elevated p-4 space-y-4 animate-fadeUp" style={{ borderTop: `3px solid ${topAccent}` }}>
+    <div className="card p-4 space-y-4 animate-fadeUp" style={{ borderTop: `3px solid ${topAccent}` }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -290,7 +290,7 @@ function MobileBottomSheet({ open, onClose, children }) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={onClose} />
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden max-h-[80vh] overflow-y-auto bg-white dark:bg-dark-card border-t border-cream-200 dark:border-dark-border rounded-t-2xl shadow-xl animate-slide-up">
+      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden max-h-[80vh] overflow-y-auto bg-white dark:bg-dark-card border-t border-cream-200 dark:border-dark-border rounded-t-2xl shadow-lg animate-slide-up">
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white dark:bg-dark-card z-10">
           <div className="w-10 h-1 rounded-full bg-cream-300 dark:bg-dark-border" />
         </div>
@@ -455,7 +455,7 @@ export default function CalendarPage() {
 
       {/* ─── Streak banner ─── */}
       {monthStats.streak >= 2 && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-success/10 to-accent/10 border border-success/20">
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-success/5 border border-success/20">
           <Star size={18} className="text-success shrink-0" />
           <div>
             <p className="text-sm font-bold text-success">{t('calendar.streakTitle', { count: monthStats.streak })}</p>
@@ -468,7 +468,7 @@ export default function CalendarPage() {
       <div className="flex gap-4 items-start">
         {/* Calendar grid card */}
         <div className="flex-1 min-w-0">
-          <div className="card-elevated p-2 sm:p-3 lg:p-4 overflow-hidden">
+          <div className="card p-2 sm:p-3 lg:p-4 overflow-hidden">
             {viewMode === 'month' ? (
               <>
                 {/* Day name headers */}

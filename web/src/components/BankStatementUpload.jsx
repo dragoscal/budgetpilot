@@ -220,7 +220,7 @@ export default function BankStatementUpload({ onResult, onError }) {
     <div className="space-y-3">
       {!fileName ? (
         <div
-          className={`border-2 border-dashed rounded-2xl p-4 md:p-8 text-center transition-colors cursor-pointer ${
+          className={`border-2 border-dashed rounded-lg p-4 md:p-8 text-center transition-colors cursor-pointer ${
             dragging
               ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/10'
               : 'border-cream-300 dark:border-dark-border hover:border-cream-400'

@@ -72,7 +72,7 @@ export default function HelpButton({ section, className = '' }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 sm:w-80 bg-white dark:bg-dark-card rounded-xl shadow-2xl border border-cream-200 dark:border-dark-border z-50 animate-fadeUp overflow-hidden">
+        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 sm:w-80 bg-white dark:bg-dark-card rounded-xl shadow-lg border border-cream-200 dark:border-dark-border z-50 animate-fadeUp overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-cream-100 dark:border-dark-border bg-cream-50 dark:bg-dark-bg/50">
             <div className="flex items-center gap-1.5">

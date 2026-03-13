@@ -235,7 +235,7 @@ export default function CSVImport({ onResult, onError }) {
     <div className="space-y-4">
       {!parsed ? (
         <div
-          className="border-2 border-dashed rounded-2xl p-4 md:p-8 text-center transition-colors cursor-pointer border-cream-300 dark:border-dark-border hover:border-cream-400"
+          className="border-2 border-dashed rounded-lg p-4 md:p-8 text-center transition-colors cursor-pointer border-cream-300 dark:border-dark-border hover:border-cream-400"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}

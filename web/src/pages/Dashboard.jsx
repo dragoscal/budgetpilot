@@ -1140,7 +1140,7 @@ export default function Dashboard() {
 
           case 'healthScore':
             return (
-              <div key="healthScore" className={`card-hero !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
+              <div key="healthScore" className={`card !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
                 <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 shrink-0">
                     <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
@@ -1173,7 +1173,7 @@ export default function Dashboard() {
           case 'spendingChart':
             return (
               <div key="spendingChart" className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="card-elevated !p-3 md:!p-5">
+                <div className="card !p-3 md:!p-5">
                   <h3 className="section-title">{t('dashboard.spendingTrend')}</h3>
                   {spendingChartData.length > 0 ? (
                     <div className="h-[140px] md:h-[200px]">
@@ -1202,7 +1202,7 @@ export default function Dashboard() {
 
                 {/* Goals & Bills previews alongside chart */}
                 <div className="space-y-4">
-                  <div className={`card-elevated !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
+                  <div className={`card !p-3 md:!p-5 ${goalsList.length === 0 ? 'hidden md:block' : ''}`}>
                     <div className="flex items-center justify-between mb-3 md:mb-4">
                       <h3 className="section-title mb-0">{t('dashboard.savingsGoals')}</h3>
                       <Link to="/goals" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1229,7 +1229,7 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <div className={`card-elevated !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
+                  <div className={`card !p-3 md:!p-5 ${upcomingBills.length === 0 ? 'hidden md:block' : ''}`}>
                     <div className="flex items-center justify-between mb-3 md:mb-4">
                       <h3 className="section-title mb-0">{t('dashboard.upcomingBills')}</h3>
                       <Link to="/recurring" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1260,7 +1260,7 @@ export default function Dashboard() {
 
           case 'topCategories':
             return (
-              <div key="topCategories" className="card-elevated !p-3 md:!p-5">
+              <div key="topCategories" className="card !p-3 md:!p-5">
                 <h3 className="section-title">{t('dashboard.byCategory')}</h3>
                 {categoryData.length > 0 ? (
                   <div className="flex items-center gap-3 md:gap-4">
@@ -1293,7 +1293,7 @@ export default function Dashboard() {
 
           case 'budgetOverview':
             return budgetProgress.length > 0 ? (
-              <div key="budgetOverview" className="card-elevated !p-3 md:!p-5">
+              <div key="budgetOverview" className="card !p-3 md:!p-5">
                 <div className="flex items-center justify-between mb-3 md:mb-4">
                   <h3 className="section-title mb-0">{t('dashboard.budgetProgress')}</h3>
                   <Link to="/budgets" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>
@@ -1310,7 +1310,7 @@ export default function Dashboard() {
 
           case 'predictions':
             return predictions ? (
-              <div key="predictions" className="card-elevated !p-3 md:!p-5">
+              <div key="predictions" className="card !p-3 md:!p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Target size={14} className="text-accent-600 dark:text-accent-400" />
                   <h3 className="section-title mb-0">{t('dashboard.predictions')}</h3>
@@ -1366,7 +1366,7 @@ export default function Dashboard() {
 
           case 'billSuggestions':
             return billSuggestions.length > 0 ? (
-              <div key="billSuggestions" className="card-elevated !p-3 md:!p-5">
+              <div key="billSuggestions" className="card !p-3 md:!p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb size={14} className="text-warning" />
                   <h3 className="section-title mb-0">{t('dashboard.billSuggestions')}</h3>
@@ -1403,7 +1403,7 @@ export default function Dashboard() {
 
           case 'recentTransactions':
             return (
-              <div key="recentTransactions" className="card-elevated !p-3 md:!p-5">
+              <div key="recentTransactions" className="card !p-3 md:!p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="section-title mb-0">{t('dashboard.recentTransactions')}</h3>
                   <Link to="/transactions" className="text-xs text-cream-500 hover:text-cream-700 flex items-center gap-1">{t('common.viewAll')} <ArrowRight size={12} /></Link>

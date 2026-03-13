@@ -67,7 +67,7 @@ export default function BatchToolbar({
 
   return (
     <div ref={toolbarRef} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
-      <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-cream-900/95 dark:bg-cream-100/95 text-white dark:text-cream-900 shadow-2xl backdrop-blur-sm border border-cream-700/30 dark:border-cream-300/30">
+      <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-cream-900/95 dark:bg-cream-100/95 text-white dark:text-cream-900 shadow-lg backdrop-blur-sm border border-cream-700/30 dark:border-cream-300/30">
         {/* Selection count */}
         <span className="text-sm font-medium whitespace-nowrap">
           {t('batch.selectedCount', { count: selectedCount })}
@@ -85,7 +85,7 @@ export default function BatchToolbar({
             <Tag size={16} />
           </button>
           {showCategoryPicker && (
-            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden z-50" style={{ minWidth: '220px', maxHeight: '320px' }}>
+            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg overflow-hidden z-50" style={{ minWidth: '220px', maxHeight: '320px' }}>
               <div className="p-2 border-b border-cream-100 dark:border-dark-border">
                 <p className="text-xs font-medium text-cream-600 dark:text-cream-400">{t('batch.changeCategory')}</p>
               </div>
@@ -115,7 +115,7 @@ export default function BatchToolbar({
             <Calendar size={16} />
           </button>
           {showDatePicker && (
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl p-3 z-50">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg p-3 z-50">
               <p className="text-xs font-medium text-cream-600 dark:text-cream-400 mb-2">{t('batch.changeDate')}</p>
               <form onSubmit={handleDateSubmit} className="flex items-center gap-2">
                 <input
@@ -141,7 +141,7 @@ export default function BatchToolbar({
             <Hash size={16} />
           </button>
           {showTagInput && (
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl p-3 z-50" style={{ minWidth: '240px' }}>
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg p-3 z-50" style={{ minWidth: '240px' }}>
               <p className="text-xs font-medium text-cream-600 dark:text-cream-400 mb-2">{t('batch.manageTags')}</p>
               <div className="flex gap-1 mb-2">
                 <button

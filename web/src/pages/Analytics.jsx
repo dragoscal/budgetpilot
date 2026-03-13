@@ -154,7 +154,7 @@ export default function Analytics() {
       </div>
 
       {/* Smart summary */}
-      <div className="card-hero">
+      <div className="card">
         <h3 className="section-title">{t('analytics.smartSummary')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><p className="text-cream-500 text-xs">{t('analytics.totalTransactions')}</p><p className="stat-value text-lg">{monthTx.length}</p></div>
@@ -177,7 +177,7 @@ export default function Analytics() {
       </div>
 
       {/* Category vs budget */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.categoryVsBudget')}</h3>
         <p className="text-xs text-cream-400 mb-2">{t('analytics.clickCategory')}</p>
         {categoryBudgetData.length > 0 ? (
@@ -213,7 +213,7 @@ export default function Analytics() {
         const totalCatSpent = subcatData.reduce((s, d) => s + d.spent, 0);
 
         return (
-          <div className="card-elevated">
+          <div className="card">
             <div className="flex items-center justify-between mb-3">
               <h3 className="section-title mb-0">
                 {getCategoryById(selectedCategory)?.icon} {t('categories.' + selectedCategory)} — {t('analytics.subcategories')}
@@ -246,7 +246,7 @@ export default function Analytics() {
       })()}
 
       {/* Daily spending pattern */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.dailySpending')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dailySpending}>
@@ -260,7 +260,7 @@ export default function Analytics() {
 
       {/* Smart Insights */}
       {insights.length > 0 && (
-        <div className="card-elevated border-info/20 bg-info/5">
+        <div className="card border-info/20 bg-info/5">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={16} className="text-info" />
             <h3 className="section-title mb-0">{t('analytics.smartInsights')}</h3>
@@ -280,7 +280,7 @@ export default function Analytics() {
       )}
 
       {/* Top merchants */}
-      <div className="card-elevated">
+      <div className="card">
         <h3 className="section-title">{t('analytics.topMerchants')}</h3>
         {topMerchants.length > 0 ? (
           <div className="space-y-2">
@@ -300,7 +300,7 @@ export default function Analytics() {
 
       {/* Spending by tag */}
       {tagStats.length > 0 && (
-        <div className="card-elevated">
+        <div className="card">
           <div className="flex items-center gap-2 mb-3">
             <Hash size={16} className="text-accent" />
             <h3 className="section-title mb-0">{t('analytics.spendingByTag')}</h3>

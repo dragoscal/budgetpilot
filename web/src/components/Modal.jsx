@@ -59,11 +59,11 @@ export default function Modal({ open, onClose, title, children, wide = false }) 
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`bg-white dark:bg-dark-card rounded-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-md'} max-h-[85vh] flex flex-col relative overflow-hidden`}
+        className={`bg-white dark:bg-dark-card rounded-lg w-full ${wide ? 'max-w-2xl' : 'max-w-md'} max-h-[85vh] flex flex-col relative overflow-hidden`}
         style={{ boxShadow: '0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.12)' }}
       >
         {/* Gold accent line */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-gold-400 via-gold-300 to-gold-400 opacity-70" />
+        
         <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 dark:border-dark-border shrink-0">
           <h3 id={titleId} className="font-heading font-semibold text-lg">{title}</h3>
           <button onClick={onClose} aria-label="Close dialog" className="p-1.5 rounded-xl text-cream-400 hover:bg-cream-100 hover:text-cream-600 dark:hover:bg-dark-border dark:hover:text-cream-300 transition-all">

@@ -138,7 +138,7 @@ function AuthFallback() {
     return (
       <div className="min-h-screen bg-cream-100 dark:bg-dark-bg flex items-center justify-center p-8">
         <div className="text-center max-w-md space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-lg bg-warning/10 flex items-center justify-center mx-auto">
             <AlertTriangle size={32} className="text-warning" />
           </div>
           <h2 className="text-xl font-bold text-cream-900 dark:text-cream-100">

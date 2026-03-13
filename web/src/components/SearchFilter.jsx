@@ -40,7 +40,7 @@ function CategoryDropdown({ value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute z-50 right-0 sm:left-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden" style={{ minWidth: '200px', maxHeight: '320px' }}>
+        <div className="absolute z-50 right-0 sm:left-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg overflow-hidden" style={{ minWidth: '200px', maxHeight: '320px' }}>
           <div className="overflow-y-auto" style={{ maxHeight: '320px' }}>
             <button
               type="button"

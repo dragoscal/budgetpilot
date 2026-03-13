@@ -374,7 +374,7 @@ export default function Budgets() {
 
       {/* Overall progress */}
       {budgetData.length > 0 && (
-        <div className="card-hero">
+        <div className="card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">{t('budgets.overallBudget')}</span>
             <span className="text-sm stat-value">
@@ -461,7 +461,7 @@ export default function Budgets() {
 
       {/* Unbudgeted categories with quick-add */}
       {budgetData.length > 0 && toBeBudgeted > 1 && availableCategories.length > 0 && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('budgets.quickAllocate')}</h3>
           <p className="text-xs text-cream-500 mb-3">
             {t('budgets.categoriesWithoutBudgets', { count: availableCategories.length })}
@@ -495,7 +495,7 @@ export default function Budgets() {
 
       {/* Fully allocated message */}
       {budgetData.length > 0 && Math.abs(toBeBudgeted) <= 1 && (
-        <div className="card-elevated border border-success/20 bg-success/5">
+        <div className="card border border-success/20 bg-success/5">
           <p className="text-sm text-success font-medium text-center">
             {t('budgets.fullyAllocated')}
           </p>
@@ -553,7 +553,7 @@ export default function Budgets() {
               <button
                 key={tmpl.id}
                 onClick={() => handleSelectTemplate(tmpl)}
-                className={`w-full text-left p-3 rounded-2xl border transition-all ${
+                className={`w-full text-left p-3 rounded-lg border transition-all ${
                   selectedTemplate?.id === tmpl.id
                     ? 'border-gold-400 bg-gold-50/50 shadow-sm dark:border-gold-500/50 dark:bg-gold-500/5'
                     : 'border-cream-200 hover:border-gold-300 dark:border-dark-border dark:hover:border-gold-500/30'

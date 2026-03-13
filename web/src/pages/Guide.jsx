@@ -266,7 +266,7 @@ function SectionNav({ activeSection, onNavigate, t }) {
 
 function HeroSection({ t, onGetStarted }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent-50 to-accent-100/60 dark:from-accent-900/20 dark:to-dark-card p-6 sm:p-8 md:p-10">
+    <div className="relative overflow-hidden rounded-lg bg-accent-50 dark:bg-accent-500/5 border border-accent-200 dark:border-accent-500/15 p-6 sm:p-8 md:p-10">
       {/* Decorative circles */}
       <div className="absolute top-4 right-4 w-24 h-24 rounded-full bg-accent-200/30 dark:bg-accent-500/10" />
       <div className="absolute top-14 right-20 w-14 h-14 rounded-full bg-accent-300/25 dark:bg-accent-400/10 animate-pulse-slow" />

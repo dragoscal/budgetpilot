@@ -240,7 +240,7 @@ export default function Challenges() {
 
       {/* Streak card */}
       {streakDays > 0 && (
-        <div className="card bg-gradient-to-r from-accent-500/10 to-accent-600/5 border-accent-200 dark:border-accent-800">
+        <div className="card bg-accent-50 dark:bg-accent-500/5 border-accent-200 dark:border-accent-800">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-accent-100 dark:bg-accent-900/40 flex items-center justify-center text-2xl">🔥</div>
             <div>

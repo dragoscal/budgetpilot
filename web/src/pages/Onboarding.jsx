@@ -183,7 +183,7 @@ export default function Onboarding() {
           {step === 0 && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-2xl mb-3">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-lg mb-3">
                   <Wallet className="w-7 h-7 text-success" />
                 </div>
                 <h2 className="text-2xl font-heading font-bold">{t('onboarding.welcome')}</h2>
@@ -280,7 +280,7 @@ export default function Onboarding() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-accent-500/10 rounded-2xl mb-3">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-accent-500/10 rounded-lg mb-3">
                   <Upload className="w-7 h-7 text-accent-500" />
                 </div>
                 <h2 className="text-2xl font-heading font-bold">{t('onboarding.importData')}</h2>
@@ -367,7 +367,7 @@ export default function Onboarding() {
           {step === 4 && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-info/10 rounded-2xl mb-3">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-info/10 rounded-lg mb-3">
                   <Sparkles className="w-7 h-7 text-info" />
                 </div>
                 <h2 className="text-2xl font-heading font-bold">{t('onboarding.aiPowered')}</h2>

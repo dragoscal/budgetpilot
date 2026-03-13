@@ -508,7 +508,7 @@ export default function People() {
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl ${
+                  <div className={`w-14 h-14 rounded-lg flex items-center justify-center text-3xl ${
                     selectedPersonBal.net > 0
                       ? 'bg-success/10'
                       : selectedPersonBal.net < 0

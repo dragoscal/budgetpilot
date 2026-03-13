@@ -572,7 +572,7 @@ export default function Transactions() {
       </div>
 
       {/* Quick Add */}
-      <div className="card-elevated !p-3">
+      <div className="card !p-3">
         <button
           onClick={() => setShowQuickAdd(prev => !prev)}
           className="flex items-center justify-between w-full"
@@ -610,7 +610,7 @@ export default function Transactions() {
 
       {/* Audit Results */}
       {auditResult && (
-        <div className="card-elevated !p-4 space-y-4 border-2 border-accent/20">
+        <div className="card !p-4 space-y-4 border-2 border-accent/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Search size={16} className="text-accent" />
@@ -739,7 +739,7 @@ export default function Transactions() {
 
       {/* Correlation Results */}
       {correlationResult && (
-        <div className="card-elevated !p-4 space-y-4 border-2 border-info/20">
+        <div className="card !p-4 space-y-4 border-2 border-info/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Link size={16} className="text-info" />
@@ -869,7 +869,7 @@ export default function Transactions() {
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-cream-500 shrink-0">{t('transactions.period')}</span>
-        <div className="flex rounded-2xl border border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide bg-cream-50/50 dark:bg-dark-card/50">
+        <div className="flex rounded-lg border border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide bg-cream-50/50 dark:bg-dark-card/50">
           {[
             { id: 'all', label: t('common.all') },
             { id: 'thisMonth', label: t('transactions.thisMonth') },
@@ -953,7 +953,7 @@ export default function Transactions() {
       </div>
 
       {/* Transaction list */}
-      <div className="card-elevated p-0">
+      <div className="card p-0">
         {loading ? (
           <div>{[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}</div>
         ) : paginated.length > 0 ? (

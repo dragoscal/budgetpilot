@@ -124,7 +124,7 @@ export default function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label={t('commandPalette.title') || 'Command palette'}
-        className="relative w-full max-w-lg mx-4 bg-white dark:bg-dark-card rounded-2xl shadow-2xl border border-cream-200 dark:border-dark-border overflow-hidden"
+        className="relative w-full max-w-lg mx-4 bg-white dark:bg-dark-card rounded-lg shadow-lg border border-cream-200 dark:border-dark-border overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-cream-200 dark:border-dark-border">

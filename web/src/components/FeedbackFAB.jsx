@@ -106,7 +106,7 @@ export default function FeedbackFAB() {
       {/* FAB Button */}
       <button
         onClick={() => setOpen(true)}
-        className={`fixed z-50 bottom-[5.5rem] right-3 md:bottom-6 md:right-6 w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-600 hover:bg-accent-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
+        className={`fixed z-50 bottom-[5.5rem] right-3 md:bottom-6 md:right-6 w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-600 hover:bg-accent-700 text-white shadow-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
         aria-label={t('feedback.title')}
         title={t('feedback.title')}
       >
@@ -123,7 +123,7 @@ export default function FeedbackFAB() {
           />
           <div
             ref={modalRef}
-            className="pointer-events-auto relative z-10 w-full md:w-96 md:max-w-[calc(100vw-2rem)] mb-0 md:mb-6 md:mr-6 bg-white dark:bg-dark-card rounded-t-2xl md:rounded-2xl shadow-2xl border border-cream-200 dark:border-dark-border animate-slide-up md:animate-fadeUp overflow-hidden"
+            className="pointer-events-auto relative z-10 w-full md:w-96 md:max-w-[calc(100vw-2rem)] mb-0 md:mb-6 md:mr-6 bg-white dark:bg-dark-card rounded-t-2xl md:rounded-lg shadow-lg border border-cream-200 dark:border-dark-border animate-slide-up md:animate-fadeUp overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-dark-border">

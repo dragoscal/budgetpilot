@@ -58,7 +58,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-fadeUp">
-      <div className="bg-white dark:bg-dark-card rounded-2xl border border-cream-200 dark:border-dark-border shadow-xl p-4">
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-cream-200 dark:border-dark-border shadow-lg p-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-accent-600 flex items-center justify-center shrink-0">
             <Download size={18} className="text-white" />

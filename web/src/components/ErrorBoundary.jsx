@@ -37,7 +37,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-8">
           <div className="text-center max-w-md space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-lg bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto">
               <AlertTriangle size={32} className="text-red-500" />
             </div>
             <h2 className="text-xl font-bold text-cream-900 dark:text-cream-100">

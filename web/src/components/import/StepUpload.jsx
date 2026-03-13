@@ -78,7 +78,7 @@ export default function StepUpload({ parsedData, setParsedData, selectedSheet, s
 
       {/* Drag-drop zone */}
       <div
-        className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer ${
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
           dragging
             ? 'border-accent bg-accent/5'
             : 'border-cream-300 dark:border-dark-border hover:border-accent/50'

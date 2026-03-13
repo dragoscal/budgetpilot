@@ -162,7 +162,7 @@ export default function Family() {
       <div className="space-y-6">
         <h1 className="page-title">{t('family.title')}</h1>
         <div className="card text-center py-12">
-          <div className="w-16 h-16 rounded-2xl bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-lg bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center mx-auto mb-4">
             <Users size={32} className="text-accent" />
           </div>
           <h2 className="text-lg font-heading font-bold mb-2">{t('family.sharedBudgeting')}</h2>

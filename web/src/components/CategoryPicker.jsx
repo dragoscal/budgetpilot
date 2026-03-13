@@ -143,7 +143,7 @@ export default function CategoryPicker({
       {open && (
         <div
           ref={panelRef}
-          className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-xl overflow-hidden"
+          className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded-xl shadow-lg overflow-hidden"
           style={{ minWidth: '240px', maxHeight: '340px' }}
         >
           {/* Search */}

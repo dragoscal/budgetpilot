@@ -534,7 +534,7 @@ export default function AddTransaction() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'bg-gold-50 text-gold-800 border border-gold-300 shadow-sm dark:bg-gold-500/10 dark:text-gold-300 dark:border-gold-500/30'
                 : 'bg-cream-100 text-cream-600 hover:bg-cream-200 border border-transparent dark:bg-dark-border dark:text-cream-500 dark:hover:bg-dark-border/80'
@@ -548,7 +548,7 @@ export default function AddTransaction() {
 
       {/* Saved Drafts */}
       {drafts.length > 0 && (
-        <div className="card-elevated border-info/20 bg-info/5">
+        <div className="card border-info/20 bg-info/5">
           <button
             onClick={() => setShowDrafts(!showDrafts)}
             className="flex items-center justify-between w-full"
@@ -599,7 +599,7 @@ export default function AddTransaction() {
 
       {/* Quick Add */}
       {activeTab === 'quick' && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('addTransaction.naturalLanguageInput')}</h3>
           <QuickAdd onResult={handleAIResult} onError={handleError} initialValue={sharedText} />
         </div>
@@ -607,7 +607,7 @@ export default function AddTransaction() {
 
       {/* Receipt Scanner */}
       {activeTab === 'receipt' && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('addTransaction.scanReceipt')}</h3>
           <ReceiptScanner onResult={handleAIResult} onError={handleError} />
         </div>
@@ -615,7 +615,7 @@ export default function AddTransaction() {
 
       {/* Bank Statement Upload */}
       {activeTab === 'bank' && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('addTransaction.importStatement')}</h3>
           <BankStatementUpload onResult={handleAIResult} onError={handleError} />
         </div>
@@ -623,7 +623,7 @@ export default function AddTransaction() {
 
       {/* CSV Import */}
       {activeTab === 'csv' && (
-        <div className="card-elevated">
+        <div className="card">
           <h3 className="section-title">{t('addTransaction.csvImport')}</h3>
           <CSVImport onResult={handleAIResult} onError={handleError} />
         </div>
@@ -633,7 +633,7 @@ export default function AddTransaction() {
       {receiptMeta && (
         <div className="space-y-3">
           {receiptMeta.receipt?.store && (
-            <div className="card-elevated">
+            <div className="card">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🧾</span>
                 <div>
@@ -699,7 +699,7 @@ export default function AddTransaction() {
 
       {/* AI REVIEW WITH ENHANCED RECEIPT */}
       {pendingResults && pendingResults.length > 0 && (
-        <div className="card-elevated border-success/30 bg-success/5">
+        <div className="card border-success/30 bg-success/5">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('addTransaction.reviewConfirm')}</h3>
             <div className="flex gap-2">
@@ -1043,7 +1043,7 @@ export default function AddTransaction() {
 
       {/* Recently Added */}
       {recentlyAdded.length > 0 && (
-        <div className="card-elevated border-success/20 bg-success/5">
+        <div className="card border-success/20 bg-success/5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-success">
               <CheckCircle2 size={16} />
@@ -1085,7 +1085,7 @@ export default function AddTransaction() {
       )}
 
       {/* Manual entry */}
-      <div className="card-elevated">
+      <div className="card">
         <button
           onClick={() => setShowManual(!showManual)}
           className="flex items-center justify-between w-full text-sm font-semibold"

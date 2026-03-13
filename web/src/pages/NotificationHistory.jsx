@@ -249,7 +249,7 @@ export default function NotificationHistory() {
       {/* Clear confirmation dialog */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-dark-card rounded-2xl shadow-xl p-6 max-w-sm mx-4">
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
                 <Trash2 size={20} className="text-danger" />

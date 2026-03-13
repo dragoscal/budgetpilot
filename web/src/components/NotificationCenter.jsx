@@ -174,7 +174,7 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
         <div className={`absolute z-[60] ${
           mobile
             ? 'fixed inset-x-0 top-0 bottom-0 bg-white dark:bg-dark-card'
-            : 'top-full left-0 mt-2 w-80 max-h-[70vh] bg-white dark:bg-dark-card rounded-xl border border-cream-200 dark:border-dark-border shadow-xl'
+            : 'top-full left-0 mt-2 w-80 max-h-[70vh] bg-white dark:bg-dark-card rounded-xl border border-cream-200 dark:border-dark-border shadow-lg'
         } overflow-hidden flex flex-col`}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-dark-border shrink-0">

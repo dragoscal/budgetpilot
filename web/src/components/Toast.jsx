@@ -31,7 +31,7 @@ export default function ToastContainer() {
         return (
           <div
             key={item.id}
-            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-2xl border border-l-[3px] shadow-lg backdrop-blur-xl ${COLORS[item.type] || COLORS.info}`}
+            className={`animate-slideIn flex items-start gap-3 px-4 py-3 rounded-lg border border-l-[3px] shadow-lg backdrop-blur-xl ${COLORS[item.type] || COLORS.info}`}
           >
             <Icon size={18} className="mt-0.5 shrink-0" />
             <p className="text-sm flex-1">{item.message}</p>
