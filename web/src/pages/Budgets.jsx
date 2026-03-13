@@ -384,12 +384,9 @@ export default function Budgets() {
           <div className="h-3 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? '' : 'bg-success'
+                overallPct >= 100 ? 'bg-danger' : overallPct >= 80 ? 'bar-gradient-warning' : 'bg-success'
               }`}
-              style={{
-                width: `${Math.min(overallPct, 100)}%`,
-                ...(overallPct >= 80 && overallPct < 100 ? { background: 'linear-gradient(90deg, #14b8a6, #f59e0b)' } : {}),
-              }}
+              style={{ width: `${Math.min(overallPct, 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-xs text-cream-500">

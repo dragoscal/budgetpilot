@@ -10,13 +10,8 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
   const cat = getCategoryById(category);
   const pct = percentOf(spent, budgeted);
   const remaining = budgeted - spent;
-  const barColor = pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-warning' : 'bg-success';
-
-  // Gradient bar style for high-usage budgets
-  const barStyle = {
-    width: `${Math.min(pct, 100)}%`,
-    ...(pct >= 80 && pct < 100 ? { background: 'linear-gradient(90deg, #14b8a6, #f59e0b)' } : {}),
-  };
+  const barColor = pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bar-gradient-warning' : 'bg-success';
+  const barWidth = `${Math.min(pct, 100)}%`;
 
   if (compact) {
     return (
@@ -29,7 +24,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
           <span className={`font-heading font-bold ${pct >= 80 ? 'text-gold-600 dark:text-gold-400' : 'text-cream-500'}`}>{pct}%</span>
         </div>
         <div className="h-1.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-          <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={barStyle} />
+          <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: barWidth }} />
         </div>
       </div>
     );
@@ -59,7 +54,7 @@ export default function BudgetBar({ category, spent, budgeted, currency = 'RON',
         </span>
       </div>
       <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden">
-        <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={barStyle} />
+        <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: barWidth }} />
       </div>
       <p className="text-xs text-cream-500 mt-2">
         {remaining >= 0

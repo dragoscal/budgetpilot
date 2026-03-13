@@ -96,10 +96,11 @@ textarea:-webkit-autofill {
   }
 
   .card-elevated {
-    @apply bg-white rounded-[18px] p-5 transition-all duration-200;
+    @apply bg-white rounded-[18px] p-5 duration-200;
     border: 1px solid rgba(214, 211, 209, 0.4);
     border-top: 1px solid rgba(255, 255, 255, 0.8);
     box-shadow: 0 4px 12px rgba(28,25,23,.03), 0 16px 40px rgba(28,25,23,.08);
+    transition: box-shadow 0.2s, transform 0.2s;
   }
   .card-elevated:hover {
     box-shadow: 0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.12);
@@ -116,9 +117,10 @@ textarea:-webkit-autofill {
   }
 
   .card-hero {
-    @apply bg-white rounded-[20px] p-6 transition-all duration-300 relative overflow-hidden;
+    @apply bg-white rounded-[20px] p-6 duration-300 relative overflow-hidden;
     border: 1px solid rgba(214, 211, 209, 0.3);
     box-shadow: 0 8px 24px rgba(28,25,23,.05), 0 24px 48px rgba(28,25,23,.10);
+    transition: box-shadow 0.3s, transform 0.3s;
   }
   .card-hero::before {
     content: '';
@@ -166,26 +168,6 @@ textarea:-webkit-autofill {
   .dark .btn-primary:hover {
     background: linear-gradient(135deg, #5eead4, #2dd4bf);
     box-shadow: 0 4px 16px rgba(13,148,136,.3), inset 0 1px 0 rgba(255,255,255,.1);
-  }
-
-  /* ─── Gold Button (luxury accent) ─────────────────── */
-  .btn-gold {
-    @apply px-5 py-2.5 rounded-2xl font-medium text-sm transition-all duration-200;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    box-shadow: 0 2px 8px rgba(245,158,11,.25), inset 0 1px 0 rgba(255,255,255,.2);
-  }
-  .btn-gold:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    box-shadow: 0 4px 16px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.2);
-    transform: translateY(-1px);
-  }
-  .btn-gold:active {
-    transform: translateY(0) scale(0.98);
-  }
-  .dark .btn-gold {
-    background: linear-gradient(135deg, #fbbf24, #d97706);
-    box-shadow: 0 2px 8px rgba(245,158,11,.2);
   }
 
   /* ─── Secondary Button ──────────────────────────────── */
@@ -356,6 +338,11 @@ textarea:-webkit-autofill {
     background: #fbbf24;
   }
 
+  /* ─── Budget gradient bar (teal→gold for 80-99%) ──── */
+  .bar-gradient-warning {
+    background: linear-gradient(90deg, #14b8a6, #f59e0b);
+  }
+
   /* ─── Shimmer loading ───────────────────────────────── */
   .shimmer {
     @apply relative overflow-hidden;
@@ -380,29 +367,6 @@ textarea:-webkit-autofill {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     letter-spacing: -0.02em;
-  }
-
-  .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-  .dark .glass {
-    background: rgba(28, 25, 23, 0.7);
-    border-color: rgba(68, 64, 60, 0.3);
-  }
-
-  .gradient-text {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .dark .gradient-text {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    -webkit-background-clip: text;
-    background-clip: text;
   }
 
   .divider-gold {

@@ -25,7 +25,7 @@ export default function StatCard({ label, value, trend, icon: Icon, className = 
       </div>
 
       <div className="flex-1 flex flex-col justify-between">
-        <p className={`${compact ? 'text-[14px] sm:text-[17px] md:text-[22px]' : 'text-[22px]'} font-heading font-bold stat-value leading-tight truncate`}>{hide ? '••••••' : value}</p>
+        <p className={`${compact ? 'text-[14px] sm:text-[17px] md:text-[22px]' : 'text-[22px]'} stat-value leading-tight truncate`}>{hide ? '••••••' : value}</p>
 
         {trend && !hide ? (
           <div className="flex items-center gap-1.5 mt-1.5 md:mt-2">
