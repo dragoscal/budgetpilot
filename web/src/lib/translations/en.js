@@ -2307,6 +2307,13 @@ const en = {
   'changelog.v410challengeRetry': 'Challenge retry button on failed challenges with stats summary (completed, failed, success rate)',
   'changelog.v410reportsYoY': 'Year-over-Year spending comparison report — side-by-side monthly bars for current vs previous year',
 
+  // v4.1.1
+  'changelog.v411fkDeletion': 'Fixed database constraint error when deleting users from admin panel — proper cascading deletion order',
+  'changelog.v411adminRace': 'Fixed admin panel race condition — rapid tab switching no longer shows stale data from slower API responses',
+  'changelog.v411biannualFix': 'Fixed calendar biannual billing — recurring items now correctly show every 2 years instead of every year',
+  'changelog.v411memoization': 'Performance improvements — fixed memoization across Reports, Budgets, Challenges, and Admin pages',
+  'changelog.v411i18nFixes': 'Translation fixes — calendar categories, tax report tags, and challenge status labels now translate correctly',
+
   // v4.0.0
   'changelog.v400nordicClarity': 'Nordic Clarity redesign — ultra-clean aesthetic with slate neutrals, single indigo accent, airy white space, precision borders',
   'changelog.v400typography': 'New typography — Instrument Serif for display titles, Plus Jakarta Sans for body, tabular-nums for all financial data',

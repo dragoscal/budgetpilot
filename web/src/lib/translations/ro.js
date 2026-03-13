@@ -2307,6 +2307,13 @@ const ro = {
   'changelog.v410challengeRetry': 'Buton reîncearcă pe provocări eșuate cu rezumat statistici (completate, eșuate, rată de succes)',
   'changelog.v410reportsYoY': 'Raport comparație cheltuieli an-cu-an — bare lunare alăturate pentru anul curent vs precedent',
 
+  // v4.1.1
+  'changelog.v411fkDeletion': 'Rezolvat eroarea de constrângere bază de date la ștergerea utilizatorilor din panoul admin — ordine corectă de ștergere în cascadă',
+  'changelog.v411adminRace': 'Rezolvat condiția de cursă în panoul admin — comutarea rapidă între tab-uri nu mai afișează date vechi',
+  'changelog.v411biannualFix': 'Rezolvat facturarea bianuală în calendar — elementele recurente apar corect la fiecare 2 ani, nu anual',
+  'changelog.v411memoization': 'Îmbunătățiri de performanță — memoizare corectată în Rapoarte, Bugete, Provocări și Admin',
+  'changelog.v411i18nFixes': 'Corecții traduceri — categorii calendar, etichete raport fiscal și stări provocări se traduc corect',
+
   // v4.0.0
   'changelog.v400nordicClarity': 'Redesign Nordic Clarity — estetică ultra-curată cu tonuri neutre de ardezie, accent unic indigo, spațiu alb generos, borduri de precizie',
   'changelog.v400typography': 'Tipografie nouă — Instrument Serif pentru titluri de afișaj, Plus Jakarta Sans pentru corp, numere tabulare pentru toate datele financiare',
