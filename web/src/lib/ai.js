@@ -800,6 +800,207 @@ function normalizeBankStatementResult(result, userId = 'local') {
   };
 }
 
+// ─── UNIVERSAL DOCUMENT PROCESSING ────────────────────────
+function buildDocumentPrompt(customCats = []) {
+  const allSubs = { ...SUBCATEGORIES };
+  for (const c of customCats) { if (c.subcategories?.length) allSubs[c.id] = c.subcategories; }
+  return `You are an expert financial document parser for a budgeting app called LUMET. You can read and interpret ANY type of financial document — invoices, utility bills, contracts, tax forms, warranty cards, receipts, insurance documents, medical bills, subscription confirmations, and more.
+
+DOCUMENT TYPE DETECTION — First identify what kind of document this is:
+- INVOICE (factură): Has invoice number, due date, vendor, line items, total
+- UTILITY BILL (factură utilități): Electricity (Enel, Electrica), gas (Engie), water, internet (Digi, RCS-RDS, Vodafone), phone
+- MAINTENANCE BILL (listă întreținere): Monthly apartment building maintenance
+- CONTRACT: Subscription, service, or purchase agreement with recurring or one-time payment
+- TAX FORM: Tax declaration, tax receipt, fiscal certificate
+- WARRANTY CARD: Product purchase with warranty details
+- INSURANCE DOCUMENT: Policy, premium notice, claim
+- MEDICAL BILL: Healthcare provider invoice, pharmacy receipt
+- SUBSCRIPTION CONFIRMATION: Digital service signup/renewal
+- RECEIPT (bon fiscal): Point-of-sale receipt
+- OTHER: Any financial document not fitting above categories
+
+PARSING RULES:
+- Romanian documents: factură = invoice, bon fiscal = receipt, LEI/RON = currency, TVA = VAT, CIF/CUI = tax ID
+- Multi-currency: RON/lei, EUR/€, USD/$, GBP/£ — detect from document
+- Always return amounts as POSITIVE numbers
+- Dates: convert any format to YYYY-MM-DD
+- Detect income vs expense: salary, refund, credit note = income; everything else = expense
+- For invoices: extract due date, invoice number, payment status if visible
+- For utility bills: extract service type, billing period, consumption/usage
+- For contracts with recurring payments: create ONE transaction for the first/next payment
+
+CATEGORIZATION — Assign categories based on document content:
+${[...CATEGORIES, ...customCats].map((c) => `- ${c.id}: ${c.name} (${c.icon})`).join('\n')}
+
+SUBCATEGORIES — When possible:
+${Object.entries(allSubs).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
+${customCats.length > 0 ? '\nCUSTOM CATEGORIES:\n' + customCats.map(c => `- ${c.id} (${c.name}): ${(c.keywords || []).join(', ')}`).join('\n') : ''}
+
+DOCUMENT TYPE → CATEGORY MAPPING:
+- Electricity/gas/water/internet/phone bills → utilities
+- Apartment maintenance (listă întreținere) → housing
+- Insurance premiums → insurance
+- Medical bills → health
+- Gym/fitness → health
+- Streaming/software subscriptions → subscriptions
+- Vehicle-related (fuel, service, insurance) → transport
+- Education fees, courses → education
+- Store invoices → shopping/groceries based on items
+
+RETURN FORMAT (always return valid JSON):
+{
+  "documentInfo": {
+    "type": "invoice|utility_bill|maintenance_bill|contract|tax_form|warranty|insurance|medical|subscription|receipt|other",
+    "issuer": "Company/Provider Name",
+    "documentNumber": "Invoice/reference number if visible",
+    "date": "YYYY-MM-DD (document date)",
+    "dueDate": "YYYY-MM-DD (if applicable, null otherwise)",
+    "billingPeriod": { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" },
+    "currency": "RON",
+    "paymentStatus": "paid|unpaid|partial|unknown"
+  },
+  "transactions": [
+    {
+      "merchant": "Company/Provider Name",
+      "amount": 150.00,
+      "currency": "RON",
+      "category": "utilities",
+      "subcategory": null,
+      "date": "YYYY-MM-DD",
+      "type": "expense",
+      "description": "Brief description of what this charge is for",
+      "confidence": 0.9,
+      "items": [
+        {
+          "name": "Line item description",
+          "qty": 1,
+          "price": 150.00,
+          "category": "utilities",
+          "confidence": 0.9,
+          "needsReview": false
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "summary": "Brief human-readable summary of the document"
+}
+
+IMPORTANT RULES:
+- Most documents produce ONE transaction (the total amount to pay)
+- Only create MULTIPLE transactions if the document has genuinely separate charges for different categories
+- For invoices with line items: include them in the items array of a single transaction
+- If document has a clear total, use that as the transaction amount
+- If document is unclear or partially readable, set low confidence and include warnings
+- For warranty cards: create a transaction for the purchase amount if visible
+- For contracts: create ONE transaction for the first/next payment amount`;
+}
+
+export async function processDocument(base64Data, mediaType = 'image/jpeg', { userId = 'local', signal } = {}) {
+  const isImage = mediaType.startsWith('image/');
+  const contentBlock = isImage
+    ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64Data } }
+    : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } };
+
+  const maxTokens = isImage ? 4000 : 8000;
+
+  const result = await callAI([
+    {
+      role: 'user',
+      content: [
+        contentBlock,
+        {
+          type: 'text',
+          text: 'Analyze this financial document completely. Identify the document type, extract the issuer, amounts, dates, and any line items. Create transaction(s) from it. Return the full JSON structure.',
+        },
+      ],
+    },
+  ], buildDocumentPrompt(await getCustomCategories()), maxTokens, { signal });
+
+  return normalizeDocumentResult(result, userId);
+}
+
+function normalizeDocumentResult(result, userId = 'local') {
+  if (!result || typeof result !== 'object') {
+    return {
+      transactions: [],
+      documentInfo: { type: 'other', issuer: 'Unknown', currency: 'RON' },
+      receipt: { store: 'Unknown', date: formatDateISO(new Date()), currency: 'RON' },
+      summary: '0 transactions extracted',
+      hasItemsToReview: false,
+      warnings: ['AI returned invalid response'],
+    };
+  }
+
+  const docInfo = result.documentInfo || {};
+  const rawTxns = Array.isArray(result.transactions) ? result.transactions : [];
+  const today = formatDateISO(new Date());
+  const warnings = [...(result.warnings || [])];
+  const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+  const transactions = rawTxns
+    .filter(t => t && typeof t === 'object' && !isNaN(Number(t.amount)) && Number(t.amount) !== 0)
+    .map(t => {
+      const items = (t.items || []).map(item => ({
+        name: item.name || 'Unknown item',
+        qty: item.qty || 1,
+        price: Math.abs(Number(item.price)) || 0,
+        unitPrice: item.unitPrice || item.price || 0,
+        category: item.category || t.category || 'other',
+        subcategory: item.subcategory || null,
+        confidence: item.confidence || t.confidence || 0.8,
+        needsReview: item.needsReview || (item.confidence || 0.8) < 0.7,
+      }));
+
+      const amount = Math.abs(Number(t.amount));
+      const date = (t.date && isValidDate(t.date)) ? t.date : (docInfo.date && isValidDate(docInfo.date) ? docInfo.date : today);
+      const confidence = typeof t.confidence === 'number' ? Math.min(1, Math.max(0, t.confidence)) : 0.8;
+
+      return {
+        id: generateId(),
+        merchant: String(t.merchant || docInfo.issuer || 'Unknown').substring(0, 200),
+        amount,
+        currency: (t.currency || docInfo.currency || 'RON').toUpperCase(),
+        category: t.category || inferCategory(t.merchant || docInfo.issuer) || 'other',
+        subcategory: t.subcategory || null,
+        date,
+        type: t.type || 'expense',
+        description: String(t.description || '').substring(0, 500),
+        source: 'document',
+        confidence,
+        needsReview: confidence < 0.7 || items.some(i => i.needsReview),
+        items,
+        notes: '',
+        tags: [],
+        userId,
+        createdAt: new Date().toISOString(),
+      };
+    });
+
+  return {
+    transactions,
+    documentInfo: {
+      type: docInfo.type || 'other',
+      issuer: docInfo.issuer || 'Unknown',
+      documentNumber: docInfo.documentNumber || null,
+      date: docInfo.date || null,
+      dueDate: docInfo.dueDate || null,
+      billingPeriod: docInfo.billingPeriod || null,
+      currency: docInfo.currency || 'RON',
+      paymentStatus: docInfo.paymentStatus || 'unknown',
+    },
+    receipt: {
+      store: docInfo.issuer || 'Document',
+      date: docInfo.date || today,
+      total: transactions.reduce((s, tx) => s + tx.amount, 0),
+      currency: docInfo.currency || 'RON',
+    },
+    summary: result.summary || `${transactions.length} transaction(s) extracted from ${docInfo.type || 'document'}`,
+    hasItemsToReview: transactions.some(t => t.needsReview),
+    warnings,
+  };
+}
+
 // ─── NLP PROCESSING ───────────────────────────────────────
 export async function processNaturalLanguage(text, { userId = 'local' } = {}) {
   // Extract #hashtags before sending to AI

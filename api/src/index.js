@@ -426,7 +426,7 @@ router.post('/api/ai/process', async (ctx) => {
   const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
   const usedModel = ALLOWED_MODELS.includes(model) ? model : 'claude-sonnet-4-20250514';
   // Cap max tokens to prevent abuse
-  const cappedMaxTokens = Math.min(Math.max(1, maxTokens || 2000), 4096);
+  const cappedMaxTokens = Math.min(Math.max(1, maxTokens || 2000), 16384);
 
   let res;
   try {

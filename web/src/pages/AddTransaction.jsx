@@ -14,13 +14,14 @@ import QuickAdd from '../components/QuickAdd';
 import ManualForm from '../components/ManualForm';
 import CategoryPicker from '../components/CategoryPicker';
 import BankStatementUpload from '../components/BankStatementUpload';
+import DocumentScanner from '../components/DocumentScanner';
 import CSVImport from '../components/CSVImport';
 import { getActiveJob } from '../lib/backgroundJobs';
 import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
   Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet, CheckCircle2,
-  ArrowLeftRight,
+  ArrowLeftRight, FileSearch,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -31,7 +32,7 @@ export default function AddTransaction() {
   const { t } = useTranslation();
   const sharedText = searchParams.get('text') || searchParams.get('title') || '';
   const tabParam = searchParams.get('tab');
-  const TAB_ALIASES = { nlp: 'quick', import: 'csv', quick: 'quick', receipt: 'receipt', bank: 'bank', csv: 'csv' };
+  const TAB_ALIASES = { nlp: 'quick', import: 'csv', quick: 'quick', receipt: 'receipt', document: 'document', bank: 'bank', csv: 'csv' };
   const [activeTab, setActiveTab] = useState(TAB_ALIASES[tabParam] || 'quick');
   const [showManual, setShowManual] = useState(false);
   const [pendingResults, setPendingResults] = useState(null);
@@ -465,6 +466,7 @@ export default function AddTransaction() {
   const tabs = [
     { id: 'quick', label: t('addTransaction.quickAdd'), icon: Zap },
     { id: 'receipt', label: t('addTransaction.receipt'), icon: Camera },
+    { id: 'document', label: t('addTransaction.document'), icon: FileSearch },
     { id: 'bank', label: t('addTransaction.statement'), icon: Building2 },
     { id: 'csv', label: t('addTransaction.csvImport'), icon: FileSpreadsheet },
   ];
@@ -610,6 +612,14 @@ export default function AddTransaction() {
         <div className="card">
           <h3 className="section-title">{t('addTransaction.scanReceipt')}</h3>
           <ReceiptScanner onResult={handleAIResult} onError={handleError} />
+        </div>
+      )}
+
+      {/* Document Scanner */}
+      {activeTab === 'document' && (
+        <div className="card">
+          <h3 className="section-title">{t('addTransaction.scanDocument')}</h3>
+          <DocumentScanner onResult={handleAIResult} onError={handleError} />
         </div>
       )}
 

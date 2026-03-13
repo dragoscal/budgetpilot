@@ -3,7 +3,7 @@
 // When a user uploads a bank statement and navigates away,
 // the processing continues here and saves results as a draft.
 
-import { processBankStatement } from './ai';
+import { processBankStatement, processDocument } from './ai';
 import { saveDraft } from './storage';
 import { addNotification } from './notificationStore';
 import { generateId, formatDateISO } from './helpers';
@@ -114,6 +114,98 @@ export function startBankStatementJob(base64Data, { userId, fileName }) {
       activeJob = null;
 
       // Dispatch error event for toast
+      window.dispatchEvent(new CustomEvent('bg-job-error', {
+        detail: { error: err.message },
+      }));
+    });
+
+  return { promise, controller };
+}
+
+/**
+ * Start a document processing job in the background.
+ * Works like startBankStatementJob but calls processDocument() instead.
+ */
+export function startDocumentJob(base64Data, mediaType, { userId, fileName }) {
+  if (activeJob?.controller) {
+    activeJob.controller.abort();
+  }
+
+  const controller = new AbortController();
+  const promise = processDocument(base64Data, mediaType, { userId, signal: controller.signal });
+
+  activeJob = {
+    type: 'document',
+    status: 'processing',
+    fileName,
+    userId,
+    controller,
+    promise,
+    handled: false,
+    startedAt: Date.now(),
+  };
+
+  promise
+    .then(async (results) => {
+      if (!activeJob || activeJob.handled) return;
+
+      const txCount = results.transactions?.length || 0;
+      const issuer = results.documentInfo?.issuer || 'Document';
+      const currency = results.documentInfo?.currency || 'RON';
+
+      const enrichedTx = results.transactions.map(tx => ({
+        ...tx,
+        _duplicate: null,
+        _dismissed: false,
+      }));
+
+      const totalExpenses = enrichedTx
+        .filter(tx => tx.type === 'expense')
+        .reduce((s, tx) => s + (tx.amount || 0), 0);
+
+      const draft = {
+        id: generateId(),
+        savedAt: new Date().toISOString(),
+        label: `${issuer} — ${fileName}`,
+        merchant: issuer,
+        date: formatDateISO(new Date()),
+        totalAmount: totalExpenses,
+        currency,
+        transactionCount: txCount,
+        transactions: enrichedTx,
+        receiptMeta: {
+          receipt: results.receipt || {
+            store: issuer,
+            date: results.documentInfo?.date || 'Unknown date',
+            currency,
+          },
+          warnings: results.warnings || [],
+          summary: results.summary || `${txCount} transactions extracted`,
+          hasItemsToReview: results.hasItemsToReview,
+        },
+        _autoSaved: true,
+        _background: true,
+      };
+
+      await saveDraft(draft);
+
+      await addNotification({
+        type: 'info',
+        title: `${issuer} processed`,
+        message: `${txCount} transaction(s) ready to review`,
+        actionUrl: '/add',
+      });
+
+      activeJob = null;
+
+      window.dispatchEvent(new CustomEvent('bg-job-complete', {
+        detail: { txCount, bankName: issuer, draftId: draft.id },
+      }));
+    })
+    .catch((err) => {
+      if (!activeJob || activeJob.handled) return;
+      if (err.name === 'AbortError') { activeJob = null; return; }
+      activeJob = null;
       window.dispatchEvent(new CustomEvent('bg-job-error', {
         detail: { error: err.message },
       }));
