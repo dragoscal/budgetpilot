@@ -141,6 +141,7 @@ export default function Dashboard() {
     { id: 'budgetLeft', visible: true },
     { id: 'dailyAvg', visible: true },
     { id: 'netWorth', visible: true },
+    { id: 'noSpendDays', visible: true },
   ];
 
   const STAT_CARD_LABELS = {
@@ -150,6 +151,7 @@ export default function Dashboard() {
     budgetLeft: 'dashboard.budgetLeft',
     dailyAvg: 'dashboard.dailyAvg',
     netWorth: 'dashboard.netWorth',
+    noSpendDays: 'dashboard.noSpendDaysStat',
   };
 
   const [statCardConfig, setStatCardConfig] = useState(() => {
@@ -170,6 +172,7 @@ export default function Dashboard() {
   const [draggedStat, setDraggedStat] = useState(null);
   const [dragOverStat, setDragOverStat] = useState(null);
   const [showStatSettings, setShowStatSettings] = useState(false);
+  const [showHealthBreakdown, setShowHealthBreakdown] = useState(false);
 
   const saveStatCardConfig = useCallback((config) => {
     setStatCardConfig(config);
@@ -464,58 +467,74 @@ export default function Dashboard() {
     return days.filter((d) => !spendDates.has(format(d, 'yyyy-MM-dd'))).length;
   }, [scopedTx, month]);
 
-  // Financial Health Score (0-100)
-  const healthScore = useMemo(() => {
+  // Financial Health Score (0-100) with factor breakdown
+  const { healthScore, healthFactors } = useMemo(() => {
+    const factors = [];
     let score = 0;
 
     // 1. Budget adherence: % of budgets under limit (0-30 points)
+    let budgetScore = 0;
     if (budgetProgress.length > 0) {
       const underBudget = budgetProgress.filter((b) => b.pct <= 100).length;
-      score += Math.round((underBudget / budgetProgress.length) * 30);
+      budgetScore = Math.round((underBudget / budgetProgress.length) * 30);
     } else {
-      score += 15; // neutral if no budgets set
+      budgetScore = 15;
     }
+    score += budgetScore;
+    factors.push({ key: 'dashboard.healthBudget', score: budgetScore, max: 30 });
 
     // 2. Savings rate: (income - expenses) / income (0-25 points)
+    let savingsScore = 0;
     if (stats.totalIncome > 0) {
       const savingsRate = Math.max(0, (stats.totalIncome - stats.totalSpent) / stats.totalIncome);
-      score += Math.round(Math.min(savingsRate, 0.5) / 0.5 * 25);
+      savingsScore = Math.round(Math.min(savingsRate, 0.5) / 0.5 * 25);
     }
+    score += savingsScore;
+    factors.push({ key: 'dashboard.healthSavings', score: savingsScore, max: 25 });
 
     // 3. No-spend days: days with zero spending / days elapsed (0-15 points)
+    let noSpendScore = 0;
     const now = new Date();
     const daysElapsed = now.getDate();
     if (daysElapsed > 0) {
       const noSpendRatio = noSpendDays / daysElapsed;
-      score += Math.round(noSpendRatio * 15);
+      noSpendScore = Math.round(noSpendRatio * 15);
     }
+    score += noSpendScore;
+    factors.push({ key: 'dashboard.healthNoSpend', score: noSpendScore, max: 15 });
 
     // 4. Emergency fund: savings account balance > 3 months expenses (0-15 points)
+    let fundScore = 0;
     const savingsAccts = accountsList.filter((a) => a.type === 'savings');
     const savingsBalance = sumBy(savingsAccts, 'balance');
     const threeMonthExpenses = stats.totalSpent * 3;
     if (threeMonthExpenses > 0 && savingsBalance > 0) {
       const fundRatio = Math.min(savingsBalance / threeMonthExpenses, 1);
-      score += Math.round(fundRatio * 15);
+      fundScore = Math.round(fundRatio * 15);
     } else if (stats.totalSpent === 0) {
-      score += 15;
+      fundScore = 15;
     }
+    score += fundScore;
+    factors.push({ key: 'dashboard.healthFund', score: fundScore, max: 15 });
 
     // 5. Debt-to-income: lower is better (0-15 points)
+    let debtScore = 0;
     const debtAccts = accountsList.filter((a) => ['credit_card', 'loan'].includes(a.type));
     const totalDebt = sumBy(debtAccts, 'balance');
     if (stats.totalIncome > 0) {
       const dti = totalDebt / stats.totalIncome;
       if (dti <= 0) {
-        score += 15;
+        debtScore = 15;
       } else if (dti < 0.36) {
-        score += Math.round((1 - dti / 0.36) * 15);
+        debtScore = Math.round((1 - dti / 0.36) * 15);
       }
     } else if (totalDebt === 0) {
-      score += 15;
+      debtScore = 15;
     }
+    score += debtScore;
+    factors.push({ key: 'dashboard.healthDebt', score: debtScore, max: 15 });
 
-    return Math.min(100, Math.max(0, score));
+    return { healthScore: Math.min(100, Math.max(0, score)), healthFactors: factors };
   }, [budgetProgress, stats, noSpendDays, accountsList]);
 
   const healthLabel = useMemo(() => {
@@ -1021,6 +1040,7 @@ export default function Dashboard() {
               budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#D97706' },
               dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0EA5E9' },
               netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#4F46E5' },
+              noSpendDays: { label: t('dashboard.noSpendDaysStat'), value: `${noSpendDays} ${t('dashboard.days')}`, icon: Flame, accent: '#059669' },
             };
             return (
               <div key="quickStats">
@@ -1141,7 +1161,7 @@ export default function Dashboard() {
           case 'healthScore':
             return (
               <div key="healthScore" className={`card !p-3 md:!p-4 ${healthLabel.bg} border ${healthLabel.ring} ring-1`}>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 cursor-pointer" onClick={() => setShowHealthBreakdown(v => !v)}>
                   <div className="relative w-14 h-14 shrink-0">
                     <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" className="text-cream-200 dark:text-dark-border" />
@@ -1156,17 +1176,40 @@ export default function Dashboard() {
                     </div>
                     <p className={`text-sm font-heading font-bold ${healthLabel.color}`}>{t(healthLabel.key)}</p>
                   </div>
+                  <ChevronDown size={14} className={`text-cream-400 shrink-0 transition-transform ${showHealthBreakdown ? 'rotate-180' : ''}`} />
                 </div>
-                <p className="text-xs text-cream-500 mt-2">
-                  {healthScore > 80
-                    ? t('health.excellent')
-                    : healthScore >= 60
-                    ? t('health.good')
-                    : healthScore >= 40
-                    ? t('health.needsWork')
-                    : t('health.critical')
-                  }
-                </p>
+                {/* Collapsible breakdown */}
+                {showHealthBreakdown && (
+                  <div className="mt-3 pt-3 border-t border-cream-200/50 dark:border-dark-border/50 space-y-2.5">
+                    {healthFactors.map((f) => {
+                      const pct = f.max > 0 ? Math.round((f.score / f.max) * 100) : 0;
+                      const barColor = pct >= 75 ? 'bg-success' : pct >= 40 ? 'bg-warning' : 'bg-danger';
+                      return (
+                        <div key={f.key}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] text-cream-600 dark:text-cream-400">{t(f.key)}</span>
+                            <span className="text-[11px] font-medium text-cream-700 dark:text-cream-300">{f.score}/{f.max}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-cream-200/60 dark:bg-dark-border/60 overflow-hidden">
+                            <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {!showHealthBreakdown && (
+                  <p className="text-xs text-cream-500 mt-2">
+                    {healthScore > 80
+                      ? t('health.excellent')
+                      : healthScore >= 60
+                      ? t('health.good')
+                      : healthScore >= 40
+                      ? t('health.needsWork')
+                      : t('health.critical')
+                    }
+                  </p>
+                )}
               </div>
             );
 

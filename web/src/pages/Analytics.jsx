@@ -9,10 +9,10 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Lightbulb, Hash, User, Home } from 'lucide-react';
+import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, format, eachDayOfInterval, subMonths, getISOWeek, startOfWeek, endOfWeek } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 
 export default function Analytics() {
@@ -27,6 +27,7 @@ export default function Analytics() {
   const [rates, setRates] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [scopeFilter, setScopeFilter] = useState('all');
+  const [spendingView, setSpendingView] = useState('day');
   const loadVersion = useRef(0);
   const currency = user?.defaultCurrency || 'RON';
 
@@ -93,6 +94,48 @@ export default function Analytics() {
       return { date: format(day, 'dd'), total };
     });
   }, [expenses, month, currency, rates]);
+
+  // Weekly spending (aggregate daily into weeks)
+  const weeklySpending = useMemo(() => {
+    const weeks = {};
+    const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
+    days.forEach((day) => {
+      const weekStart = startOfWeek(day, { weekStartsOn: 1 });
+      const weekLabel = `${format(weekStart, 'dd MMM')}`;
+      const key = format(day, 'yyyy-MM-dd');
+      const dayExpenses = expenses.filter((t) => t.date === key);
+      const total = sumAmountsMultiCurrency(dayExpenses, currency, rates);
+      if (!weeks[weekLabel]) weeks[weekLabel] = { week: weekLabel, total: 0 };
+      weeks[weekLabel].total += total;
+    });
+    return Object.values(weeks);
+  }, [expenses, month, currency, rates]);
+
+  // Category trends (current month vs previous month)
+  const categoryTrends = useMemo(() => {
+    const prevStart = startOfMonth(subMonths(month, 1));
+    const prevEnd = endOfMonth(subMonths(month, 1));
+    let prevTx = allTx.filter((t) => { const d = new Date(t.date); return d >= prevStart && d <= prevEnd && t.type === 'expense'; });
+    if (scopeFilter !== 'all') prevTx = prevTx.filter((t) => (t.scope || 'personal') === scopeFilter);
+
+    const prevByCategory = groupBy(prevTx, 'category');
+    const currByCategory = groupBy(expenses, 'category');
+    const allCats = new Set([...Object.keys(prevByCategory), ...Object.keys(currByCategory)]);
+
+    const trends = [];
+    for (const catId of allCats) {
+      const prev = sumAmountsMultiCurrency(prevByCategory[catId] || [], currency, rates);
+      const curr = sumAmountsMultiCurrency(currByCategory[catId] || [], currency, rates);
+      if (prev === 0 && curr === 0) continue;
+      const change = prev > 0 ? ((curr - prev) / prev) * 100 : curr > 0 ? 100 : 0;
+      const cat = getCategoryById(catId);
+      trends.push({ catId, name: getCategoryLabel(cat, t), icon: cat.icon, prev, curr, change });
+    }
+
+    const rising = trends.filter(t => t.change > 5).sort((a, b) => b.change - a.change).slice(0, 3);
+    const falling = trends.filter(t => t.change < -5).sort((a, b) => a.change - b.change).slice(0, 3);
+    return { rising, falling };
+  }, [expenses, allTx, month, scopeFilter, currency, rates, t]);
 
   // Top merchants (multi-currency aware)
   const topMerchants = useMemo(() => {
@@ -245,18 +288,78 @@ export default function Analytics() {
         );
       })()}
 
-      {/* Daily spending pattern */}
+      {/* Daily/weekly spending pattern */}
       <div className="card">
-        <h3 className="section-title">{t('analytics.dailySpending')}</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="section-title mb-0">{t('analytics.spendingPattern')}</h3>
+          <div className="flex gap-1 bg-cream-200 dark:bg-dark-border rounded-lg p-0.5">
+            {['day', 'week'].map((v) => (
+              <button key={v} onClick={() => setSpendingView(v)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  spendingView === v
+                    ? 'bg-white dark:bg-dark-card shadow-sm text-cream-900 dark:text-dark-text'
+                    : 'text-cream-500 hover:text-cream-700'
+                }`}>
+                {t(`analytics.${v}View`)}
+              </button>
+            ))}
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={dailySpending}>
-            <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} />
+          <BarChart data={spendingView === 'week' ? weeklySpending : dailySpending}>
+            <XAxis dataKey={spendingView === 'week' ? 'week' : 'date'} tick={{ fontSize: 9 }} tickLine={false} />
             <YAxis hide />
             <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
             <Bar dataKey="total" fill="#4F46E5" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Category Trends */}
+      {(categoryTrends.rising.length > 0 || categoryTrends.falling.length > 0) && (
+        <div className="card">
+          <h3 className="section-title">{t('analytics.categoryTrends')}</h3>
+          <p className="text-xs text-cream-500 mb-3">{t('analytics.vsLastMonth')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {categoryTrends.rising.length > 0 && (
+              <div>
+                <p className="text-[11px] font-medium text-danger mb-2 flex items-center gap-1">
+                  <TrendingUp size={12} /> {t('analytics.spendingUp')}
+                </p>
+                <div className="space-y-2">
+                  {categoryTrends.rising.map((c) => (
+                    <div key={c.catId} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm">{c.icon}</span>
+                        <span className="truncate">{c.name}</span>
+                      </span>
+                      <span className="text-xs font-medium text-danger shrink-0">+{Math.round(c.change)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {categoryTrends.falling.length > 0 && (
+              <div>
+                <p className="text-[11px] font-medium text-success mb-2 flex items-center gap-1">
+                  <TrendingDown size={12} /> {t('analytics.spendingDown')}
+                </p>
+                <div className="space-y-2">
+                  {categoryTrends.falling.map((c) => (
+                    <div key={c.catId} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm">{c.icon}</span>
+                        <span className="truncate">{c.name}</span>
+                      </span>
+                      <span className="text-xs font-medium text-success shrink-0">{Math.round(c.change)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Smart Insights */}
       {insights.length > 0 && (

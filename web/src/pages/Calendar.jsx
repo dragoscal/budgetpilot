@@ -640,6 +640,34 @@ export default function CalendarPage() {
                     );
                   })}
                 </div>
+
+                {/* ─── Week totals footer ─── */}
+                {(() => {
+                  const weekExpenses = weekDays.flatMap((d) => {
+                    const key = format(d, 'yyyy-MM-dd');
+                    return dayData[key]?.transactions.filter((tx) => tx.type === 'expense') || [];
+                  });
+                  const weekIncome = weekDays.flatMap((d) => {
+                    const key = format(d, 'yyyy-MM-dd');
+                    return dayData[key]?.transactions.filter((tx) => tx.type === 'income') || [];
+                  });
+                  const totalExp = sumAmountsMultiCurrency(weekExpenses, currency, rates);
+                  const totalInc = sumAmountsMultiCurrency(weekIncome, currency, rates);
+                  const net = totalInc - totalExp;
+                  if (totalExp === 0 && totalInc === 0) return null;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-cream-200 dark:border-cream-700 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-4">
+                        <span className="text-cream-500 font-medium">{t('calendar.weekTotal')}</span>
+                        {totalExp > 0 && <span className="font-bold money text-danger">-{fmtAmt(totalExp, currency)}</span>}
+                        {totalInc > 0 && <span className="font-bold money text-success">+{fmtAmt(totalInc, currency)}</span>}
+                      </div>
+                      <span className={`font-bold money ${net >= 0 ? 'text-success' : 'text-danger'}`}>
+                        {t('calendar.net')}: {net >= 0 ? '+' : ''}{fmtAmt(Math.abs(net), currency)}
+                      </span>
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>

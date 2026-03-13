@@ -15,7 +15,7 @@ import MonthPicker from '../components/MonthPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/LoadingSkeleton';
-import { PiggyBank, Plus, Users, ArrowRightLeft, LayoutTemplate, Eye, Check, Target } from 'lucide-react';
+import { PiggyBank, Plus, Users, ArrowRightLeft, LayoutTemplate, Eye, Check, Target, Copy } from 'lucide-react';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { useFamily } from '../contexts/FamilyContext';
 
@@ -47,6 +47,8 @@ export default function Budgets() {
 
   const currency = user?.defaultCurrency || 'RON';
   const monthKey = format(month, 'yyyy-MM');
+  const prevMonthKey = format(subMonths(month, 1), 'yyyy-MM');
+  const allBudgetsRef = useRef([]);
   const loadVersion = useRef(0);
 
   const loadData = useCallback(async () => {
@@ -81,6 +83,9 @@ export default function Budgets() {
       const monthTx = allTx.filter((t) => filterExpense(t, start, end));
       const allMonthTx = allTx.filter((t) => filterByRange(t, start, end));
       const prevTx = allTx.filter((t) => filterExpense(t, prevStart, prevEnd));
+
+      // Store all budgets for cross-month features (copy last month)
+      allBudgetsRef.current = budgets;
 
       // Filter budgets
       const filteredBudgets = isFamily
@@ -297,6 +302,42 @@ export default function Budgets() {
     }
   };
 
+  // ─── Copy Last Month ─────────────────────────────────
+  const prevMonthBudgets = useMemo(() => {
+    const isFamily = viewMode === 'family' && isFamilyMode;
+    return allBudgetsRef.current.filter((b) => {
+      if (isFamily) return b.familyId === activeFamily?.id && b.month === prevMonthKey;
+      return !b.familyId && b.month === prevMonthKey;
+    });
+  }, [allBudgetsRef.current, viewMode, isFamilyMode, activeFamily, prevMonthKey]);
+
+  const canCopyLastMonth = prevMonthBudgets.length > 0 && prevMonthBudgets.some((b) => !usedCategories.has(b.category));
+
+  const handleCopyLastMonth = async () => {
+    const toCopy = prevMonthBudgets.filter((b) => !usedCategories.has(b.category));
+    if (toCopy.length === 0) { toast.error(t('budgets.nothingToCopy')); return; }
+    try {
+      const isFamily = viewMode === 'family' && isFamilyMode;
+      for (const b of toCopy) {
+        await budgetsApi.create({
+          id: generateId(),
+          category: b.category,
+          amount: b.amount,
+          currency: b.currency || currency,
+          rollover: b.rollover || false,
+          month: monthKey,
+          userId: effectiveUserId,
+          familyId: isFamily ? activeFamily?.id : null,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      toast.success(t('budgets.copiedFromLastMonth', { count: toCopy.length, month: format(subMonths(month, 1), 'MMMM') }));
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -328,6 +369,11 @@ export default function Budgets() {
           >
             <LayoutTemplate size={14} /> {t('budgets.useTemplate')}
           </button>
+          {canCopyLastMonth && (
+            <button onClick={handleCopyLastMonth} className="btn-secondary text-xs flex items-center gap-1 shrink-0">
+              <Copy size={14} /> {t('budgets.copyLastMonth')}
+            </button>
+          )}
           <button onClick={() => { resetForm(); setEditBudget(null); setShowAdd(true); }} className="btn-primary text-xs flex items-center gap-1 shrink-0">
             <Plus size={14} /> {t('common.add')}
           </button>

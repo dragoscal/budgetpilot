@@ -51,7 +51,7 @@ export default {
         },
       },
       fontFamily: {
-        heading: ['"Instrument Serif"', 'serif'],
+        heading: ['"Space Grotesk"', 'sans-serif'],
         body: ['"Plus Jakarta Sans"', 'sans-serif'],
       },
       borderRadius: {

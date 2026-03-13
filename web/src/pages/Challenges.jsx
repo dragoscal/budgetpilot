@@ -9,7 +9,7 @@ import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { Trophy, Plus, Flame, Target, Ban, Check, X } from 'lucide-react';
+import { Trophy, Plus, Flame, Target, Ban, Check, X, RotateCcw } from 'lucide-react';
 import HelpButton from '../components/HelpButton';
 
 const getChallengePresets = (t) => [
@@ -198,6 +198,17 @@ export default function Challenges() {
     loadData();
   };
 
+  const handleRetry = (challenge) => {
+    setForm({
+      type: challenge.type,
+      title: challenge.title,
+      target: challenge.target ? String(challenge.target) : '',
+      category: challenge.category || '',
+      durationDays: String(Math.ceil((new Date(challenge.endDate) - new Date(challenge.startDate)) / (1000 * 60 * 60 * 24))),
+    });
+    setShowForm(true);
+  };
+
   if (loading) return <SkeletonPage />;
 
   const streakDays = (() => {
@@ -248,6 +259,26 @@ export default function Challenges() {
               <p className="text-xs text-cream-500">{t('challenges.noSpendingStreak', { count: streakDays })}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Stats summary */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cream-100 dark:bg-cream-800/30 text-xs font-medium">
+            <Trophy size={13} className="text-accent-600" />
+            <span>{t('challenges.statsCompleted', { count: completed.length })}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cream-100 dark:bg-cream-800/30 text-xs font-medium">
+            <Ban size={13} className="text-danger" />
+            <span>{t('challenges.statsFailed', { count: failed.length })}</span>
+          </div>
+          {(completed.length + failed.length) > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cream-100 dark:bg-cream-800/30 text-xs font-medium">
+              <Target size={13} className="text-success" />
+              <span>{t('challenges.successRate', { rate: Math.round((completed.length / (completed.length + failed.length)) * 100) })}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -325,13 +356,27 @@ export default function Challenges() {
             {failed.map(c => {
               const p = getProgress(c, allTx, t);
               return (
-                <div key={c.id} className="card opacity-60">
-                  <div className="flex items-center justify-between">
-                    <div>
+                <div key={c.id} className="card">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{c.title}</p>
                       <p className="text-xs text-danger">{p.statusLabel}</p>
+                      {p.percent > 0 && (
+                        <p className="text-xs text-cream-500 mt-1">
+                          {t('challenges.reachedPercent', { pct: p.percent })}
+                        </p>
+                      )}
                     </div>
-                    <button onClick={() => handleDelete(c.id)} className="p-1 text-cream-400 hover:text-danger"><X size={14} /></button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleRetry(c)}
+                        className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-500/10 text-accent-600 dark:text-accent-400 transition-colors"
+                        title={t('challenges.retry')}
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded-lg text-cream-400 hover:text-danger hover:bg-danger/10 transition-colors"><X size={14} /></button>
+                    </div>
                   </div>
                 </div>
               );

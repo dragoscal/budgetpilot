@@ -6,7 +6,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { generateCSV, downloadBlob } from '../lib/exportHelpers';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Download, Printer, Calendar, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { getCachedRates } from '../lib/exchangeRates';
@@ -29,10 +29,20 @@ export default function Reports() {
   const [rates, setRates] = useState(null);
   const currency = user?.defaultCurrency || 'RON';
 
+  // Check if user has 12+ months of data for YoY
+  const hasYoYData = useMemo(() => {
+    if (allTx.length === 0) return false;
+    const dates = allTx.map((t) => new Date(t.date));
+    const earliest = Math.min(...dates);
+    const diffMs = Date.now() - earliest;
+    return diffMs > 365 * 24 * 60 * 60 * 1000;
+  }, [allTx]);
+
   const REPORT_TYPES = [
     { id: 'spending', label: t('reports.spendingSummary'), description: t('reports.spendingSummaryDesc') },
     { id: 'tax', label: t('reports.taxReport'), description: t('reports.taxReportDesc') },
     { id: 'trends', label: t('reports.monthlyTrends'), description: t('reports.monthlyTrendsDesc') },
+    ...(hasYoYData ? [{ id: 'yoy', label: t('reports.yearComparison'), description: t('reports.yearComparisonDesc') }] : []),
   ];
 
   const loadVersion = useRef(0);
@@ -108,6 +118,35 @@ export default function Reports() {
     }
     return months;
   }, [allTx, currency, rates]);
+
+  // Year-over-Year comparison
+  const yoyData = useMemo(() => {
+    if (!hasYoYData) return [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const lastYear = currentYear - 1;
+    const months = [];
+    for (let m = 0; m < 12; m++) {
+      const cyStart = new Date(currentYear, m, 1);
+      const cyEnd = endOfMonth(cyStart);
+      const lyStart = new Date(lastYear, m, 1);
+      const lyEnd = endOfMonth(lyStart);
+      // Skip future months
+      if (cyStart > now && lyStart > now) continue;
+      const cyTx = allTx.filter((t) => { const d = new Date(t.date); return d >= cyStart && d <= cyEnd && t.type === 'expense'; });
+      const lyTx = allTx.filter((t) => { const d = new Date(t.date); return d >= lyStart && d <= lyEnd && t.type === 'expense'; });
+      const cyTotal = sumAmountsMultiCurrency(cyTx, currency, rates);
+      const lyTotal = sumAmountsMultiCurrency(lyTx, currency, rates);
+      if (cyTotal > 0 || lyTotal > 0) {
+        months.push({
+          month: format(cyStart, 'MMM'),
+          [String(currentYear)]: cyTotal,
+          [String(lastYear)]: lyTotal,
+        });
+      }
+    }
+    return months;
+  }, [allTx, hasYoYData, currency, rates]);
 
   const handleExportCSV = () => {
     const data = reportType === 'tax' ? taxFiltered : filtered;
@@ -327,6 +366,29 @@ export default function Reports() {
               <Bar dataKey="income" fill="#059669" name={t('reports.income')} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* YEAR-OVER-YEAR COMPARISON */}
+      {reportType === 'yoy' && (
+        <div className="card">
+          <h3 className="section-title">{t('reports.yearComparisonTitle')}</h3>
+          <p className="text-xs text-cream-500 mb-4">{t('reports.yearComparisonSubtitle', { current: new Date().getFullYear(), previous: new Date().getFullYear() - 1 })}</p>
+          {yoyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={yoyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey={String(new Date().getFullYear())} fill="#4F46E5" name={String(new Date().getFullYear())} radius={[4, 4, 0, 0]} />
+                <Bar dataKey={String(new Date().getFullYear() - 1)} fill="#94A3B8" name={String(new Date().getFullYear() - 1)} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-cream-400 text-center py-8">{t('reports.noYoYData')}</p>
+          )}
         </div>
       )}
     </div>

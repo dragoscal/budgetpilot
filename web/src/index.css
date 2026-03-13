@@ -257,8 +257,9 @@ textarea:-webkit-autofill {
   /* ─── Page / Section Titles ─────────────────────────── */
   .page-title {
     @apply text-3xl font-bold mb-6 relative inline-block;
-    font-family: 'Instrument Serif', serif;
+    font-family: 'Space Grotesk', sans-serif;
     color: #0F172A;
+    letter-spacing: -0.02em;
   }
   .page-title::after {
     display: none; /* Nordic: no underline decoration */

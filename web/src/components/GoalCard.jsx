@@ -1,8 +1,8 @@
 import { formatCurrency, percentOf } from '../lib/helpers';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { differenceInMonths, parseISO } from 'date-fns';
-import { Target, CreditCard, Edit3, Trash2 } from 'lucide-react';
+import { differenceInMonths, differenceInDays, parseISO } from 'date-fns';
+import { Target, CreditCard, Edit3, Trash2, Check } from 'lucide-react';
 
 export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hideProp }) {
   const { shouldHide } = useHideAmounts();
@@ -32,6 +32,23 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
       status = 'behind';
     }
   }
+
+  // Countdown
+  let countdown = null;
+  if (goal.targetDate && remaining > 0) {
+    const targetDate = parseISO(goal.targetDate);
+    const dLeft = differenceInDays(targetDate, new Date());
+    if (dLeft > 0) {
+      countdown = dLeft < 60
+        ? t('goals.daysLeft', { count: dLeft })
+        : t('goals.monthsLeft', { count: differenceInMonths(targetDate, new Date()) });
+    } else {
+      countdown = t('goals.overdue');
+    }
+  }
+
+  // Milestones at 25%, 50%, 75%
+  const milestones = [25, 50, 75];
 
   const statusColors = {
     'on-track': 'text-success bg-success/10',
@@ -70,17 +87,38 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddFunds, hide: hid
         <span className="text-sm text-cream-500">{t('budgets.of')} {formatCurrency(goal.targetAmount, goal.currency, { hide })}</span>
       </div>
 
-      <div className="h-2.5 bg-cream-200 dark:bg-dark-border rounded-full overflow-hidden mb-2">
+      <div className="relative h-2.5 bg-cream-200 dark:bg-dark-border rounded-full mb-2">
         <div
           className="h-full bg-success rounded-full transition-all duration-500"
           style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: goal.color || '#059669' }}
         />
+        {/* Milestone markers */}
+        {milestones.map((m) => (
+          <div
+            key={m}
+            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
+            style={{ left: `${m}%`, transform: 'translate(-50%, -50%)' }}
+          >
+            {pct >= m ? (
+              <div className="w-3.5 h-3.5 rounded-full bg-white dark:bg-dark-card border-2 flex items-center justify-center" style={{ borderColor: goal.color || '#059669' }}>
+                <Check size={7} strokeWidth={3} style={{ color: goal.color || '#059669' }} />
+              </div>
+            ) : (
+              <div className="w-2 h-2 rounded-full bg-cream-300 dark:bg-cream-600 border border-white dark:border-dark-card" />
+            )}
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center justify-between text-xs">
-        <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
-          {status === 'on-track' ? t('goals.onTrack') : status === 'behind' ? t('goals.behind') : t('goals.ahead')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
+            {status === 'on-track' ? t('goals.onTrack') : status === 'behind' ? t('goals.behind') : t('goals.ahead')}
+          </span>
+          {countdown && (
+            <span className="text-cream-400 text-[11px]">{countdown}</span>
+          )}
+        </div>
         <span className="text-cream-500">{t('goals.pctComplete', { pct })}</span>
       </div>
 
