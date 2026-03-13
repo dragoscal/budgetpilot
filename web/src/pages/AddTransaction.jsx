@@ -7,7 +7,7 @@ import { transactions as txApi, recurring as recurringApi, undoImportBatch } fro
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 
-import { checkDuplicate, checkBudgetAlerts, learnCategory } from '../lib/smartFeatures';
+import { checkDuplicate, checkBudgetAlerts, learnCategory, normalizeMerchantName } from '../lib/smartFeatures';
 import { getTransactionsByDateRange, saveDraft, getDrafts, deleteDraft } from '../lib/storage';
 import ReceiptScanner from '../components/ReceiptScanner';
 import QuickAdd from '../components/QuickAdd';
@@ -554,23 +554,53 @@ export default function AddTransaction() {
     if (!pendingResults || pendingResults.length < 4) return;
     const visible = pendingResults.filter(tx => !tx._dismissed && tx.type === 'expense' && tx.merchant);
 
-    // Group by normalized merchant
+    // Phase 1: Group by aggressively normalized merchant name
     const byMerchant = {};
     for (const tx of visible) {
-      const key = tx.merchant.toLowerCase().trim();
+      const key = normalizeMerchantName(tx.merchant);
+      if (!key) continue;
       if (!byMerchant[key]) byMerchant[key] = [];
       byMerchant[key].push(tx);
     }
 
-    // Filter: 2+ occurrences in 2+ different months
+    // Phase 2: Fuzzy-cluster similar merchant groups
+    const keys = Object.keys(byMerchant);
+    const clustered = {};
+    for (const key of keys) {
+      let bestMatch = null;
+      let bestScore = 0;
+      for (const canonical of Object.keys(clustered)) {
+        const na = key.replace(/[^a-z0-9]/g, '');
+        const nb = canonical.replace(/[^a-z0-9]/g, '');
+        let score = 0;
+        if (na === nb) score = 1;
+        else if (na.includes(nb) || nb.includes(na)) score = 0.85;
+        else {
+          const fA = key.split(/\s+/)[0], fB = canonical.split(/\s+/)[0];
+          if (fA.length >= 3 && fA === fB) score = 0.8;
+        }
+        if (score > bestScore) { bestScore = score; bestMatch = canonical; }
+      }
+      if (bestMatch && bestScore >= 0.6) clustered[bestMatch].push(...byMerchant[key]);
+      else clustered[key] = [...byMerchant[key]];
+    }
+
+    // Detect patterns from clustered groups
     const patterns = [];
-    for (const [, txns] of Object.entries(byMerchant)) {
+    for (const [, txns] of Object.entries(clustered)) {
       if (txns.length < 2) continue;
       const months = new Set(txns.map(tx => tx.date?.substring(0, 7)).filter(Boolean));
       if (months.size < 2) continue;
 
       const amounts = txns.map(tx => tx.amount);
       const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+
+      // Relaxed variance: allow CoV up to 50% for clustered groups
+      if (amounts.length > 3) {
+        const stdDev = Math.sqrt(amounts.reduce((sum, a) => sum + Math.pow(a - avgAmount, 2), 0) / amounts.length);
+        const coeffOfVariation = avgAmount > 0 ? stdDev / avgAmount : 1;
+        if (coeffOfVariation > 0.5) continue;
+      }
 
       // Estimate frequency from avg gap
       const sortedDates = txns.map(tx => tx.date).filter(Boolean).sort();
@@ -589,8 +619,13 @@ export default function AddTransaction() {
       days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
       const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
 
+      // Pick most common original merchant name for display
+      const merchantFreq = {};
+      txns.forEach(tx => { merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1; });
+      const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
+
       patterns.push({
-        merchant: txns[0].merchant,
+        merchant: displayMerchant,
         category: txns[0].category,
         currency: txns[0].currency || 'RON',
         avgAmount: Math.round(avgAmount * 100) / 100,
@@ -604,13 +639,22 @@ export default function AddTransaction() {
 
     if (patterns.length === 0) { setRecurringPatterns(null); return; }
 
-    // Filter out already-tracked recurring merchants
+    // Filter out already-tracked recurring merchants (with fuzzy matching)
     try {
       const existing = await recurringApi.getAll({ userId: effectiveUserId });
-      const existingMerchants = new Set(
-        (Array.isArray(existing) ? existing : []).map(r => (r.name || r.merchant || '').toLowerCase().trim())
-      );
-      const newPatterns = patterns.filter(p => !existingMerchants.has(p.merchant.toLowerCase().trim()));
+      const existingNormalized = (Array.isArray(existing) ? existing : [])
+        .map(r => normalizeMerchantName(r.name || r.merchant || ''));
+      const newPatterns = patterns.filter(p => {
+        const pNorm = normalizeMerchantName(p.merchant);
+        return !existingNormalized.some(en => {
+          if (!en || !pNorm) return false;
+          if (en === pNorm) return true;
+          const na = en.replace(/[^a-z0-9]/g, '');
+          const nb = pNorm.replace(/[^a-z0-9]/g, '');
+          return na.includes(nb) || nb.includes(na) ||
+            (en.split(/\s+/)[0].length >= 3 && en.split(/\s+/)[0] === pNorm.split(/\s+/)[0]);
+        });
+      });
       setRecurringPatterns(newPatterns.length > 0 ? newPatterns : null);
     } catch {
       setRecurringPatterns(patterns);

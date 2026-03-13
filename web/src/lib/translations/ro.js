@@ -2378,6 +2378,7 @@ const ro = {
   'changelog.v430recurring': 'Detectare automată a plăților recurente din extrasele bancare',
   'changelog.v430transfers': 'Banner îmbunătățit pentru detectarea transferurilor cu totaluri',
   'changelog.v431scan': 'Scanare tranzacții pentru plăți recurente din pagina Recurente',
+  'changelog.v432merchantNorm': 'Detectare recurente mai inteligentă cu potrivire fuzzy a comercianților',
   'changelog.v421multiPass': 'Procesare multi-pas pentru documente mari — extrasele bancare cu 100+ tranzacții sunt acum extrase complet în mai mulți pași AI',
   'changelog.v421truncationFix': 'Rezolvat pierderea silențioasă de date la trunchiere răspuns AI — trunchierea este detectată și continuată automat',
 

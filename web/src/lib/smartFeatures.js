@@ -11,6 +11,96 @@ import { getAll, getSetting, setSetting } from './storage';
 import { MERCHANT_CATEGORY_MAP, KEYWORD_SUBCATEGORY_MAP } from './constants';
 import { getCustomCategoriesSync } from './categoryManager';
 
+// ─── MERCHANT NORMALIZATION ──────────────────────────────
+// Aggressive normalization for merchant names from bank statements.
+// Strips business suffixes, payment prefixes, reference numbers, locations.
+
+export function normalizeMerchantName(name) {
+  if (!name) return '';
+  let s = name.toLowerCase().trim();
+
+  // 1. Strip Romanian/international business suffixes
+  s = s.replace(/\b(s\.?\s?a\.?|s\.?\s?r\.?\s?l\.?|s\.?\s?c\.?\s?s\.?|s\.?\s?c\.?|ltd\.?|inc\.?|gmbh|co\.?|ag)\b/g, '');
+
+  // 2. Strip payment method prefixes from bank statements
+  s = s.replace(/\b(pos|plata|transfer|payment|card|debit|direct\s+debit|incasare|tranzactie)\b/g, '');
+
+  // 3. Strip reference numbers, transaction IDs, card masks
+  s = s.replace(/\b[a-z0-9]{10,}\b/g, '');       // long alphanumeric codes (10+ chars)
+  s = s.replace(/\b\d{6,}\b/g, '');               // 6+ digit numbers
+  s = s.replace(/\*+\d+/g, '');                   // masked cards like *1234
+  s = s.replace(/\b0[0-9]{8,}\b/g, '');           // Romanian phone numbers (07x, 03x)
+
+  // 4. Strip common Romanian location/descriptor words
+  s = s.replace(/\b(romania|rom|bucuresti|bucharest|cluj|timisoara|iasi|brasov|constanta|sibiu|craiova|oradea|sector\s*\d)\b/g, '');
+
+  // 5. Strip dates and replace punctuation with spaces
+  s = s.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, '');
+  s = s.replace(/[./*_-]+/g, ' ');
+
+  // 6. Clean up whitespace
+  s = s.replace(/\s+/g, ' ').trim();
+
+  return s;
+}
+
+// Bigram (Dice coefficient) similarity between two merchant names.
+function merchantSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const na = a.replace(/[^a-z0-9]/g, '');
+  const nb = b.replace(/[^a-z0-9]/g, '');
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  if (na.includes(nb) || nb.includes(na)) return 0.85;
+
+  // Same first word (brand name) with 3+ chars
+  const firstA = a.split(/\s+/)[0];
+  const firstB = b.split(/\s+/)[0];
+  if (firstA.length >= 3 && firstA === firstB) return 0.8;
+
+  // Bigram similarity
+  const bigrams = (s) => {
+    const result = new Set();
+    for (let i = 0; i < s.length - 1; i++) result.add(s.slice(i, i + 2));
+    return result;
+  };
+  const setA = bigrams(na);
+  const setB = bigrams(nb);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const bg of setA) if (setB.has(bg)) intersection++;
+  return (2.0 * intersection) / (setA.size + setB.size);
+}
+
+// Merge similar merchant groups into clusters.
+// Input:  { normalizedKey: [tx, tx, ...], ... }
+// Output: { canonicalKey: [tx, tx, ...], ... }
+function clusterMerchantGroups(groups) {
+  const keys = Object.keys(groups);
+  const merged = {};
+
+  for (const key of keys) {
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const canonical of Object.keys(merged)) {
+      const score = merchantSimilarity(key, canonical);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = canonical;
+      }
+    }
+
+    if (bestMatch && bestScore >= 0.6) {
+      merged[bestMatch].push(...groups[key]);
+    } else {
+      merged[key] = [...groups[key]];
+    }
+  }
+
+  return merged;
+}
+
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
 
@@ -19,22 +109,33 @@ export async function detectRecurringPatterns(userId) {
   const transactions = await getAll('transactions', filter);
   if (transactions.length < 2) return [];
 
-  // Group by merchant (normalized)
+  // Phase 1: Group by aggressively normalized merchant name
   const byMerchant = {};
   for (const tx of transactions) {
     if (tx.type !== 'expense' || !tx.merchant || !tx.date) continue;
-    const key = tx.merchant.toLowerCase().trim();
+    const key = normalizeMerchantName(tx.merchant);
+    if (!key) continue;
     if (!byMerchant[key]) byMerchant[key] = [];
     byMerchant[key].push(tx);
   }
 
+  // Phase 2: Fuzzy-cluster similar merchant groups
+  const clustered = clusterMerchantGroups(byMerchant);
+
   const suggestions = [];
   const existingRecurring = await getAll('recurring', filter);
-  const existingMerchants = new Set(existingRecurring.map(r => r.merchant?.toLowerCase().trim()));
+  const existingNormalized = new Set(
+    existingRecurring.map(r => normalizeMerchantName(r.merchant || r.name))
+  );
 
-  for (const [merchant, txns] of Object.entries(byMerchant)) {
-    // Skip if already tracked as recurring
-    if (existingMerchants.has(merchant)) continue;
+  for (const [normalizedKey, txns] of Object.entries(clustered)) {
+    // Skip if already tracked as recurring (exact or fuzzy match)
+    if (existingNormalized.has(normalizedKey)) continue;
+    let alreadyTracked = false;
+    for (const em of existingNormalized) {
+      if (merchantSimilarity(normalizedKey, em) >= 0.6) { alreadyTracked = true; break; }
+    }
+    if (alreadyTracked) continue;
     if (txns.length < 2) continue;
 
     // Group by month (YYYY-MM)
@@ -63,14 +164,20 @@ export async function detectRecurringPatterns(userId) {
 
     if (maxConsecutive < 2) continue;
 
-    // Calculate average amount and check similarity
+    // Calculate average amount and check similarity (relaxed for clustered groups)
     const amounts = txns.map(t => t.amount);
     const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
     const amountVariance = avgAmount > 0
       ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.15)
-      : amounts.every(a => a === 0); // within 15%, guard against division by zero
+      : amounts.every(a => a === 0);
 
-    if (!amountVariance && amounts.length > 2) continue;
+    if (!amountVariance && amounts.length > 3) {
+      // Relaxed check: allow up to 50% coefficient of variation
+      // (handles multiple phone lines on same carrier at different prices)
+      const stdDev = Math.sqrt(amounts.reduce((sum, a) => sum + Math.pow(a - avgAmount, 2), 0) / amounts.length);
+      const coeffOfVariation = avgAmount > 0 ? stdDev / avgAmount : 1;
+      if (coeffOfVariation > 0.5) continue;
+    }
 
     // Estimate billing day (most common day of month)
     const days = txns.map(t => parseInt(t.date?.substring(8, 10) || '1'));
@@ -78,8 +185,15 @@ export async function detectRecurringPatterns(userId) {
     days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
     const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
 
+    // Pick the most common original merchant name for display
+    const merchantFreq = {};
+    for (const tx of txns) {
+      merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1;
+    }
+    const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
+
     suggestions.push({
-      merchant: txns[0].merchant,
+      merchant: displayMerchant,
       amount: Math.round(avgAmount * 100) / 100,
       currency: txns[0].currency || 'RON',
       category: txns[0].category,
