@@ -125,9 +125,11 @@ function groupByAmountSimilarity(txns, tolerance = 0.20) {
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
 
-export async function detectRecurringPatterns(userId) {
+export async function detectRecurringPatterns(userId, transactionsOverride, recurringOverride) {
   const filter = userId ? { userId } : {};
-  const transactions = await getAll('transactions', filter);
+  // Accept pre-fetched data to avoid race condition with IndexedDB background cache updates.
+  // When callers already have fresh server data, passing it here avoids reading stale/empty IndexedDB.
+  const transactions = transactionsOverride || await getAll('transactions', filter);
   if (transactions.length < 2) return [];
 
   // Phase 1: Group by aggressively normalized merchant name
@@ -144,7 +146,7 @@ export async function detectRecurringPatterns(userId) {
   const clustered = clusterMerchantGroups(byMerchant);
 
   const suggestions = [];
-  const existingRecurring = await getAll('recurring', filter);
+  const existingRecurring = recurringOverride || await getAll('recurring', filter);
   const existingNormalized = new Set(
     existingRecurring.map(r => normalizeMerchantName(r.merchant || r.name))
   );

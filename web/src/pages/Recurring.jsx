@@ -53,7 +53,8 @@ export default function Recurring() {
         if (loadVersion.current !== version) return;
         setItems(data);
         setAllTransactions(txData);
-        const patterns = await detectRecurringPatterns(effectiveUserId);
+        // Pass fresh server data directly — avoids race condition with IndexedDB background cache
+        const patterns = await detectRecurringPatterns(effectiveUserId, txData, data);
         if (loadVersion.current !== version) return;
         setSuggestions(patterns);
         if (patterns.filter(s => s.merchant && s.confidence >= 0.6).length > 0) {
@@ -244,7 +245,14 @@ export default function Recurring() {
   const handleScanTransactions = async () => {
     setScanning(true);
     try {
-      const patterns = await detectRecurringPatterns(effectiveUserId);
+      // Re-fetch fresh data from server to ensure we scan the latest transactions
+      const [freshRecurring, freshTx] = await Promise.all([
+        recurringApi.getAll({ userId: effectiveUserId }),
+        txApi.getAll({ userId: effectiveUserId }),
+      ]);
+      setItems(freshRecurring);
+      setAllTransactions(freshTx);
+      const patterns = await detectRecurringPatterns(effectiveUserId, freshTx, freshRecurring);
       setSuggestions(patterns);
       setShowScanResults(true);
       const filtered = patterns.filter(s => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6);
