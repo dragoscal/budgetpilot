@@ -2380,6 +2380,7 @@ const en = {
   'changelog.v431scan': 'Scan transactions for recurring payments from the Recurring page',
   'changelog.v432merchantNorm': 'Smarter recurring detection with fuzzy merchant matching',
   'changelog.v433amountSplit': 'Detect multiple recurring payments from same merchant (e.g., multiple phone lines)',
+  'changelog.v434phoneKeep': 'Phone numbers preserved in recurring detection — each subscription detected separately',
   'changelog.v421multiPass': 'Multi-pass processing for large documents — bank statements with 100+ transactions are now fully extracted across multiple AI passes',
   'changelog.v421truncationFix': 'Fixed silent data loss when AI response was truncated — truncation is now detected and automatically continued',
 

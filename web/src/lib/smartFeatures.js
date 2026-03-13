@@ -25,11 +25,10 @@ export function normalizeMerchantName(name) {
   // 2. Strip payment method prefixes from bank statements
   s = s.replace(/\b(pos|plata|transfer|payment|card|debit|direct\s+debit|incasare|tranzactie)\b/g, '');
 
-  // 3. Strip reference numbers, transaction IDs, card masks
-  s = s.replace(/\b[a-z0-9]{10,}\b/g, '');       // long alphanumeric codes (10+ chars)
-  s = s.replace(/\b\d{6,}\b/g, '');               // 6+ digit numbers
+  // 3. Strip transaction IDs and card masks (but KEEP phone numbers — they differentiate subscriptions)
+  s = s.replace(/\b(?=[a-z]*\d)(?=\d*[a-z])[a-z0-9]{12,}\b/g, ''); // long mixed alphanumeric codes (12+ chars, must have both letters AND digits)
+  s = s.replace(/\b\d{12,}\b/g, '');              // very long pure digit numbers (bank account numbers, IBANs)
   s = s.replace(/\*+\d+/g, '');                   // masked cards like *1234
-  s = s.replace(/\b0[0-9]{8,}\b/g, '');           // Romanian phone numbers (07x, 03x)
 
   // 4. Strip common Romanian location/descriptor words
   s = s.replace(/\b(romania|bucuresti|bucharest|cluj|timisoara|iasi|brasov|constanta|sibiu|craiova|oradea|sector\s*\d)\b/g, '');
