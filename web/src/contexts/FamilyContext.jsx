@@ -41,12 +41,6 @@ export function FamilyProvider({ children }) {
   const [familyTransactionsLoading, setFamilyTransactionsLoading] = useState(false);
   const [sharedExpensesList, setSharedExpensesList] = useState([]);
 
-  // Load families on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    loadFamilies();
-  }, [loadFamilies]);
-
   const loadFamilies = useCallback(async () => {
     setLoading(true);
     try {
@@ -90,6 +84,11 @@ export function FamilyProvider({ children }) {
       setLoading(false);
     }
   }, [effectiveUserId]);
+
+  // Load families on mount
+  useEffect(() => {
+    loadFamilies();
+  }, [loadFamilies]);
 
   // Load all family members' transactions + shared expenses when family is active
   const loadFamilyTransactions = useCallback(async () => {
