@@ -44,12 +44,21 @@ export function normalizeMerchantName(name) {
 }
 
 // Bigram (Dice coefficient) similarity between two merchant names.
+// Returns a score 0–1 used to decide if two normalized merchant keys should merge.
 function merchantSimilarity(a, b) {
   if (!a || !b) return 0;
   const na = a.replace(/[^a-z0-9]/g, '');
   const nb = b.replace(/[^a-z0-9]/g, '');
   if (!na || !nb) return 0;
   if (na === nb) return 1;
+
+  // Guard: if both keys have distinct numeric identifiers (phone numbers, account IDs),
+  // they represent DIFFERENT subscriptions — cap similarity low to prevent merging.
+  // e.g., "orange telefon 0741234567" vs "orange telefon 0731234567" → different subs.
+  const numsA = (a.match(/\d{4,}/g) || []).sort().join(',');
+  const numsB = (b.match(/\d{4,}/g) || []).sort().join(',');
+  if (numsA && numsB && numsA !== numsB) return 0.3;
+
   if (na.includes(nb) || nb.includes(na)) return 0.85;
 
   // Same first word (brand name) with 3+ chars
