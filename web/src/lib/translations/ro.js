@@ -1835,6 +1835,26 @@ const ro = {
   'admin.stats': 'Statistici',
   'admin.totalTransactions': 'Total tranzacții',
 
+  // ─── Admin v4.1 Îmbunătățiri ──────────────────────────
+  'admin.liveData': 'Date Live',
+  'admin.healthScore': 'Scor Sănătate',
+  'admin.excellent': 'Excelent',
+  'admin.fair': 'Acceptabil',
+  'admin.poor': 'Slab',
+  'admin.bulkActions': 'Acțiuni Multiple',
+  'admin.selectAll': 'Selectează Tot',
+  'admin.nSelected': '{count} selectat(e)',
+  'admin.suspendSelected': 'Suspendă',
+  'admin.activateSelected': 'Activează',
+  'admin.emailCopied': 'Email copiat',
+  'admin.copyEmail': 'Copiază email',
+  'admin.clientErrors': 'Client',
+  'admin.serverErrors': 'Server',
+  'admin.allClear': 'Toate sistemele funcționează normal',
+  'admin.fast': 'Rapid',
+  'admin.moderate': 'Moderat',
+  'admin.slow': 'Lent',
+
   // ─── Căutare și filtrare ──────────────────────────────
   'filter.searchPlaceholder': 'Caută tranzacții...',
   'filter.allCategories': 'Toate categoriile',

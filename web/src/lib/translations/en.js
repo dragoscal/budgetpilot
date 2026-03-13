@@ -1835,6 +1835,26 @@ const en = {
   'admin.stats': 'Stats',
   'admin.totalTransactions': 'Total transactions',
 
+  // ─── Admin v4.1 Enhancements ──────────────────────────
+  'admin.liveData': 'Live Data',
+  'admin.healthScore': 'Health Score',
+  'admin.excellent': 'Excellent',
+  'admin.fair': 'Fair',
+  'admin.poor': 'Poor',
+  'admin.bulkActions': 'Bulk Actions',
+  'admin.selectAll': 'Select All',
+  'admin.nSelected': '{count} selected',
+  'admin.suspendSelected': 'Suspend',
+  'admin.activateSelected': 'Activate',
+  'admin.emailCopied': 'Email copied',
+  'admin.copyEmail': 'Copy email',
+  'admin.clientErrors': 'Client',
+  'admin.serverErrors': 'Server',
+  'admin.allClear': 'All systems running smoothly',
+  'admin.fast': 'Fast',
+  'admin.moderate': 'Moderate',
+  'admin.slow': 'Slow',
+
   // ─── Search & Filter ─────────────────────────────────
   'filter.searchPlaceholder': 'Search transactions...',
   'filter.allCategories': 'All categories',
