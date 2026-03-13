@@ -432,15 +432,15 @@ function OverviewTab({ stats, onCleanup }) {
               <AreaChart data={stats.apiCallsByDay}>
                 <defs>
                   <linearGradient id="adminAreaFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="#1B7A6E" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#1B7A6E" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-line)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d?.slice(5)} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,.1)' }} />
-                <Area type="monotone" dataKey="count" stroke="#4F46E5" fill="url(#adminAreaFill)" strokeWidth={2.5} dot={false} activeDot={{ r: 4, strokeWidth: 2, fill: '#fff' }} />
+                <Area type="monotone" dataKey="count" stroke="#1B7A6E" fill="url(#adminAreaFill)" strokeWidth={2.5} dot={false} activeDot={{ r: 4, strokeWidth: 2, fill: '#fff' }} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
@@ -455,7 +455,7 @@ function OverviewTab({ stats, onCleanup }) {
                 <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis dataKey="action" type="category" tick={{ fontSize: 10 }} width={100} tickFormatter={a => ACTION_LABEL_KEYS[a] ? t(ACTION_LABEL_KEYS[a]) : a} />
                 <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,.1)' }} />
-                <Bar dataKey="count" fill="#4F46E5" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="count" fill="#1B7A6E" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
@@ -504,7 +504,7 @@ function OverviewTab({ stats, onCleanup }) {
 }
 
 // ─── Avatar color from name ──────────────────────────────
-const AVATAR_COLORS = ['#4F46E5', '#7C3AED', '#2563EB', '#0891B2', '#059669', '#D97706', '#DC2626', '#DB2777', '#65A30D', '#EA580C'];
+const AVATAR_COLORS = ['#1B7A6E', '#7C3AED', '#2563EB', '#0891B2', '#059669', '#D97706', '#DC2626', '#DB2777', '#65A30D', '#EA580C'];
 function avatarColor(name) { return AVATAR_COLORS[(name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length]; }
 
 // ─── Users Tab ───────────────────────────────────────────
@@ -923,7 +923,7 @@ function AiCostsTab({ data }) {
                 contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,.1)' }}
                 formatter={(v) => [`$${v.toFixed(4)}`, t('admin.costUsd')]}
               />
-              <Bar dataKey="totalCostUSD" fill="#4F46E5" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="totalCostUSD" fill="#1B7A6E" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1354,8 +1354,8 @@ function PerformanceTab({ performance }) {
               }} width={180} />
               <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,.1)' }}
                 formatter={(v, name) => [`${v}ms`, name === 'avgTime' ? t('admin.avg') : name === 'maxTime' ? t('admin.max') : name]} />
-              <Bar dataKey="avgTime" fill="#4F46E5" radius={[0, 4, 4, 0]} name={t('admin.avg')} />
-              <Bar dataKey="maxTime" fill="#4F46E5" fillOpacity={0.2} radius={[0, 4, 4, 0]} name={t('admin.max')} />
+              <Bar dataKey="avgTime" fill="#1B7A6E" radius={[0, 4, 4, 0]} name={t('admin.avg')} />
+              <Bar dataKey="maxTime" fill="#1B7A6E" fillOpacity={0.2} radius={[0, 4, 4, 0]} name={t('admin.max')} />
             </BarChart>
           </ResponsiveContainer>
         ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}
@@ -1371,7 +1371,7 @@ function PerformanceTab({ performance }) {
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,.1)' }}
                 formatter={(v, name) => [name === 'avgTime' ? `${v}ms` : v, name === 'avgTime' ? t('admin.avgTime') : t('admin.requests')]} />
-              <Bar dataKey="count" fill="#4F46E5" radius={[4, 4, 0, 0]} name={t('admin.requests')} />
+              <Bar dataKey="count" fill="#1B7A6E" radius={[4, 4, 0, 0]} name={t('admin.requests')} />
             </BarChart>
           </ResponsiveContainer>
         ) : <p className="text-sm text-cream-500 text-center py-8">{t('admin.noDataYet')}</p>}

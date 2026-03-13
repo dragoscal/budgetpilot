@@ -1036,10 +1036,10 @@ export default function Dashboard() {
             const STAT_CARDS = {
               totalSpent: { label: t('dashboard.totalSpent'), value: formatCurrency(stats.totalSpent, currency), trend: stats.spentTrend, icon: TrendingDown, accent: '#DC2626' },
               totalIncome: { label: t('dashboard.totalIncome'), value: formatCurrency(stats.totalIncome, currency), icon: TrendingUp, accent: '#059669' },
-              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#4F46E5' },
+              net: { label: t('dashboard.net'), value: formatCurrency(stats.net, currency), icon: DollarSign, accent: '#1B7A6E' },
               budgetLeft: { label: t('dashboard.budgetLeft'), value: formatCurrency(Math.max(0, stats.budgetRemaining), currency), icon: PiggyBank, accent: '#D97706' },
               dailyAvg: { label: t('dashboard.dailyAvg'), value: formatCurrency(stats.dailyAvg, currency), icon: CalendarDays, accent: '#0EA5E9' },
-              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#4F46E5' },
+              netWorth: { label: t('dashboard.netWorth'), value: formatCurrency(stats.netWorth, currency), icon: Landmark, accent: '#1B7A6E' },
               noSpendDays: { label: t('dashboard.noSpendDaysStat'), value: `${noSpendDays} ${t('dashboard.days')}`, icon: Flame, accent: '#059669' },
             };
             return (
@@ -1224,17 +1224,17 @@ export default function Dashboard() {
                         <AreaChart data={spendingChartData}>
                           <defs>
                             <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1} />
-                              <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#1B7A6E" stopOpacity={0.1} />
+                              <stop offset="95%" stopColor="#1B7A6E" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94A3B8' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#A39D94' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                           <YAxis hide />
                           <Tooltip
-                            contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: '12px' }}
+                            contentStyle={{ borderRadius: '8px', border: '1px solid #E6E2DB', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: '12px' }}
                             formatter={(val) => [hidden ? '••••••' : formatCurrency(val, currency), '']}
                           />
-                          <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#4F46E5'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
+                          <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#1B7A6E'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -1311,7 +1311,7 @@ export default function Dashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={categoryData} dataKey="value" innerRadius="55%" outerRadius="90%" paddingAngle={2} stroke="none">
-                            {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#E2E8F0' : d.color} />)}
+                            {categoryData.map((d, i) => <Cell key={i} fill={hidden ? '#E6E2DB' : d.color} />)}
                           </Pie>
                         </PieChart>
                       </ResponsiveContainer>
@@ -1320,7 +1320,7 @@ export default function Dashboard() {
                       {categoryData.slice(0, 5).map((d) => (
                         <div key={d.name} className="flex items-center justify-between text-xs">
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? '#E2E8F0' : d.color }} />
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hidden ? '#E6E2DB' : d.color }} />
                             {d.name}
                           </span>
                           <span className="font-medium money">{hidden ? '••••••' : formatCurrency(d.value, currency)}</span>

@@ -13,7 +13,7 @@ import { getCachedRates } from '../lib/exchangeRates';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 
-const PIE_COLORS = ['#4F46E5', '#059669', '#D97706', '#2563EB', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#EA580C', '#DC2626'];
+const PIE_COLORS = ['#1B7A6E', '#059669', '#D97706', '#2563EB', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#EA580C', '#DC2626'];
 
 export default function Reports() {
   const { effectiveUserId, user } = useAuth();
@@ -382,8 +382,8 @@ export default function Reports() {
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--grid-line)', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: 12 }} formatter={(v) => formatCurrency(v, currency)} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey={String(new Date().getFullYear())} fill="#4F46E5" name={String(new Date().getFullYear())} radius={[4, 4, 0, 0]} />
-                <Bar dataKey={String(new Date().getFullYear() - 1)} fill="#94A3B8" name={String(new Date().getFullYear() - 1)} radius={[4, 4, 0, 0]} />
+                <Bar dataKey={String(new Date().getFullYear())} fill="#1B7A6E" name={String(new Date().getFullYear())} radius={[4, 4, 0, 0]} />
+                <Bar dataKey={String(new Date().getFullYear() - 1)} fill="#A39D94" name={String(new Date().getFullYear() - 1)} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
