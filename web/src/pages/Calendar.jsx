@@ -457,8 +457,8 @@ export default function CalendarPage() {
                               ${isFuture ? 'opacity-35' : ''}
                             `}
                             style={{
-                              borderBottom: ri < gridRows.length - 1 ? '1px solid var(--grid-line, #f1f5f9)' : 'none',
-                              borderRight: ci < 6 ? '1px solid var(--grid-line, #f1f5f9)' : 'none',
+                              borderBottom: ri < gridRows.length - 1 ? '1px solid var(--grid-line, #E6E2DB)' : 'none',
+                              borderRight: ci < 6 ? '1px solid var(--grid-line, #E6E2DB)' : 'none',
                             }}
                           >
                             {/* Day number row */}

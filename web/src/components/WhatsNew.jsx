@@ -41,7 +41,7 @@ export default function WhatsNew() {
   }, [user]);
 
   const handleDismiss = async () => {
-    await markChangelogSeen();
+    try { await markChangelogSeen(); } catch (e) { console.warn('Failed to mark changelog seen:', e); }
     setOpen(false);
   };
 

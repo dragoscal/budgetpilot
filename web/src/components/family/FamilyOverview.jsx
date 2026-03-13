@@ -249,8 +249,8 @@ export default function FamilyOverview() {
             <AreaChart data={trendData}>
               <defs>
                 <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#1B7A6E" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#1B7A6E" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -260,7 +260,7 @@ export default function FamilyOverview() {
                 formatter={(v) => formatCurrency(v, currency)}
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
               />
-              <Area type="monotone" dataKey="total" stroke="#6366f1" fill="url(#trendFill)" strokeWidth={2} dot={{ r: 3 }} />
+              <Area type="monotone" dataKey="total" stroke="#1B7A6E" fill="url(#trendFill)" strokeWidth={2} dot={{ r: 3 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
