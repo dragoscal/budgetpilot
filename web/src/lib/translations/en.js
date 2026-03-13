@@ -2205,6 +2205,11 @@ const en = {
   'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
+  // v4.0.0
+  'changelog.v400nordicClarity': 'Nordic Clarity redesign — ultra-clean aesthetic with slate neutrals, single indigo accent, airy white space, precision borders',
+  'changelog.v400typography': 'New typography — Instrument Serif for display titles, Plus Jakarta Sans for body, tabular-nums for all financial data',
+  'changelog.v400cardSystem': 'Simplified card system — single-tier flat cards with 1px borders, no gradients, minimal shadows, consistent 12px radius',
+
   // v3.2.0
   'changelog.v320securityHardening': 'Security hardening — PBKDF2 password hashing, token invalidation on password change, CORS origin whitelist, fail-closed rate limiting',
   'changelog.v320familyDataIsolation': 'Fixed family data sync — joined families, members, and shared expenses now sync correctly across all users',

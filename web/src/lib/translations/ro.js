@@ -2205,6 +2205,11 @@ const ro = {
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
+  // v4.0.0
+  'changelog.v400nordicClarity': 'Redesign Nordic Clarity — estetică ultra-curată cu tonuri neutre de ardezie, accent unic indigo, spațiu alb generos, borduri de precizie',
+  'changelog.v400typography': 'Tipografie nouă — Instrument Serif pentru titluri de afișaj, Plus Jakarta Sans pentru corp, numere tabulare pentru toate datele financiare',
+  'changelog.v400cardSystem': 'Sistem de carduri simplificat — carduri plate cu un singur nivel, borduri de 1px, fără gradienți, umbre minime, rază de 12px consistentă',
+
   // v3.2.0
   'changelog.v320securityHardening': 'Securitate consolidată — hash parole PBKDF2, invalidare token la schimbarea parolei, CORS cu listă de origini, limitare cereri fail-closed',
   'changelog.v320familyDataIsolation': 'Sincronizare date familie reparată — familiile la care ești membru, membrii și cheltuielile comune se sincronizează corect',

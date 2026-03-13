@@ -1,10 +1,19 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '3.2.0';
+export const APP_VERSION = '4.0.0';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '4.0.0',
+    date: '2026-03-13',
+    items: [
+      { icon: 'Palette', textKey: 'changelog.v400nordicClarity', type: 'feature' },
+      { icon: 'Type', textKey: 'changelog.v400typography', type: 'feature' },
+      { icon: 'Layout', textKey: 'changelog.v400cardSystem', type: 'improvement' },
+    ],
+  },
   {
     version: '3.2.0',
     date: '2026-03-13',
