@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { transactions as txApi } from '../lib/api';
+import { transactions as txApi, recurring as recurringApi, undoImportBatch } from '../lib/api';
 import { formatCurrency, getCategoryById, getMonthRange, generateId, todayLocal, parseLocalNumber, formatDateISO } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 
@@ -21,7 +21,7 @@ import {
   Camera, Zap, PenLine, ChevronDown, ChevronUp, Check, X,
   AlertTriangle, ShoppingBag, AlertCircle, Info, Eye,
   Plus, Minus, Trash2, Undo2, Pencil, Clock, FileText, Building2, FileSpreadsheet, CheckCircle2,
-  ArrowLeftRight, FileSearch,
+  ArrowLeftRight, FileSearch, Repeat, Layers,
 } from 'lucide-react';
 
 export default function AddTransaction() {
@@ -41,6 +41,20 @@ export default function AddTransaction() {
   const [pendingSave, setPendingSave] = useState(null);
   const [expandedItems, setExpandedItems] = useState({});
   const [skipTransfers, setSkipTransfers] = useState(false);
+
+  // Save progress state
+  const [saving, setSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0 });
+  const [lastBatchId, setLastBatchId] = useState(null);
+
+  // Grouping state
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'category' | 'date'
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+
+  // Recurring detection state
+  const [recurringPatterns, setRecurringPatterns] = useState(null);
+  const [showRecurringPanel, setShowRecurringPanel] = useState(false);
+  const hasScannedRecurring = useRef(false);
 
   // Inline editing state
   const [editingField, setEditingField] = useState(null); // { txIdx, field, itemIdx? }
@@ -167,12 +181,18 @@ export default function AddTransaction() {
   };
 
   const handleSaveResults = async () => {
-    if (!pendingResults) return;
+    if (!pendingResults || saving) return;
+    const toSave = pendingResults.filter((tx) => !tx._dismissed);
+    if (toSave.length === 0) return;
+
+    const batchId = crypto.randomUUID();
+    setSaving(true);
+    setSaveProgress({ current: 0, total: toSave.length });
+
     try {
-      const toSave = pendingResults.filter((tx) => !tx._dismissed);
       const saved = [];
-      for (const tx of toSave) {
-        const { _duplicate, _dismissed, ...clean } = tx;
+      for (let i = 0; i < toSave.length; i++) {
+        const { _duplicate, _dismissed, ...clean } = toSave[i];
         // Add paidBy info to description if present
         if (clean.paidBy) {
           clean.description = clean.description
@@ -187,17 +207,23 @@ export default function AddTransaction() {
             : `${t('quickAdd.debtLabel')} ${clean.debtTo}`;
           clean.tags = [...(clean.tags || []), 'debt', clean.debtTo.toLowerCase()];
         }
-        await txApi.create(clean);
+        await txApi.create({ ...clean, importBatch: batchId });
         if (clean.merchant) learnCategory(clean.merchant, clean.category, clean.subcategory || null);
         saved.push(clean);
+        setSaveProgress({ current: i + 1, total: toSave.length });
       }
       toast.success(t('addTransaction.transactionsAdded').replace('{count}', toSave.length));
+      setLastBatchId(batchId);
       await showBudgetAlerts();
       setRecentlyAdded((prev) => [...saved, ...prev]);
       setPendingResults(null);
       setReceiptMeta(null);
+      hasScannedRecurring.current = false;
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setSaving(false);
+      setSaveProgress({ current: 0, total: 0 });
     }
   };
 
@@ -495,6 +521,115 @@ export default function AddTransaction() {
     recalcTxTotal(txIdx);
   };
 
+  // ─── GROUPING COMPUTATION ─────────────────────────────
+  const groupedTransactions = useMemo(() => {
+    if (!pendingResults || groupBy === 'none') return null;
+    const visible = pendingResults
+      .map((tx, idx) => ({ ...tx, _originalIdx: idx }))
+      .filter(tx => !tx._dismissed);
+    const groups = {};
+    for (const tx of visible) {
+      const key = groupBy === 'category' ? (tx.category || 'other') : (tx.date || 'unknown');
+      if (!groups[key]) {
+        const cat = groupBy === 'category' ? getCategoryById(key) : null;
+        groups[key] = {
+          key,
+          label: cat ? getCategoryLabel(cat, t) : key,
+          icon: cat?.icon || null,
+          color: cat?.color || null,
+          transactions: [],
+          total: 0,
+        };
+      }
+      groups[key].transactions.push(tx);
+      groups[key].total += tx.amount || 0;
+    }
+    return Object.values(groups).sort((a, b) =>
+      groupBy === 'date' ? b.key.localeCompare(a.key) : a.label.localeCompare(b.label)
+    );
+  }, [pendingResults, groupBy, t]);
+
+  // ─── RECURRING PATTERN SCAN ──────────────────────────
+  const scanForRecurringPatterns = useCallback(async () => {
+    if (!pendingResults || pendingResults.length < 4) return;
+    const visible = pendingResults.filter(tx => !tx._dismissed && tx.type === 'expense' && tx.merchant);
+
+    // Group by normalized merchant
+    const byMerchant = {};
+    for (const tx of visible) {
+      const key = tx.merchant.toLowerCase().trim();
+      if (!byMerchant[key]) byMerchant[key] = [];
+      byMerchant[key].push(tx);
+    }
+
+    // Filter: 2+ occurrences in 2+ different months
+    const patterns = [];
+    for (const [, txns] of Object.entries(byMerchant)) {
+      if (txns.length < 2) continue;
+      const months = new Set(txns.map(tx => tx.date?.substring(0, 7)).filter(Boolean));
+      if (months.size < 2) continue;
+
+      const amounts = txns.map(tx => tx.amount);
+      const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+
+      // Estimate frequency from avg gap
+      const sortedDates = txns.map(tx => tx.date).filter(Boolean).sort();
+      let frequency = 'monthly';
+      if (sortedDates.length >= 2) {
+        const daySpan = (new Date(sortedDates[sortedDates.length - 1]) - new Date(sortedDates[0])) / (1000 * 60 * 60 * 24);
+        const avgGap = daySpan / (sortedDates.length - 1);
+        if (avgGap < 10) frequency = 'weekly';
+        else if (avgGap < 20) frequency = 'biweekly';
+        else if (avgGap > 80) frequency = 'quarterly';
+      }
+
+      // Estimate billing day (most common)
+      const days = txns.map(tx => parseInt(tx.date?.substring(8, 10) || '1'));
+      const dayFreq = {};
+      days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
+      const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
+
+      patterns.push({
+        merchant: txns[0].merchant,
+        category: txns[0].category,
+        currency: txns[0].currency || 'RON',
+        avgAmount: Math.round(avgAmount * 100) / 100,
+        count: txns.length,
+        months: months.size,
+        frequency,
+        billingDay,
+        _added: false,
+      });
+    }
+
+    if (patterns.length === 0) { setRecurringPatterns(null); return; }
+
+    // Filter out already-tracked recurring merchants
+    try {
+      const existing = await recurringApi.getAll({ userId: effectiveUserId });
+      const existingMerchants = new Set(
+        (Array.isArray(existing) ? existing : []).map(r => (r.name || r.merchant || '').toLowerCase().trim())
+      );
+      const newPatterns = patterns.filter(p => !existingMerchants.has(p.merchant.toLowerCase().trim()));
+      setRecurringPatterns(newPatterns.length > 0 ? newPatterns : null);
+    } catch {
+      setRecurringPatterns(patterns);
+    }
+  }, [pendingResults, effectiveUserId]);
+
+  // Trigger recurring scan once when results arrive
+  useEffect(() => {
+    if (pendingResults && pendingResults.length >= 4 && !hasScannedRecurring.current) {
+      hasScannedRecurring.current = true;
+      scanForRecurringPatterns();
+    }
+    if (!pendingResults) {
+      hasScannedRecurring.current = false;
+      setRecurringPatterns(null);
+      setShowRecurringPanel(false);
+    }
+  }, [pendingResults, scanForRecurringPatterns]);
+
   // ─── RENDER INLINE EDIT ────────────────────────────────
   const renderEditableText = (txIdx, field, value, className = '', itemIdx = undefined) => {
     if (isEditing(txIdx, field, itemIdx)) {
@@ -523,6 +658,186 @@ export default function AddTransaction() {
         {(field === 'amount' || field === 'price') && value != null ? Number(value).toFixed(2) : (value || '—')}
         <Pencil size={10} className="text-cream-300 dark:text-cream-600 group-hover/edit:text-indigo-400 shrink-0 transition-colors" />
       </span>
+    );
+  };
+
+  // ─── TRANSACTION CARD RENDERER ─────────────────────────
+  // Extracted so both flat and grouped views share the same card JSX.
+  // `idx` is always the index in `pendingResults` so update/remove helpers work.
+  const renderTransactionCard = (tx, idx) => {
+    const cat = getCategoryById(tx.category);
+    const hasItems = tx.items && tx.items.length > 0;
+    const needsReviewItems = hasItems ? tx.items.filter(i => i.needsReview) : [];
+    const itemsTotal = hasItems ? tx.items.reduce((s, it) => {
+      if (it.unitPrice && it.unitPrice !== it.price && (it.qty || 1) > 1) {
+        return s + (it.unitPrice * (it.qty || 1));
+      }
+      return s + (it.price || 0);
+    }, 0) : 0;
+    const receiptTotal = receiptMeta?.receipt?.total;
+    const mismatch = receiptTotal && hasItems && Math.abs(itemsTotal - receiptTotal) / receiptTotal > 0.02;
+
+    return (
+      <div key={idx} className={`bg-white dark:bg-dark-card rounded-xl p-4 border ${
+        tx.needsReview ? 'border-warning/40' : 'border-cream-200 dark:border-dark-border'
+      }`}>
+        {/* Transaction header - editable */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}>{cat.icon}</div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium flex items-center gap-1.5">
+                {renderEditableText(idx, 'merchant', tx.merchant || t('addTransaction.unknown'))}
+                {(tx.type === 'transfer' || tx.category === 'transfer') && (
+                  <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-info/10 text-info font-medium shrink-0">
+                    <ArrowLeftRight size={9} /> {t('addTransaction.transferBadge') || 'Transfer'}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-cream-500">
+                {renderEditableText(idx, 'date', tx.date, 'text-xs')}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className={`stat-value ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
+              {tx.type === 'income' ? '+' : '-'}
+              {renderEditableText(idx, 'amount', tx.amount, 'text-sm font-bold w-20 text-right')}
+              {!isEditing(idx, 'amount') && (
+                <span className="text-xs font-normal text-cream-400 ml-0.5">{tx.currency}</span>
+              )}
+            </div>
+            <button onClick={() => removePending(idx)} className="p-1 rounded hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Confidence dot */}
+        {tx.confidence && tx.confidence < 0.95 && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <div className={`w-2 h-2 rounded-full ${getConfidenceDot(tx.confidence).color}`} title={getConfidenceDot(tx.confidence).label} />
+            <span className="text-[10px] text-cream-400">{getConfidenceDot(tx.confidence).label}</span>
+          </div>
+        )}
+
+        {tx.originalText && (
+          <p className="text-[11px] text-cream-400 dark:text-cream-500 mt-1 italic">
+            &ldquo;{tx.originalText}&rdquo;
+          </p>
+        )}
+        {tx.description && <p className="text-xs text-cream-500 mt-1">{tx.description}</p>}
+
+        {/* Duplicate warning */}
+        {tx._duplicate && (
+          <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/8 border border-warning/20">
+            <AlertTriangle size={12} className="text-warning shrink-0" />
+            <span className="text-[11px] text-warning flex-1">
+              {t('addTransaction.possibleDuplicate')}: {tx._duplicate.reason}
+            </span>
+            <button onClick={() => updatePending(idx, { _dismissed: true })} className="text-[10px] font-medium text-danger hover:underline">
+              {t('addTransaction.skip')}
+            </button>
+            <button onClick={() => updatePending(idx, { _duplicate: null })} className="text-[10px] font-medium text-cream-500 hover:underline">
+              {t('addTransaction.keep')}
+            </button>
+          </div>
+        )}
+
+        {/* Needs review badge */}
+        {tx.needsReview && needsReviewItems.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-warning/10 w-fit">
+            <AlertCircle size={12} className="text-warning" />
+            <span className="text-[10px] font-medium text-warning">
+              {t('addTransaction.itemsFlagged').replace('{count}', needsReviewItems.length)}
+            </span>
+          </div>
+        )}
+
+        {/* Receipt Items */}
+        {hasItems && (
+          <div className="mt-2">
+            <button onClick={() => toggleItemsExpand(idx)} className="flex items-center gap-1 text-xs text-info hover:underline">
+              <ShoppingBag size={12} />
+              {t('addTransaction.items').replace('{count}', tx.items.length)}
+              {needsReviewItems.length > 0 && (
+                <span className="text-warning ml-1">{t('addTransaction.toReview').replace('{count}', needsReviewItems.length)}</span>
+              )}
+              {expandedItems[idx] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+
+            {expandedItems[idx] && (
+              <div className="mt-2 bg-cream-50 dark:bg-dark-bg rounded-lg p-3 space-y-1">
+                {tx.items.map((item, itemIdx) => {
+                  const dot = getConfidenceDot(item.confidence || 0.8);
+                  return (
+                    <div key={itemIdx} className={`flex items-center gap-2 text-xs p-2 rounded-lg group ${
+                      item.needsReview ? 'bg-warning/5 border border-warning/20' : 'hover:bg-cream-100 dark:hover:bg-dark-border'
+                    }`}>
+                      {item.needsReview && (
+                        <div className={`w-1.5 h-1.5 rounded-full ${dot.color} shrink-0`} title={dot.label} />
+                      )}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button onClick={() => adjustQty(idx, itemIdx, -1)} className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors" title={t('addTransaction.decreaseQty')}>
+                          <Minus size={10} />
+                        </button>
+                        <span onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)} className="w-7 text-center text-xs font-medium text-cream-600 dark:text-cream-400 cursor-pointer hover:text-indigo-500 transition-colors" title={t('addTransaction.tapToTypeQty')}>
+                          {isEditing(idx, 'qty', itemIdx) ? (
+                            <input ref={editRef} type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={commitEdit} onKeyDown={handleEditKeyDown} className="w-7 bg-white dark:bg-dark-card border-2 border-indigo-400 rounded text-xs text-center py-0.5" min="1" />
+                          ) : (`${item.qty || 1}x`)}
+                        </span>
+                        <button onClick={() => adjustQty(idx, itemIdx, 1)} className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors" title={t('addTransaction.increaseQty')}>
+                          <Plus size={10} />
+                        </button>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {renderEditableText(idx, 'name', item.name, 'text-xs text-cream-700 dark:text-cream-400 truncate block', itemIdx)}
+                      </div>
+                      <CategoryPicker value={item.category || tx.category} onChange={(catId, subId) => updatePendingItem(idx, itemIdx, { category: catId, subcategory: subId || null, needsReview: false })} compact exclude={['income', 'transfer']} />
+                      <div className="shrink-0 w-16 text-right">
+                        {renderEditableText(idx, 'price', item.price, 'text-xs font-medium money w-14 text-right', itemIdx)}
+                      </div>
+                      <button onClick={() => deleteItem(idx, itemIdx)} className="p-1.5 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0" title={t('addTransaction.removeItem')}>
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {addingItem === idx ? (
+                  <div className="flex items-center gap-2 p-2 border-t border-cream-200 dark:border-dark-border mt-1 pt-2">
+                    <input value={newItem.name} onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))} placeholder={t('addTransaction.itemName')} className="flex-1 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); if (e.key === 'Escape') setAddingItem(null); }} />
+                    <input type="text" value={newItem.price} onChange={(e) => setNewItem(n => ({ ...n, price: e.target.value }))} placeholder={t('addTransaction.price')} className="w-16 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1" inputMode="decimal" onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); }} />
+                    <button onClick={() => addItem(idx)} className="p-1 rounded bg-success/10 text-success hover:bg-success/20"><Check size={14} /></button>
+                    <button onClick={() => setAddingItem(null)} className="p-1 rounded bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300"><X size={14} /></button>
+                  </div>
+                ) : (
+                  <button onClick={() => setAddingItem(idx)} className="flex items-center gap-1 text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 mt-1 px-2 py-1">
+                    <Plus size={12} /> {t('addTransaction.addMissedItem')}
+                  </button>
+                )}
+
+                <div className="border-t border-cream-200 dark:border-dark-border mt-2 pt-2 flex items-center justify-between text-xs">
+                  <span className="text-cream-500">{t('addTransaction.itemsTotal')}</span>
+                  <span className="font-medium money">{formatCurrency(itemsTotal, tx.currency)}</span>
+                </div>
+                {mismatch && (
+                  <div className="flex items-center gap-1 text-[10px] text-warning mt-1">
+                    <AlertTriangle size={10} />
+                    {t('addTransaction.totalMismatch').replace('{total}', formatCurrency(receiptTotal, receiptMeta?.receipt?.currency || 'RON'))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Transaction category - CategoryPicker */}
+        <div className="mt-3 flex items-center gap-2">
+          <label className="text-[10px] text-cream-400 shrink-0">{t('addTransaction.categoryLabel')}</label>
+          <CategoryPicker value={tx.category} subcategoryValue={tx.subcategory || null} onChange={(catId, subId) => updatePending(idx, { category: catId, subcategory: subId || null })} exclude={['income', 'transfer']} />
+        </div>
+      </div>
     );
   };
 
@@ -713,324 +1028,243 @@ export default function AddTransaction() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('addTransaction.reviewConfirm')}</h3>
             <div className="flex gap-2">
-              <button onClick={() => { setPendingResults(null); setReceiptMeta(null); }} className="btn-ghost text-xs flex items-center gap-1">
+              <button onClick={() => { setPendingResults(null); setReceiptMeta(null); }} disabled={saving} className="btn-ghost text-xs flex items-center gap-1 disabled:opacity-50">
                 <X size={14} /> {t('addTransaction.discard')}
               </button>
-              <button onClick={handleSaveForLater} className="btn-ghost text-xs flex items-center gap-1 text-info border-info/30 hover:bg-info/10">
+              <button onClick={handleSaveForLater} disabled={saving} className="btn-ghost text-xs flex items-center gap-1 text-info border-info/30 hover:bg-info/10 disabled:opacity-50">
                 <Clock size={14} /> {t('addTransaction.later')}
               </button>
-              <button onClick={handleSaveResults} className="btn-primary text-xs flex items-center gap-1">
-                <Check size={14} /> {pendingResults.filter(tx => !tx._dismissed).length > 1 ? t('addTransaction.saveAll').replace('{count}', pendingResults.filter(tx => !tx._dismissed).length) : t('addTransaction.save')}
+              <button onClick={handleSaveResults} disabled={saving} className="btn-primary text-xs flex items-center gap-1 disabled:opacity-50">
+                {saving ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    {saveProgress.current}/{saveProgress.total}
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    {pendingResults.filter(tx => !tx._dismissed).length > 1
+                      ? t('addTransaction.saveAll').replace('{count}', pendingResults.filter(tx => !tx._dismissed).length)
+                      : t('addTransaction.save')}
+                  </>
+                )}
               </button>
             </div>
           </div>
-          <p className="text-[10px] text-cream-400 dark:text-cream-600 mb-3 flex items-center gap-1">
-            <Pencil size={10} /> {t('addTransaction.tapToEditHint')}
-          </p>
 
-          {/* Transfer detection banner */}
-          {(() => {
-            const transferCount = pendingResults.filter(tx => !tx._dismissed && (tx.type === 'transfer' || tx.category === 'transfer')).length;
-            if (transferCount === 0) return null;
-            return (
-              <div className="flex items-center justify-between p-3 mb-3 rounded-xl bg-info/5 border border-info/20">
-                <div className="flex items-center gap-2">
-                  <ArrowLeftRight size={14} className="text-info shrink-0" />
-                  <span className="text-xs text-cream-600 dark:text-cream-400">
-                    {(t('addTransaction.transfersDetected') || '{count} transfer(s) between accounts detected').replace('{count}', transferCount)}
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    setSkipTransfers(!skipTransfers);
-                    // Auto-dismiss/restore transfer transactions
-                    setPendingResults(prev => prev.map(tx =>
-                      (tx.type === 'transfer' || tx.category === 'transfer')
-                        ? { ...tx, _dismissed: !skipTransfers }
-                        : tx
-                    ));
-                  }}
-                  className={`text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors ${
-                    skipTransfers
-                      ? 'bg-info text-white'
-                      : 'bg-info/10 text-info hover:bg-info/20'
-                  }`}
-                >
-                  {t('addTransaction.skipTransfers') || 'Skip transfers'}
-                </button>
+          {/* Save progress overlay */}
+          {saving ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium">
+                {(t('addTransaction.savingProgress') || 'Saving {current} of {total}...')
+                  .replace('{current}', saveProgress.current)
+                  .replace('{total}', saveProgress.total)}
+              </p>
+              <div className="w-full max-w-xs bg-cream-200 dark:bg-dark-border rounded-full h-2">
+                <div
+                  className="bg-accent h-2 rounded-full transition-all duration-200"
+                  style={{ width: `${saveProgress.total ? (saveProgress.current / saveProgress.total) * 100 : 0}%` }}
+                />
               </div>
-            );
-          })()}
+            </div>
+          ) : (
+            <>
+              <p className="text-[10px] text-cream-400 dark:text-cream-600 mb-3 flex items-center gap-1">
+                <Pencil size={10} /> {t('addTransaction.tapToEditHint')}
+              </p>
 
-          <div className="space-y-3">
-            {pendingResults.map((tx, idx) => {
-              if (tx._dismissed) return null;
-              const cat = getCategoryById(tx.category);
-              const hasItems = tx.items && tx.items.length > 0;
-              const needsReviewItems = hasItems ? tx.items.filter(i => i.needsReview) : [];
-
-              // Running total for items
-              // price = line total from receipt; only multiply by qty if unitPrice exists and differs
-              const itemsTotal = hasItems ? tx.items.reduce((s, it) => {
-                if (it.unitPrice && it.unitPrice !== it.price && (it.qty || 1) > 1) {
-                  return s + (it.unitPrice * (it.qty || 1));
-                }
-                return s + (it.price || 0);
-              }, 0) : 0;
-              const receiptTotal = receiptMeta?.receipt?.total;
-              const mismatch = receiptTotal && hasItems && Math.abs(itemsTotal - receiptTotal) / receiptTotal > 0.02;
-
-              return (
-                <div key={idx} className={`bg-white dark:bg-dark-card rounded-xl p-4 border ${
-                  tx.needsReview ? 'border-warning/40' : 'border-cream-200 dark:border-dark-border'
-                }`}>
-                  {/* Transaction header - editable */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}>{cat.icon}</div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium flex items-center gap-1.5">
-                          {renderEditableText(idx, 'merchant', tx.merchant || t('addTransaction.unknown'))}
-                          {(tx.type === 'transfer' || tx.category === 'transfer') && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-info/10 text-info font-medium shrink-0">
-                              <ArrowLeftRight size={9} /> {t('addTransaction.transferBadge') || 'Transfer'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-cream-500">
-                          {renderEditableText(idx, 'date', tx.date, 'text-xs')}
-                        </div>
+              {/* Enhanced transfer detection banner */}
+              {(() => {
+                const transfers = pendingResults.filter(tx => !tx._dismissed && (tx.type === 'transfer' || tx.category === 'transfer'));
+                const transferCount = transfers.length;
+                if (transferCount === 0) return null;
+                const transferTotal = transfers.reduce((s, tx) => s + (tx.amount || 0), 0);
+                return (
+                  <div className="flex items-center justify-between p-3.5 mb-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-info/30 border-l-4 border-l-info">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-info/15 flex items-center justify-center shrink-0">
+                        <ArrowLeftRight size={16} className="text-info" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-cream-700 dark:text-cream-300">
+                          {(t('addTransaction.transfersDetected') || '{count} transfer(s) between accounts detected').replace('{count}', transferCount)}
+                        </span>
+                        <p className="text-[10px] text-cream-400">
+                          {(t('addTransaction.transferTotal') || 'Total: {amount}').replace('{amount}', formatCurrency(transferTotal, transfers[0]?.currency))}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className={`stat-value ${tx.type === 'income' ? 'text-income' : 'text-danger'}`}>
-                        {tx.type === 'income' ? '+' : '-'}
-                        {renderEditableText(idx, 'amount', tx.amount, 'text-sm font-bold w-20 text-right')}
-                        {!isEditing(idx, 'amount') && (
-                          <span className="text-xs font-normal text-cream-400 ml-0.5">{tx.currency}</span>
-                        )}
-                      </div>
-                      <button onClick={() => removePending(idx)} className="p-1 rounded hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400">
-                        <X size={14} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setSkipTransfers(!skipTransfers);
+                        setPendingResults(prev => prev.map(tx =>
+                          (tx.type === 'transfer' || tx.category === 'transfer')
+                            ? { ...tx, _dismissed: !skipTransfers }
+                            : tx
+                        ));
+                      }}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                        skipTransfers
+                          ? 'bg-info text-white shadow-sm'
+                          : 'bg-info/10 text-info hover:bg-info/20 border border-info/20'
+                      }`}
+                    >
+                      {skipTransfers
+                        ? (t('addTransaction.transfersSkipped') || 'Skipped')
+                        : (t('addTransaction.skipTransfers') || 'Skip transfers')}
+                    </button>
                   </div>
+                );
+              })()}
 
-                  {/* Confidence dot */}
-                  {tx.confidence && tx.confidence < 0.95 && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <div className={`w-2 h-2 rounded-full ${getConfidenceDot(tx.confidence).color}`} title={getConfidenceDot(tx.confidence).label} />
-                      <span className="text-[10px] text-cream-400">{getConfidenceDot(tx.confidence).label}</span>
-                    </div>
-                  )}
-
-                  {tx.originalText && (
-                    <p className="text-[11px] text-cream-400 dark:text-cream-500 mt-1 italic">
-                      &ldquo;{tx.originalText}&rdquo;
-                    </p>
-                  )}
-                  {tx.description && <p className="text-xs text-cream-500 mt-1">{tx.description}</p>}
-
-                  {/* Duplicate warning */}
-                  {tx._duplicate && (
-                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/8 border border-warning/20">
-                      <AlertTriangle size={12} className="text-warning shrink-0" />
-                      <span className="text-[11px] text-warning flex-1">
-                        {t('addTransaction.possibleDuplicate')}: {tx._duplicate.reason}
-                      </span>
-                      <button
-                        onClick={() => updatePending(idx, { _dismissed: true })}
-                        className="text-[10px] font-medium text-danger hover:underline"
-                      >
-                        {t('addTransaction.skip')}
-                      </button>
-                      <button
-                        onClick={() => updatePending(idx, { _duplicate: null })}
-                        className="text-[10px] font-medium text-cream-500 hover:underline"
-                      >
-                        {t('addTransaction.keep')}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Needs review badge */}
-                  {tx.needsReview && needsReviewItems.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-warning/10 w-fit">
-                      <AlertCircle size={12} className="text-warning" />
-                      <span className="text-[10px] font-medium text-warning">
-                        {t('addTransaction.itemsFlagged').replace('{count}', needsReviewItems.length)}
+              {/* Recurring pattern detection banner */}
+              {recurringPatterns && recurringPatterns.length > 0 && (
+                <div className="p-3 mb-3 rounded-xl bg-accent/5 border border-accent/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Repeat size={14} className="text-accent shrink-0" />
+                      <span className="text-xs font-medium text-cream-700 dark:text-cream-300">
+                        {(t('addTransaction.recurringDetected') || '{count} potential recurring payment(s) detected').replace('{count}', recurringPatterns.filter(p => !p._added).length || recurringPatterns.length)}
                       </span>
                     </div>
-                  )}
+                    <button
+                      onClick={() => setShowRecurringPanel(!showRecurringPanel)}
+                      className="text-xs font-medium text-accent hover:underline flex items-center gap-1"
+                    >
+                      {t('addTransaction.viewAndAdd') || 'View & Add'}
+                      {showRecurringPanel ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-cream-400 mt-1">
+                    {recurringPatterns.slice(0, 3).map(p => p.merchant).join(', ')}
+                    {recurringPatterns.length > 3 && ` +${recurringPatterns.length - 3}`}
+                  </p>
 
-                  {/* Receipt Items */}
-                  {hasItems && (
-                    <div className="mt-2">
-                      <button
-                        onClick={() => toggleItemsExpand(idx)}
-                        className="flex items-center gap-1 text-xs text-info hover:underline"
-                      >
-                        <ShoppingBag size={12} />
-                        {t('addTransaction.items').replace('{count}', tx.items.length)}
-                        {needsReviewItems.length > 0 && (
-                          <span className="text-warning ml-1">{t('addTransaction.toReview').replace('{count}', needsReviewItems.length)}</span>
-                        )}
-                        {expandedItems[idx] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                      </button>
-
-                      {expandedItems[idx] && (
-                        <div className="mt-2 bg-cream-50 dark:bg-dark-bg rounded-lg p-3 space-y-1">
-                          {tx.items.map((item, itemIdx) => {
-                            const dot = getConfidenceDot(item.confidence || 0.8);
-                            return (
-                              <div key={itemIdx} className={`flex items-center gap-2 text-xs p-2 rounded-lg group ${
-                                item.needsReview ? 'bg-warning/5 border border-warning/20' : 'hover:bg-cream-100 dark:hover:bg-dark-border'
-                              }`}>
-                                {/* Confidence dot */}
-                                {item.needsReview && (
-                                  <div className={`w-1.5 h-1.5 rounded-full ${dot.color} shrink-0`} title={dot.label} />
-                                )}
-
-                                {/* Qty with +/- */}
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <button
-                                    onClick={() => adjustQty(idx, itemIdx, -1)}
-                                    className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
-                                    title={t('addTransaction.decreaseQty')}
-                                  >
-                                    <Minus size={10} />
-                                  </button>
-                                  <span
-                                    onClick={() => startEdit(idx, 'qty', item.qty || 1, itemIdx)}
-                                    className="w-7 text-center text-xs font-medium text-cream-600 dark:text-cream-400 cursor-pointer hover:text-indigo-500 transition-colors"
-                                    title={t('addTransaction.tapToTypeQty')}
-                                  >
-                                    {isEditing(idx, 'qty', itemIdx) ? (
-                                      <input
-                                        ref={editRef}
-                                        type="number"
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        onBlur={commitEdit}
-                                        onKeyDown={handleEditKeyDown}
-                                        className="w-7 bg-white dark:bg-dark-card border-2 border-indigo-400 rounded text-xs text-center py-0.5"
-                                        min="1"
-                                      />
-                                    ) : (
-                                      `${item.qty || 1}x`
-                                    )}
-                                  </span>
-                                  <button
-                                    onClick={() => adjustQty(idx, itemIdx, 1)}
-                                    className="w-6 h-6 rounded flex items-center justify-center text-cream-400 hover:bg-cream-200 dark:hover:bg-dark-border hover:text-cream-700 transition-colors"
-                                    title={t('addTransaction.increaseQty')}
-                                  >
-                                    <Plus size={10} />
-                                  </button>
-                                </div>
-
-                                {/* Name - editable */}
-                                <div className="flex-1 min-w-0">
-                                  {renderEditableText(idx, 'name', item.name, 'text-xs text-cream-700 dark:text-cream-400 truncate block', itemIdx)}
-                                </div>
-
-                                {/* Item category */}
-                                <CategoryPicker
-                                  value={item.category || tx.category}
-                                  onChange={(catId, subId) => updatePendingItem(idx, itemIdx, {
-                                    category: catId,
-                                    subcategory: subId || null,
-                                    needsReview: false,
-                                  })}
-                                  compact
-                                  exclude={['income', 'transfer']}
-                                />
-
-                                {/* Price - editable */}
-                                <div className="shrink-0 w-16 text-right">
-                                  {renderEditableText(idx, 'price', item.price, 'text-xs font-medium money w-14 text-right', itemIdx)}
-                                </div>
-
-                                {/* Delete item */}
-                                <button
-                                  onClick={() => deleteItem(idx, itemIdx)}
-                                  className="p-1.5 rounded sm:opacity-0 sm:group-hover:opacity-100 hover:bg-danger/10 text-cream-300 dark:text-cream-600 hover:text-danger transition-all shrink-0"
-                                  title={t('addTransaction.removeItem')}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                  {showRecurringPanel && (
+                    <div className="mt-3 space-y-2">
+                      {recurringPatterns.map((pattern, i) => {
+                        const pcat = getCategoryById(pattern.category);
+                        return (
+                          <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base shrink-0">{pcat.icon}</span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{pattern.merchant}</p>
+                                <p className="text-[10px] text-cream-400">
+                                  ~{formatCurrency(pattern.avgAmount, pattern.currency)} / {pattern.frequency}
+                                  {' \u00b7 '}{pattern.count}x {(t('addTransaction.inMonths') || 'in {count} months').replace('{count}', pattern.months)}
+                                </p>
                               </div>
-                            );
-                          })}
-
-                          {/* Add item button / form */}
-                          {addingItem === idx ? (
-                            <div className="flex items-center gap-2 p-2 border-t border-cream-200 dark:border-dark-border mt-1 pt-2">
-                              <input
-                                value={newItem.name}
-                                onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))}
-                                placeholder={t('addTransaction.itemName')}
-                                className="flex-1 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
-                                autoFocus
-                                onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); if (e.key === 'Escape') setAddingItem(null); }}
-                              />
-                              <input
-                                type="text"
-                                value={newItem.price}
-                                onChange={(e) => setNewItem(n => ({ ...n, price: e.target.value }))}
-                                placeholder={t('addTransaction.price')}
-                                className="w-16 text-xs bg-white dark:bg-dark-card border border-cream-200 dark:border-dark-border rounded px-2 py-1"
-                                inputMode="decimal"
-                                onKeyDown={(e) => { if (e.key === 'Enter') addItem(idx); }}
-                              />
-                              <button onClick={() => addItem(idx)} className="p-1 rounded bg-success/10 text-success hover:bg-success/20">
-                                <Check size={14} />
-                              </button>
-                              <button onClick={() => setAddingItem(null)} className="p-1 rounded bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300">
-                                <X size={14} />
-                              </button>
                             </div>
-                          ) : (
                             <button
-                              onClick={() => setAddingItem(idx)}
-                              className="flex items-center gap-1 text-xs text-cream-500 hover:text-cream-700 dark:hover:text-cream-300 mt-1 px-2 py-1"
+                              onClick={async () => {
+                                try {
+                                  await recurringApi.create({
+                                    id: generateId(), name: pattern.merchant, merchant: pattern.merchant,
+                                    amount: pattern.avgAmount, currency: pattern.currency, category: pattern.category,
+                                    frequency: pattern.frequency, billingDay: pattern.billingDay,
+                                    active: true, autoDetected: true, recurringType: 'bill', status: 'active',
+                                    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+                                  });
+                                  toast.success((t('addTransaction.recurringAdded') || '"{name}" added to recurring payments').replace('{name}', pattern.merchant));
+                                  setRecurringPatterns(prev => prev.map((p, j) => j === i ? { ...p, _added: true } : p));
+                                } catch (err) { toast.error(err.message); }
+                              }}
+                              disabled={pattern._added}
+                              className={`text-[10px] font-medium px-2.5 py-1 rounded-lg shrink-0 flex items-center gap-1 ${
+                                pattern._added
+                                  ? 'bg-success/10 text-success'
+                                  : 'bg-accent/10 text-accent hover:bg-accent/20'
+                              }`}
                             >
-                              <Plus size={12} /> {t('addTransaction.addMissedItem')}
+                              {pattern._added ? <><Check size={10} /> {t('common.done')}</> : (t('addTransaction.addToRecurring') || 'Add')}
                             </button>
-                          )}
-
-                          {/* Running total */}
-                          <div className="border-t border-cream-200 dark:border-dark-border mt-2 pt-2 flex items-center justify-between text-xs">
-                            <span className="text-cream-500">{t('addTransaction.itemsTotal')}</span>
-                            <span className="font-medium money">
-                              {formatCurrency(itemsTotal, tx.currency)}
-                            </span>
                           </div>
-                          {mismatch && (
-                            <div className="flex items-center gap-1 text-[10px] text-warning mt-1">
-                              <AlertTriangle size={10} />
-                              {t('addTransaction.totalMismatch').replace('{total}', formatCurrency(receiptTotal, receiptMeta?.receipt?.currency || 'RON'))}
-                            </div>
-                          )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Group-by toggle (show when 5+ visible transactions) */}
+              {pendingResults.filter(tx => !tx._dismissed).length >= 5 && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Layers size={12} className="text-cream-400" />
+                  <span className="text-[10px] text-cream-400 font-medium uppercase tracking-wide">
+                    {t('addTransaction.groupByLabel') || 'Group by'}:
+                  </span>
+                  {['none', 'category', 'date'].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => { setGroupBy(mode); setCollapsedGroups({}); }}
+                      className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                        groupBy === mode
+                          ? 'bg-accent text-white'
+                          : 'bg-cream-100 dark:bg-dark-border text-cream-500 hover:text-cream-700'
+                      }`}
+                    >
+                      {t(`addTransaction.groupBy_${mode}`) || mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Transaction list — flat or grouped */}
+              <div className="space-y-3">
+                {groupBy === 'none' ? (
+                  // Flat list
+                  pendingResults.map((tx, idx) => {
+                    if (tx._dismissed) return null;
+                    return renderTransactionCard(tx, idx);
+                  })
+                ) : (
+                  // Grouped list
+                  groupedTransactions?.map((group) => (
+                    <div key={group.key} className="rounded-xl border border-cream-200 dark:border-dark-border overflow-hidden">
+                      <button
+                        onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                        className="w-full flex items-center justify-between p-3 bg-cream-50 dark:bg-dark-card hover:bg-cream-100 dark:hover:bg-dark-border transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          {group.icon && <span className="text-base">{group.icon}</span>}
+                          <span className="text-sm font-medium">{group.label}</span>
+                          <span className="text-[10px] font-medium bg-cream-200 dark:bg-dark-border px-1.5 py-0.5 rounded-full text-cream-500">
+                            {group.transactions.length}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium stat-value text-danger">
+                            -{formatCurrency(group.total, group.transactions[0]?.currency)}
+                          </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingResults(prev => prev.map((tx, i) => {
+                                const inGroup = group.transactions.some(g => g._originalIdx === i);
+                                return inGroup ? { ...tx, _dismissed: true } : tx;
+                              }));
+                            }}
+                            className="p-1 rounded hover:bg-danger/10 text-cream-400 hover:text-danger cursor-pointer transition-colors"
+                            title={t('addTransaction.dismissGroup') || 'Dismiss all'}
+                          >
+                            <X size={12} />
+                          </span>
+                          {collapsedGroups[group.key] ? <ChevronDown size={14} className="text-cream-400" /> : <ChevronUp size={14} className="text-cream-400" />}
+                        </div>
+                      </button>
+                      {!collapsedGroups[group.key] && (
+                        <div className="p-2 space-y-2">
+                          {group.transactions.map((tx) => renderTransactionCard(tx, tx._originalIdx))}
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Transaction category - CategoryPicker */}
-                  <div className="mt-3 flex items-center gap-2">
-                    <label className="text-[10px] text-cream-400 shrink-0">{t('addTransaction.categoryLabel')}</label>
-                    <CategoryPicker
-                      value={tx.category}
-                      subcategoryValue={tx.subcategory || null}
-                      onChange={(catId, subId) => updatePending(idx, { category: catId, subcategory: subId || null })}
-                      exclude={['income', 'transfer']}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1091,6 +1325,28 @@ export default function AddTransaction() {
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Undo batch import banner */}
+      {lastBatchId && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-accent/5 border border-accent/20">
+          <span className="text-xs text-cream-600 dark:text-cream-400">
+            {t('addTransaction.batchSaved') || 'Batch import saved successfully'}
+          </span>
+          <button
+            onClick={async () => {
+              try {
+                const result = await undoImportBatch(lastBatchId);
+                toast.success((t('addTransaction.batchUndone') || '{count} transactions removed').replace('{count}', result?.deleted || recentlyAdded.length));
+                setLastBatchId(null);
+                setRecentlyAdded([]);
+              } catch (err) { toast.error(err.message); }
+            }}
+            className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          >
+            <Undo2 size={12} /> {t('addTransaction.undoBatch') || 'Undo import'}
+          </button>
         </div>
       )}
 
