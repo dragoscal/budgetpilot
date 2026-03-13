@@ -147,6 +147,12 @@ export default function BankStatementUpload({ onResult, onError }) {
         const { promise } = startBankStatementJob(base64Data, {
           userId: effectiveUserId,
           fileName: file.name,
+          onProgress: ({ pass, count }) => {
+            if (mountedRef.current) {
+              setStatus(t('document.multiPassProgress').replace('{count}', count));
+              setProgress(prev => Math.min(85, prev + 10));
+            }
+          },
         });
 
         const results = await promise;

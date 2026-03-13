@@ -21,14 +21,14 @@ export function getActiveJob() {
  * Start a bank statement processing job in the background.
  * Returns { promise, controller } so the calling component can await & cancel.
  */
-export function startBankStatementJob(base64Data, { userId, fileName }) {
+export function startBankStatementJob(base64Data, { userId, fileName, onProgress }) {
   // Cancel any previously running job
   if (activeJob?.controller) {
     activeJob.controller.abort();
   }
 
   const controller = new AbortController();
-  const promise = processBankStatement(base64Data, { userId, signal: controller.signal });
+  const promise = processBankStatement(base64Data, { userId, signal: controller.signal, onProgress });
 
   activeJob = {
     type: 'bank_statement',
@@ -126,13 +126,13 @@ export function startBankStatementJob(base64Data, { userId, fileName }) {
  * Start a document processing job in the background.
  * Works like startBankStatementJob but calls processDocument() instead.
  */
-export function startDocumentJob(base64Data, mediaType, { userId, fileName }) {
+export function startDocumentJob(base64Data, mediaType, { userId, fileName, onProgress }) {
   if (activeJob?.controller) {
     activeJob.controller.abort();
   }
 
   const controller = new AbortController();
-  const promise = processDocument(base64Data, mediaType, { userId, signal: controller.signal });
+  const promise = processDocument(base64Data, mediaType, { userId, signal: controller.signal, onProgress });
 
   activeJob = {
     type: 'document',

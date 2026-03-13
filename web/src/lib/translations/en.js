@@ -541,6 +541,8 @@ const en = {
   'document.paymentStatus.paid': 'Paid',
   'document.paymentStatus.unpaid': 'Unpaid',
   'document.paymentStatus.partial': 'Partially paid',
+  'document.multiPassProgress': 'Processing large document... ({count} transactions found so far)',
+  'document.multiPassComplete': 'Large document processed in {passes} passes',
 
   // ─── Budgets ─────────────────────────────────────────
   'budgets.title': 'Budgets',
@@ -2346,6 +2348,10 @@ const en = {
   'changelog.v410goalMilestones': 'Goal milestone markers at 25/50/75% with countdown display showing days or months remaining',
   'changelog.v410challengeRetry': 'Challenge retry button on failed challenges with stats summary (completed, failed, success rate)',
   'changelog.v410reportsYoY': 'Year-over-Year spending comparison report — side-by-side monthly bars for current vs previous year',
+
+  // v4.2.1
+  'changelog.v421multiPass': 'Multi-pass processing for large documents — bank statements with 100+ transactions are now fully extracted across multiple AI passes',
+  'changelog.v421truncationFix': 'Fixed silent data loss when AI response was truncated — truncation is now detected and automatically continued',
 
   // v4.2.0
   'changelog.v420documentScanner': 'New Document Scanner — upload invoices, utility bills, contracts, tax forms, and more to auto-create transactions',

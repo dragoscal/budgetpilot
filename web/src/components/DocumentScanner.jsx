@@ -112,6 +112,12 @@ export default function DocumentScanner({ onResult, onError }) {
         const { promise } = startDocumentJob(base64Data, mediaType, {
           userId: effectiveUserId,
           fileName: inputFile.name,
+          onProgress: ({ pass, count }) => {
+            if (mountedRef.current) {
+              setStatus(t('document.multiPassProgress').replace('{count}', count));
+              setProgress(prev => Math.min(85, prev + 10));
+            }
+          },
         });
 
         try {

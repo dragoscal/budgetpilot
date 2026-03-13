@@ -329,6 +329,7 @@ async function readSSEStream(response, signal) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = '';
+  let stopReason = 'end_turn';
   const MAX_STREAM_SIZE = 5 * 1024 * 1024; // 5MB safety limit on accumulated text
 
   try {
@@ -355,7 +356,10 @@ async function readSSEStream(response, signal) {
                 reader.cancel();
                 throw new Error('AI response exceeded maximum size. Try a smaller document.');
               }
-            } else if (evt.d) { /* done */ }
+            } else if (evt.d) {
+              // Done event — capture stop_reason from server proxy
+              if (evt.stop_reason) stopReason = evt.stop_reason;
+            }
             else if (evt.error) throw new Error(evt.error);
           } catch (e) {
             if (e.message && !e.message.startsWith('Unexpected') && !e.message.startsWith('Expected')) throw e;
@@ -372,11 +376,20 @@ async function readSSEStream(response, signal) {
 
   if (!fullText) throw new Error('No data received from AI stream');
 
+  const truncated = stopReason === 'max_tokens';
+  if (truncated) {
+    console.warn('[AI] Server proxy response truncated (max_tokens). Multi-pass may continue.');
+  }
+
   // Parse JSON from collected text (uses robust balanced-brace extraction)
   const jsonStr = extractJSON(fullText);
-  if (jsonStr) return JSON.parse(jsonStr);
+  if (jsonStr) {
+    const parsed = JSON.parse(jsonStr);
+    parsed._truncated = truncated;
+    return parsed;
+  }
 
-  return { content: [{ text: fullText }] };
+  return { content: [{ text: fullText }], _truncated: truncated };
 }
 
 // ─── API CALLER (multi-provider) ─────────────────────────
@@ -429,7 +442,8 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
     const proxyResult = await res.json();
     const proxyText = proxyResult.content?.[0]?.text || (typeof proxyResult === 'string' ? proxyResult : JSON.stringify(proxyResult));
     const proxyJson = extractJSON(proxyText);
-    if (proxyJson) return JSON.parse(proxyJson);
+    if (proxyJson) { const parsed = JSON.parse(proxyJson); parsed._truncated = false; return parsed; }
+    proxyResult._truncated = false;
     return proxyResult;
   }
 
@@ -443,6 +457,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
   const timeoutId = setTimeout(() => abortCtrl.abort(), timeoutMs);
 
   let text;
+  let truncated = false;
 
   try {
   if (provider === 'anthropic') {
@@ -493,16 +508,20 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
               const evt = JSON.parse(raw);
               if (evt.type === 'content_block_delta' && evt.delta?.text) {
                 text += evt.delta.text;
+              } else if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
+                truncated = evt.delta.stop_reason === 'max_tokens';
               }
             } catch { /* skip */ }
           }
         }
       }
+      if (truncated) console.warn('[AI] Direct stream truncated (max_tokens). Multi-pass may continue.');
     } else {
       const data = await res.json();
       text = data.content?.[0]?.text || '';
       if (data.stop_reason === 'max_tokens') {
         console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+        truncated = true;
       }
     }
   } else {
@@ -565,6 +584,7 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
     text = data.choices?.[0]?.message?.content || '';
     if (data.choices?.[0]?.finish_reason === 'length') {
       console.warn('[AI] Response truncated (max_tokens reached). Attempting JSON repair.');
+      truncated = true;
     }
   }
   } finally {
@@ -574,7 +594,9 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
   // Extract JSON using balanced brace matching (with truncation repair)
   const jsonStr = extractJSON(text);
   if (!jsonStr) throw new Error('Could not parse AI response — no valid JSON found. The response may have been truncated.');
-  return JSON.parse(jsonStr);
+  const parsed = JSON.parse(jsonStr);
+  parsed._truncated = truncated;
+  return parsed;
 
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -632,6 +654,121 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
   }
 
   return normalized;
+}
+
+// ─── MULTI-PASS AI PROCESSING ─────────────────────────────
+// Handles large documents that exceed the model's output token limit.
+// Detects truncation, sends continuation requests, and merges results.
+
+/**
+ * Deduplicate transactions from multi-pass extraction.
+ * Uses date + merchant + amount + type as a composite key.
+ * Handles boundary overlap where the AI re-extracts a few transactions.
+ */
+function deduplicateTransactions(transactions) {
+  const seen = new Set();
+  return transactions.filter(tx => {
+    // Normalize key components for fuzzy dedup
+    const merchant = String(tx.merchant || '').toLowerCase().trim();
+    const date = tx.date || '';
+    const amount = Number(tx.amount) || 0;
+    const type = tx.type || 'expense';
+    const key = `${date}|${merchant}|${amount}|${type}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Build continuation messages for a follow-up API call.
+ * Re-sends the original document with context about what was already extracted.
+ */
+function buildContinuationMessages(originalMessages, extractedSoFar) {
+  // Show the last 3 transactions so the AI knows exactly where to resume
+  const last3 = extractedSoFar.slice(-3);
+  const summary = last3.map(tx =>
+    `  ${tx.date || '?'} | ${tx.merchant || tx.description || '?'} | ${tx.amount} ${tx.currency || 'RON'} | ${tx.type || 'expense'}`
+  ).join('\n');
+
+  return [
+    // Re-send the original document (first user message with the PDF/image)
+    originalMessages[0],
+    // Fake assistant response to set context
+    {
+      role: 'assistant',
+      content: `I found ${extractedSoFar.length} transactions so far, but my response was cut off before I could finish.`,
+    },
+    // Ask to continue from where it left off
+    {
+      role: 'user',
+      content: `Your previous response was truncated after extracting ${extractedSoFar.length} transactions. The last ${last3.length} transactions you found were:\n${summary}\n\nPlease continue extracting ONLY the remaining transactions that come AFTER these in the document. Do NOT repeat any already-extracted transactions. Return the same JSON format but with ONLY the new transactions in the "transactions" array. If there are no more transactions, return {"transactions": []}.`,
+    },
+  ];
+}
+
+/**
+ * Multi-pass AI caller that detects truncation and automatically continues.
+ * Returns the merged result with all transactions from all passes.
+ *
+ * @param {Array} messages - Initial messages (with document content)
+ * @param {string} systemPrompt - System prompt
+ * @param {number} maxTokens - Max tokens per pass
+ * @param {object} options - { signal, temperature, onPassComplete }
+ */
+async function callAIMultiPass(messages, systemPrompt, maxTokens, options = {}) {
+  const MAX_PASSES = 5;
+  let allTransactions = [];
+  let metadata = null;
+  let passCount = 0;
+
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    passCount = pass + 1;
+
+    const currentMessages = pass === 0
+      ? messages
+      : buildContinuationMessages(messages, allTransactions);
+
+    const result = await callAI(currentMessages, systemPrompt, maxTokens, options);
+    const newTxns = Array.isArray(result.transactions) ? result.transactions : [];
+
+    if (pass === 0) {
+      // First pass: capture all metadata (bankInfo, documentInfo, summary, etc.)
+      metadata = { ...result };
+      delete metadata.transactions;
+      delete metadata._truncated;
+    }
+
+    allTransactions.push(...newTxns);
+
+    // Notify caller about progress
+    options.onPassComplete?.({ pass: passCount, count: allTransactions.length });
+
+    // Stop if not truncated or no new transactions found (AI is done)
+    if (!result._truncated || newTxns.length === 0) {
+      break;
+    }
+
+    console.log(`[AI] Pass ${passCount}: ${newTxns.length} new transactions (${allTransactions.length} total). Response truncated, continuing...`);
+  }
+
+  // Deduplicate boundary overlaps
+  const deduped = deduplicateTransactions(allTransactions);
+
+  // Build warnings for multi-pass
+  const warnings = metadata?.warnings ? [...metadata.warnings] : [];
+  if (passCount > 1) {
+    warnings.push(`Large document processed in ${passCount} passes. ${deduped.length} total transactions extracted.`);
+    console.log(`[AI] Multi-pass complete: ${passCount} passes, ${deduped.length} unique transactions (${allTransactions.length} before dedup).`);
+  }
+
+  return {
+    ...metadata,
+    transactions: deduped,
+    warnings,
+    _truncated: false, // Final result is complete
+    _multiPass: passCount > 1 ? { passes: passCount, totalBeforeDedup: allTransactions.length } : null,
+  };
 }
 
 // ─── BANK STATEMENT PROCESSING ───────────────────────────
@@ -711,8 +848,8 @@ IMPORTANT:
 - For card payments, extract the actual merchant name from "POS <merchant>" format`;
 }
 
-export async function processBankStatement(pdfBase64, { userId = 'local', signal } = {}) {
-  const result = await callAI([
+export async function processBankStatement(pdfBase64, { userId = 'local', signal, onProgress } = {}) {
+  const result = await callAIMultiPass([
     {
       role: 'user',
       content: [
@@ -726,7 +863,7 @@ export async function processBankStatement(pdfBase64, { userId = 'local', signal
         },
       ],
     },
-  ], buildBankStatementPrompt(await getCustomCategories()), 16000, { signal });
+  ], buildBankStatementPrompt(await getCustomCategories()), 16000, { signal, onPassComplete: onProgress });
 
   return normalizeBankStatementResult(result, userId);
 }
@@ -738,7 +875,7 @@ function normalizeBankStatementResult(result, userId = 'local') {
 
   const txns = Array.isArray(result.transactions) ? result.transactions : [];
   const today = formatDateISO(new Date());
-  const warnings = [];
+  const warnings = [...(result.warnings || [])];
 
   // Validate date format helper
   const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -896,7 +1033,7 @@ IMPORTANT RULES:
 - For contracts: create ONE transaction for the first/next payment amount`;
 }
 
-export async function processDocument(base64Data, mediaType = 'image/jpeg', { userId = 'local', signal } = {}) {
+export async function processDocument(base64Data, mediaType = 'image/jpeg', { userId = 'local', signal, onProgress } = {}) {
   const isImage = mediaType.startsWith('image/');
   const contentBlock = isImage
     ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64Data } }
@@ -904,7 +1041,11 @@ export async function processDocument(base64Data, mediaType = 'image/jpeg', { us
 
   const maxTokens = isImage ? 4000 : 8000;
 
-  const result = await callAI([
+  // PDFs may contain many transactions — use multi-pass; images are always single-pass
+  const aiCall = isImage ? callAI : callAIMultiPass;
+  const aiOptions = isImage ? { signal } : { signal, onPassComplete: onProgress };
+
+  const result = await aiCall([
     {
       role: 'user',
       content: [
@@ -915,7 +1056,7 @@ export async function processDocument(base64Data, mediaType = 'image/jpeg', { us
         },
       ],
     },
-  ], buildDocumentPrompt(await getCustomCategories()), maxTokens, { signal });
+  ], buildDocumentPrompt(await getCustomCategories()), maxTokens, aiOptions);
 
   return normalizeDocumentResult(result, userId);
 }

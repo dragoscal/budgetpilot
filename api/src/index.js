@@ -465,6 +465,7 @@ router.post('/api/ai/process', async (ctx) => {
   ctx.ctx.waitUntil((async () => {
     let inputTokens = 0;
     let outputTokens = 0;
+    let stopReason = 'end_turn';
     try {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -487,8 +488,9 @@ router.post('/api/ai/process', async (ctx) => {
               if (event.type === 'content_block_delta' && event.delta?.text) {
                 // Forward text chunk to browser
                 await send({ t: event.delta.text });
-              } else if (event.type === 'message_delta' && event.usage) {
-                outputTokens = event.usage.output_tokens || 0;
+              } else if (event.type === 'message_delta') {
+                if (event.usage) outputTokens = event.usage.output_tokens || 0;
+                if (event.delta?.stop_reason) stopReason = event.delta.stop_reason;
               } else if (event.type === 'message_start' && event.message?.usage) {
                 inputTokens = event.message.usage.input_tokens || 0;
               }
@@ -497,8 +499,8 @@ router.post('/api/ai/process', async (ctx) => {
         }
       }
 
-      // Signal completion
-      await send({ d: true });
+      // Signal completion — include stop_reason so frontend can detect truncation
+      await send({ d: true, stop_reason: stopReason });
 
       // Log token usage asynchronously
       ctx.ctx.waitUntil(logActivity(ctx.env.DB, ctx.user.id, 'ai_process', {

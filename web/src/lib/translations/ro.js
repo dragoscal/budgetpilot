@@ -541,6 +541,8 @@ const ro = {
   'document.paymentStatus.paid': 'Plătit',
   'document.paymentStatus.unpaid': 'Neplătit',
   'document.paymentStatus.partial': 'Plătit parțial',
+  'document.multiPassProgress': 'Se procesează documentul mare... ({count} tranzacții găsite până acum)',
+  'document.multiPassComplete': 'Document mare procesat în {passes} pași',
 
   // ─── Bugete ──────────────────────────────────────────
   'budgets.title': 'Bugete',
@@ -2346,6 +2348,10 @@ const ro = {
   'changelog.v410goalMilestones': 'Marcaje obiective la 25/50/75% cu numărătoare inversă zile sau luni rămase',
   'changelog.v410challengeRetry': 'Buton reîncearcă pe provocări eșuate cu rezumat statistici (completate, eșuate, rată de succes)',
   'changelog.v410reportsYoY': 'Raport comparație cheltuieli an-cu-an — bare lunare alăturate pentru anul curent vs precedent',
+
+  // v4.2.1
+  'changelog.v421multiPass': 'Procesare multi-pas pentru documente mari — extrasele bancare cu 100+ tranzacții sunt acum extrase complet în mai mulți pași AI',
+  'changelog.v421truncationFix': 'Rezolvat pierderea silențioasă de date la trunchiere răspuns AI — trunchierea este detectată și continuată automat',
 
   // v4.2.0
   'changelog.v420documentScanner': 'Scanner Documente nou — încarcă facturi, utilități, contracte, formulare fiscale și mai mult pentru a crea tranzacții automat',
