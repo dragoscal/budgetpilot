@@ -2382,6 +2382,7 @@ const en = {
   'changelog.v433amountSplit': 'Detect multiple recurring payments from same merchant (e.g., multiple phone lines)',
   'changelog.v434phoneKeep': 'Phone numbers preserved in recurring detection — each subscription detected separately',
   'changelog.v435dataSource': 'Recurring scan now uses fresh server data instead of potentially stale local cache',
+  'changelog.v437billingSlots': 'Multiple subscriptions from the same merchant at the same price are now detected separately by billing day',
   'changelog.v436distinctSubs': 'Different phone subscriptions from same carrier now detected as separate recurring payments',
   'changelog.v421multiPass': 'Multi-pass processing for large documents — bank statements with 100+ transactions are now fully extracted across multiple AI passes',
   'changelog.v421truncationFix': 'Fixed silent data loss when AI response was truncated — truncation is now detected and automatically continued',

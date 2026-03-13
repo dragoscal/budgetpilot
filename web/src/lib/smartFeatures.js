@@ -131,6 +131,50 @@ function groupByAmountSimilarity(txns, tolerance = 0.20) {
   return groups;
 }
 
+// Split an amount sub-group into billing-day "slots" when there are
+// multiple transactions per month at the same price from the same merchant.
+// E.g., 2× ~25 RON Orange charges per month → slot 0 (day ~5) and slot 1 (day ~9).
+// Returns array of arrays. If only 1 transaction per month, returns [txns] unchanged.
+function splitByBillingSlot(txns) {
+  // Group by month
+  const byMonth = {};
+  for (const tx of txns) {
+    const month = tx.date?.substring(0, 7);
+    if (!month) continue;
+    if (!byMonth[month]) byMonth[month] = [];
+    byMonth[month].push(tx);
+  }
+
+  // Sort each month by day-of-month
+  const months = Object.keys(byMonth).sort();
+  for (const m of months) {
+    byMonth[m].sort((a, b) => {
+      const dayA = parseInt(a.date?.substring(8, 10) || '1');
+      const dayB = parseInt(b.date?.substring(8, 10) || '1');
+      return dayA - dayB;
+    });
+  }
+
+  // Find mode (most common count of transactions per month)
+  const counts = months.map(m => byMonth[m].length);
+  const countFreq = {};
+  counts.forEach(c => { countFreq[c] = (countFreq[c] || 0) + 1; });
+  const mode = parseInt(Object.entries(countFreq).sort((a, b) => b[1] - a[1])[0][0]);
+
+  if (mode <= 1) return [txns]; // Only 1 per month — no splitting needed
+
+  // Build slot arrays: 1st tx of each month → slot 0, 2nd → slot 1, etc.
+  const slots = Array.from({ length: mode }, () => []);
+  for (const m of months) {
+    const monthTxs = byMonth[m];
+    for (let i = 0; i < Math.min(monthTxs.length, mode); i++) {
+      slots[i].push(monthTxs[i]);
+    }
+  }
+
+  return slots;
+}
+
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
 
@@ -177,63 +221,72 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
     for (const subTxns of amountSubGroups) {
       if (subTxns.length < 2) continue;
 
-      // Group by month (YYYY-MM)
-      const byMonth = {};
-      for (const tx of subTxns) {
-        const month = tx.date?.substring(0, 7);
-        if (!month) continue;
-        if (!byMonth[month]) byMonth[month] = [];
-        byMonth[month].push(tx);
-      }
+      // Phase 4: Split by billing-day slot
+      // Handles multiple subscriptions at the same price from the same merchant.
+      // E.g., 2× ~25 RON Orange charges per month → slot 0 (day ~5) + slot 1 (day ~9)
+      const billingSlots = splitByBillingSlot(subTxns);
 
-      const months = Object.keys(byMonth).sort();
-      if (months.length < 2) continue;
+      for (const slotTxns of billingSlots) {
+        if (slotTxns.length < 2) continue;
 
-      // Check for consecutive months
-      let consecutiveCount = 1;
-      let maxConsecutive = 1;
-      for (let i = 1; i < months.length; i++) {
-        if (isConsecutiveMonth(months[i - 1], months[i])) {
-          consecutiveCount++;
-          maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
-        } else {
-          consecutiveCount = 1;
+        // Group by month (YYYY-MM)
+        const byMonth = {};
+        for (const tx of slotTxns) {
+          const month = tx.date?.substring(0, 7);
+          if (!month) continue;
+          if (!byMonth[month]) byMonth[month] = [];
+          byMonth[month].push(tx);
         }
+
+        const months = Object.keys(byMonth).sort();
+        if (months.length < 2) continue;
+
+        // Check for consecutive months
+        let consecutiveCount = 1;
+        let maxConsecutive = 1;
+        for (let i = 1; i < months.length; i++) {
+          if (isConsecutiveMonth(months[i - 1], months[i])) {
+            consecutiveCount++;
+            maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
+          } else {
+            consecutiveCount = 1;
+          }
+        }
+
+        if (maxConsecutive < 2) continue;
+
+        // Amount is consistent within slot by construction (±20%)
+        const amounts = slotTxns.map(t => t.amount);
+        const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+        const amountConsistent = avgAmount > 0
+          ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.20)
+          : true;
+
+        // Estimate billing day (most common day of month)
+        const days = slotTxns.map(t => parseInt(t.date?.substring(8, 10) || '1'));
+        const dayFreq = {};
+        days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
+        const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
+
+        // Pick the most common original merchant name for display
+        const merchantFreq = {};
+        for (const tx of slotTxns) {
+          merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1;
+        }
+        const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
+
+        suggestions.push({
+          merchant: displayMerchant,
+          amount: Math.round(avgAmount * 100) / 100,
+          currency: slotTxns[0].currency || 'RON',
+          category: slotTxns[0].category,
+          consecutiveMonths: maxConsecutive,
+          billingDay,
+          confidence: Math.min(0.95, 0.5 + (maxConsecutive * 0.15) + (amountConsistent ? 0.2 : 0)),
+          lastDate: slotTxns.sort((a, b) => b.date?.localeCompare(a.date))[0].date,
+          transactionCount: slotTxns.length,
+        });
       }
-
-      if (maxConsecutive < 2) continue;
-
-      // Amount is consistent within sub-group by construction (±20%)
-      const amounts = subTxns.map(t => t.amount);
-      const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-      const amountConsistent = avgAmount > 0
-        ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.20)
-        : true;
-
-      // Estimate billing day (most common day of month)
-      const days = subTxns.map(t => parseInt(t.date?.substring(8, 10) || '1'));
-      const dayFreq = {};
-      days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
-      const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
-
-      // Pick the most common original merchant name for display
-      const merchantFreq = {};
-      for (const tx of subTxns) {
-        merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1;
-      }
-      const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
-
-      suggestions.push({
-        merchant: displayMerchant,
-        amount: Math.round(avgAmount * 100) / 100,
-        currency: subTxns[0].currency || 'RON',
-        category: subTxns[0].category,
-        consecutiveMonths: maxConsecutive,
-        billingDay,
-        confidence: Math.min(0.95, 0.5 + (maxConsecutive * 0.15) + (amountConsistent ? 0.2 : 0)),
-        lastDate: subTxns.sort((a, b) => b.date?.localeCompare(a.date))[0].date,
-        transactionCount: subTxns.length,
-      });
     }
   }
 

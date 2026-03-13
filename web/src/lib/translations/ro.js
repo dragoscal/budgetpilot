@@ -2382,6 +2382,7 @@ const ro = {
   'changelog.v433amountSplit': 'Detectare plăți recurente multiple de la același comerciant (ex. mai multe linii telefonice)',
   'changelog.v434phoneKeep': 'Numerele de telefon păstrate la detectarea recurentelor — fiecare abonament detectat separat',
   'changelog.v435dataSource': 'Scanarea recurentelor folosește acum date proaspete de pe server în loc de cache-ul local potențial învechit',
+  'changelog.v437billingSlots': 'Abonamentele multiple de la același comerciant la același preț sunt acum detectate separat după ziua de facturare',
   'changelog.v436distinctSubs': 'Abonamentele telefonice diferite de la același operator sunt acum detectate ca plăți recurente separate',
   'changelog.v421multiPass': 'Procesare multi-pas pentru documente mari — extrasele bancare cu 100+ tranzacții sunt acum extrase complet în mai mulți pași AI',
   'changelog.v421truncationFix': 'Rezolvat pierderea silențioasă de date la trunchiere răspuns AI — trunchierea este detectată și continuată automat',
