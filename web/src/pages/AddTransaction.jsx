@@ -585,56 +585,68 @@ export default function AddTransaction() {
       else clustered[key] = [...byMerchant[key]];
     }
 
-    // Detect patterns from clustered groups
+    // Detect patterns from clustered groups (with amount sub-grouping)
     const patterns = [];
     for (const [, txns] of Object.entries(clustered)) {
       if (txns.length < 2) continue;
-      const months = new Set(txns.map(tx => tx.date?.substring(0, 7)).filter(Boolean));
-      if (months.size < 2) continue;
 
-      const amounts = txns.map(tx => tx.amount);
-      const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-
-      // Relaxed variance: allow CoV up to 50% for clustered groups
-      if (amounts.length > 3) {
-        const stdDev = Math.sqrt(amounts.reduce((sum, a) => sum + Math.pow(a - avgAmount, 2), 0) / amounts.length);
-        const coeffOfVariation = avgAmount > 0 ? stdDev / avgAmount : 1;
-        if (coeffOfVariation > 0.5) continue;
+      // Sub-group by similar amounts (handles multiple phone lines, etc.)
+      const sorted = [...txns].sort((a, b) => a.amount - b.amount);
+      const amountGroups = [];
+      let curGroup = [sorted[0]];
+      for (let i = 1; i < sorted.length; i++) {
+        const grpAvg = curGroup.reduce((s, t) => s + t.amount, 0) / curGroup.length;
+        if (grpAvg > 0 && Math.abs(sorted[i].amount - grpAvg) / grpAvg <= 0.20) {
+          curGroup.push(sorted[i]);
+        } else {
+          amountGroups.push(curGroup);
+          curGroup = [sorted[i]];
+        }
       }
+      amountGroups.push(curGroup);
 
-      // Estimate frequency from avg gap
-      const sortedDates = txns.map(tx => tx.date).filter(Boolean).sort();
-      let frequency = 'monthly';
-      if (sortedDates.length >= 2) {
-        const daySpan = (new Date(sortedDates[sortedDates.length - 1]) - new Date(sortedDates[0])) / (1000 * 60 * 60 * 24);
-        const avgGap = daySpan / (sortedDates.length - 1);
-        if (avgGap < 10) frequency = 'weekly';
-        else if (avgGap < 20) frequency = 'biweekly';
-        else if (avgGap > 80) frequency = 'quarterly';
+      for (const subTxns of amountGroups) {
+        if (subTxns.length < 2) continue;
+        const months = new Set(subTxns.map(tx => tx.date?.substring(0, 7)).filter(Boolean));
+        if (months.size < 2) continue;
+
+        const amounts = subTxns.map(tx => tx.amount);
+        const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+
+        // Estimate frequency from avg gap
+        const sortedDates = subTxns.map(tx => tx.date).filter(Boolean).sort();
+        let frequency = 'monthly';
+        if (sortedDates.length >= 2) {
+          const daySpan = (new Date(sortedDates[sortedDates.length - 1]) - new Date(sortedDates[0])) / (1000 * 60 * 60 * 24);
+          const avgGap = daySpan / (sortedDates.length - 1);
+          if (avgGap < 10) frequency = 'weekly';
+          else if (avgGap < 20) frequency = 'biweekly';
+          else if (avgGap > 80) frequency = 'quarterly';
+        }
+
+        // Estimate billing day (most common)
+        const days = subTxns.map(tx => parseInt(tx.date?.substring(8, 10) || '1'));
+        const dayFreq = {};
+        days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
+        const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
+
+        // Pick most common original merchant name for display
+        const merchantFreq = {};
+        subTxns.forEach(tx => { merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1; });
+        const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
+
+        patterns.push({
+          merchant: displayMerchant,
+          category: subTxns[0].category,
+          currency: subTxns[0].currency || 'RON',
+          avgAmount: Math.round(avgAmount * 100) / 100,
+          count: subTxns.length,
+          months: months.size,
+          frequency,
+          billingDay,
+          _added: false,
+        });
       }
-
-      // Estimate billing day (most common)
-      const days = txns.map(tx => parseInt(tx.date?.substring(8, 10) || '1'));
-      const dayFreq = {};
-      days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
-      const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
-
-      // Pick most common original merchant name for display
-      const merchantFreq = {};
-      txns.forEach(tx => { merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1; });
-      const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
-
-      patterns.push({
-        merchant: displayMerchant,
-        category: txns[0].category,
-        currency: txns[0].currency || 'RON',
-        avgAmount: Math.round(avgAmount * 100) / 100,
-        count: txns.length,
-        months: months.size,
-        frequency,
-        billingDay,
-        _added: false,
-      });
     }
 
     if (patterns.length === 0) { setRecurringPatterns(null); return; }

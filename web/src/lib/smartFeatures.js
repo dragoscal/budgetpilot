@@ -32,7 +32,7 @@ export function normalizeMerchantName(name) {
   s = s.replace(/\b0[0-9]{8,}\b/g, '');           // Romanian phone numbers (07x, 03x)
 
   // 4. Strip common Romanian location/descriptor words
-  s = s.replace(/\b(romania|rom|bucuresti|bucharest|cluj|timisoara|iasi|brasov|constanta|sibiu|craiova|oradea|sector\s*\d)\b/g, '');
+  s = s.replace(/\b(romania|bucuresti|bucharest|cluj|timisoara|iasi|brasov|constanta|sibiu|craiova|oradea|sector\s*\d)\b/g, '');
 
   // 5. Strip dates and replace punctuation with spaces
   s = s.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, '');
@@ -101,6 +101,28 @@ function clusterMerchantGroups(groups) {
   return merged;
 }
 
+// Sub-group transactions by similar amounts (±tolerance).
+// Handles e.g. 3 phone lines on same carrier at different prices.
+// Returns array of arrays, each with transactions of similar amount.
+function groupByAmountSimilarity(txns, tolerance = 0.20) {
+  if (txns.length === 0) return [];
+  const sorted = [...txns].sort((a, b) => a.amount - b.amount);
+  const groups = [];
+  let currentGroup = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const groupAvg = currentGroup.reduce((s, t) => s + t.amount, 0) / currentGroup.length;
+    if (groupAvg > 0 && Math.abs(sorted[i].amount - groupAvg) / groupAvg <= tolerance) {
+      currentGroup.push(sorted[i]);
+    } else {
+      groups.push(currentGroup);
+      currentGroup = [sorted[i]];
+    }
+  }
+  groups.push(currentGroup);
+  return groups;
+}
+
 // ─── AUTO-RECURRING DETECTION ─────────────────────────────
 // Scans transactions for patterns: same merchant + similar amount appearing 2+ months in a row
 
@@ -138,71 +160,71 @@ export async function detectRecurringPatterns(userId) {
     if (alreadyTracked) continue;
     if (txns.length < 2) continue;
 
-    // Group by month (YYYY-MM)
-    const byMonth = {};
-    for (const tx of txns) {
-      const month = tx.date?.substring(0, 7);
-      if (!month) continue;
-      if (!byMonth[month]) byMonth[month] = [];
-      byMonth[month].push(tx);
-    }
+    // Phase 3: Sub-group by similar amounts within the cluster
+    // This handles cases like 3 Orange phone lines at different prices
+    const amountSubGroups = groupByAmountSimilarity(txns, 0.20);
 
-    const months = Object.keys(byMonth).sort();
-    if (months.length < 2) continue;
+    for (const subTxns of amountSubGroups) {
+      if (subTxns.length < 2) continue;
 
-    // Check for consecutive months
-    let consecutiveCount = 1;
-    let maxConsecutive = 1;
-    for (let i = 1; i < months.length; i++) {
-      if (isConsecutiveMonth(months[i - 1], months[i])) {
-        consecutiveCount++;
-        maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
-      } else {
-        consecutiveCount = 1;
+      // Group by month (YYYY-MM)
+      const byMonth = {};
+      for (const tx of subTxns) {
+        const month = tx.date?.substring(0, 7);
+        if (!month) continue;
+        if (!byMonth[month]) byMonth[month] = [];
+        byMonth[month].push(tx);
       }
+
+      const months = Object.keys(byMonth).sort();
+      if (months.length < 2) continue;
+
+      // Check for consecutive months
+      let consecutiveCount = 1;
+      let maxConsecutive = 1;
+      for (let i = 1; i < months.length; i++) {
+        if (isConsecutiveMonth(months[i - 1], months[i])) {
+          consecutiveCount++;
+          maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
+        } else {
+          consecutiveCount = 1;
+        }
+      }
+
+      if (maxConsecutive < 2) continue;
+
+      // Amount is consistent within sub-group by construction (±20%)
+      const amounts = subTxns.map(t => t.amount);
+      const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+      const amountConsistent = avgAmount > 0
+        ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.20)
+        : true;
+
+      // Estimate billing day (most common day of month)
+      const days = subTxns.map(t => parseInt(t.date?.substring(8, 10) || '1'));
+      const dayFreq = {};
+      days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
+      const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
+
+      // Pick the most common original merchant name for display
+      const merchantFreq = {};
+      for (const tx of subTxns) {
+        merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1;
+      }
+      const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
+
+      suggestions.push({
+        merchant: displayMerchant,
+        amount: Math.round(avgAmount * 100) / 100,
+        currency: subTxns[0].currency || 'RON',
+        category: subTxns[0].category,
+        consecutiveMonths: maxConsecutive,
+        billingDay,
+        confidence: Math.min(0.95, 0.5 + (maxConsecutive * 0.15) + (amountConsistent ? 0.2 : 0)),
+        lastDate: subTxns.sort((a, b) => b.date?.localeCompare(a.date))[0].date,
+        transactionCount: subTxns.length,
+      });
     }
-
-    if (maxConsecutive < 2) continue;
-
-    // Calculate average amount and check similarity (relaxed for clustered groups)
-    const amounts = txns.map(t => t.amount);
-    const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-    const amountVariance = avgAmount > 0
-      ? amounts.every(a => Math.abs(a - avgAmount) / avgAmount < 0.15)
-      : amounts.every(a => a === 0);
-
-    if (!amountVariance && amounts.length > 3) {
-      // Relaxed check: allow up to 50% coefficient of variation
-      // (handles multiple phone lines on same carrier at different prices)
-      const stdDev = Math.sqrt(amounts.reduce((sum, a) => sum + Math.pow(a - avgAmount, 2), 0) / amounts.length);
-      const coeffOfVariation = avgAmount > 0 ? stdDev / avgAmount : 1;
-      if (coeffOfVariation > 0.5) continue;
-    }
-
-    // Estimate billing day (most common day of month)
-    const days = txns.map(t => parseInt(t.date?.substring(8, 10) || '1'));
-    const dayFreq = {};
-    days.forEach(d => { dayFreq[d] = (dayFreq[d] || 0) + 1; });
-    const billingDay = parseInt(Object.entries(dayFreq).sort((a, b) => b[1] - a[1])[0][0]);
-
-    // Pick the most common original merchant name for display
-    const merchantFreq = {};
-    for (const tx of txns) {
-      merchantFreq[tx.merchant] = (merchantFreq[tx.merchant] || 0) + 1;
-    }
-    const displayMerchant = Object.entries(merchantFreq).sort((a, b) => b[1] - a[1])[0][0];
-
-    suggestions.push({
-      merchant: displayMerchant,
-      amount: Math.round(avgAmount * 100) / 100,
-      currency: txns[0].currency || 'RON',
-      category: txns[0].category,
-      consecutiveMonths: maxConsecutive,
-      billingDay,
-      confidence: Math.min(0.95, 0.5 + (maxConsecutive * 0.15) + (amountVariance ? 0.2 : 0)),
-      lastDate: txns.sort((a, b) => b.date?.localeCompare(a.date))[0].date,
-      transactionCount: txns.length,
-    });
   }
 
   return suggestions.sort((a, b) => b.confidence - a.confidence);
