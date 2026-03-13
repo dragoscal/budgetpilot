@@ -761,6 +761,13 @@ const en = {
   'recurring.billsSection': 'Bills',
   'recurring.subscriptionsSection': 'Subscriptions',
   'recurring.totalRecurring': 'Total recurring',
+  'recurring.scanTitle': 'Scan for Recurring',
+  'recurring.scanDesc': 'Analyze your transactions to detect recurring payments and subscriptions.',
+  'recurring.scanButton': 'Scan Transactions',
+  'recurring.scanNoResults': 'No new recurring patterns found',
+  'recurring.scanFailed': 'Scan failed',
+  'recurring.allCaughtUp': 'No new recurring patterns found. All caught up!',
+  'recurring.patternsFound': '{count} recurring pattern(s) detected',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',
@@ -2370,6 +2377,7 @@ const en = {
   'changelog.v430saveProgress': 'Real-time progress bar when saving bulk transactions with batch undo support',
   'changelog.v430recurring': 'Auto-detect recurring payments in bank statement imports',
   'changelog.v430transfers': 'Enhanced transfer detection banner with amount totals',
+  'changelog.v431scan': 'Scan transactions for recurring payments from the Recurring page',
   'changelog.v421multiPass': 'Multi-pass processing for large documents — bank statements with 100+ transactions are now fully extracted across multiple AI passes',
   'changelog.v421truncationFix': 'Fixed silent data loss when AI response was truncated — truncation is now detected and automatically continued',
 

@@ -31,6 +31,8 @@ export default function Recurring() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [rates, setRates] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [showScanResults, setShowScanResults] = useState(false);
 
   const defaultForm = { name: '', amount: '', currency: user?.defaultCurrency || 'RON', category: 'utilities', billingDay: '1', billingMonth: '1', frequency: 'monthly', endDate: '', autoDebit: false, isVariable: false, recurringType: 'bill' };
   const [form, setForm] = useState(defaultForm);
@@ -54,6 +56,9 @@ export default function Recurring() {
         const patterns = await detectRecurringPatterns(effectiveUserId);
         if (loadVersion.current !== version) return;
         setSuggestions(patterns);
+        if (patterns.filter(s => s.merchant && s.confidence >= 0.6).length > 0) {
+          setShowScanResults(true);
+        }
         getCachedRates().then(setRates).catch(() => {});
       } catch (err) {
         if (loadVersion.current === version) toast.error(t('recurring.failedLoad'));
@@ -236,6 +241,23 @@ export default function Recurring() {
     setDismissedSuggestions((prev) => new Set([...prev, suggestion.merchant.toLowerCase()]));
   };
 
+  const handleScanTransactions = async () => {
+    setScanning(true);
+    try {
+      const patterns = await detectRecurringPatterns(effectiveUserId);
+      setSuggestions(patterns);
+      setShowScanResults(true);
+      const filtered = patterns.filter(s => s.merchant && !dismissedSuggestions.has(s.merchant.toLowerCase()) && s.confidence >= 0.6);
+      if (filtered.length === 0) {
+        toast.info(t('recurring.scanNoResults'));
+      }
+    } catch {
+      toast.error(t('recurring.scanFailed'));
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const openNewForm = () => {
     setEditItem(null);
     setForm({ ...defaultForm, currency });
@@ -297,44 +319,82 @@ export default function Recurring() {
         </div>
       </div>
 
-      {/* Auto-detected suggestions */}
-      {activeSuggestions.length > 0 && (
-        <div className="card border-info/30 bg-info-light/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={16} className="text-info" />
-            <h3 className="text-sm font-semibold">{t('recurring.detectedRecurring')}</h3>
+      {/* Scan for Recurring */}
+      <div className="card border-accent/20">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center">
+              <Search size={16} className="text-accent" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">{t('recurring.scanTitle')}</h3>
+              <p className="text-xs text-cream-500">{t('recurring.scanDesc')}</p>
+            </div>
           </div>
-          <p className="text-xs text-cream-600 dark:text-cream-400 mb-3">
-            {t('recurring.detectedDesc')}
-          </p>
-          <div className="space-y-2">
-            {activeSuggestions.map((s, i) => {
-              const cat = getCategoryById(s.category);
-              return (
-                <div key={i} className="flex items-center justify-between bg-white dark:bg-dark-card rounded-lg p-3 border border-cream-200 dark:border-dark-border">
-                  <div className="flex items-center gap-2">
-                    <span>{cat.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium">{s.merchant}</p>
-                      <p className="text-xs text-cream-500">
-                        ~{formatCurrency(s.amount, s.currency)} · {t('recurring.dayBilling', { day: s.billingDay })} · {t('recurring.monthsInRow', { count: s.consecutiveMonths })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => acceptSuggestion(s)} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors" title={t('recurring.addAsRecurring')}>
-                      <Check size={14} />
-                    </button>
-                    <button onClick={() => dismissSuggestion(s)} className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors" title={t('recurring.dismiss')}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <button
+            onClick={handleScanTransactions}
+            disabled={scanning}
+            className="btn-primary text-xs flex items-center gap-1.5"
+          >
+            {scanning ? (
+              <>
+                <RotateCcw size={12} className="animate-spin" />
+                {t('recurring.analyzing')}
+              </>
+            ) : (
+              <>
+                <Search size={12} />
+                {t('recurring.scanButton')}
+              </>
+            )}
+          </button>
         </div>
-      )}
+
+        {/* Scan results */}
+        {showScanResults && (
+          <div className="mt-3">
+            {activeSuggestions.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={14} className="text-accent" />
+                  <p className="text-xs font-medium text-accent-700 dark:text-accent-300">
+                    {t('recurring.patternsFound', { count: activeSuggestions.length })}
+                  </p>
+                </div>
+                {activeSuggestions.map((s, i) => {
+                  const cat = getCategoryById(s.category);
+                  return (
+                    <div key={i} className="flex items-center justify-between bg-white dark:bg-dark-card rounded-lg p-3 border border-cream-200 dark:border-dark-border">
+                      <div className="flex items-center gap-2">
+                        <span>{cat.icon}</span>
+                        <div>
+                          <p className="text-sm font-medium">{s.merchant}</p>
+                          <p className="text-xs text-cream-500">
+                            ~{formatCurrency(s.amount, s.currency)} · {t('recurring.dayBilling', { day: s.billingDay })} · {t('recurring.monthsInRow', { count: s.consecutiveMonths })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => acceptSuggestion(s)} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors" title={t('recurring.addAsRecurring')}>
+                          <Check size={14} />
+                        </button>
+                        <button onClick={() => dismissSuggestion(s)} className="p-1.5 rounded-lg bg-cream-200 dark:bg-dark-border text-cream-500 hover:bg-cream-300 transition-colors" title={t('recurring.dismiss')}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-success/5 border border-success/20">
+                <Check size={14} className="text-success" />
+                <p className="text-xs text-success font-medium">{t('recurring.allCaughtUp')}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {items.length > 0 ? (
         <>

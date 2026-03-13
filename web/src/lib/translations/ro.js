@@ -761,6 +761,13 @@ const ro = {
   'recurring.billsSection': 'Facturi',
   'recurring.subscriptionsSection': 'Abonamente',
   'recurring.totalRecurring': 'Total recurente',
+  'recurring.scanTitle': 'Scanare recurente',
+  'recurring.scanDesc': 'Analizează tranzacțiile tale pentru a detecta plățile recurente și abonamentele.',
+  'recurring.scanButton': 'Scanează tranzacții',
+  'recurring.scanNoResults': 'Nu s-au găsit noi tipare recurente',
+  'recurring.scanFailed': 'Scanarea a eșuat',
+  'recurring.allCaughtUp': 'Nu s-au găsit noi tipare recurente. Totul e la zi!',
+  'recurring.patternsFound': '{count} tipar(e) recurent(e) detectat(e)',
 
   // ─── Calendar ────────────────────────────────────────
   'calendar.title': 'Calendar',
@@ -2370,6 +2377,7 @@ const ro = {
   'changelog.v430saveProgress': 'Bară de progres în timp real la salvarea tranzacțiilor în bloc cu posibilitate de anulare',
   'changelog.v430recurring': 'Detectare automată a plăților recurente din extrasele bancare',
   'changelog.v430transfers': 'Banner îmbunătățit pentru detectarea transferurilor cu totaluri',
+  'changelog.v431scan': 'Scanare tranzacții pentru plăți recurente din pagina Recurente',
   'changelog.v421multiPass': 'Procesare multi-pas pentru documente mari — extrasele bancare cu 100+ tranzacții sunt acum extrase complet în mai mulți pași AI',
   'changelog.v421truncationFix': 'Rezolvat pierderea silențioasă de date la trunchiere răspuns AI — trunchierea este detectată și continuată automat',
 
