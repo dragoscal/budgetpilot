@@ -420,17 +420,19 @@ function deduplicateSuggestions(suggestions) {
       const normB = normalizeMerchantName(b.merchant);
       if (merchantSimilarity(normA, normB) < 0.6) continue;
 
+      // Check amount similarity (applies to both same and cross-frequency)
+      const avgAmt = (a.amount + b.amount) / 2;
+      if (avgAmt > 0 && Math.abs(a.amount - b.amount) / avgAmt > 0.25) continue;
+
       if (a.frequency === b.frequency) {
-        // Same frequency: also check amount + billing day
-        const avgAmt = (a.amount + b.amount) / 2;
-        if (avgAmt > 0 && Math.abs(a.amount - b.amount) / avgAmt > 0.25) continue;
+        // Same frequency: also check billing day proximity
         const dayDiff = Math.abs(a.billingDay - b.billingDay);
         if (dayDiff > 3 && dayDiff < 28) continue;
       }
-      // Different frequency OR matching same-frequency: remove lower-confidence duplicate
+      // Cross-frequency with similar amount from same merchant = same underlying pattern.
+      // Keep the higher-confidence one (already sorted).
 
       removed.add(j);
-      a.transactionCount += b.transactionCount;
     }
 
     kept.push(a);
@@ -591,10 +593,6 @@ export async function detectRecurringPatterns(userId, transactionsOverride, recu
 
   const suggestions = [];
   const existingRecurring = recurringOverride || await getAll('recurring', filter);
-  const existingNormalized = new Set(
-    existingRecurring.map(r => normalizeMerchantName(r.merchant || r.name))
-  );
-
   // Per-suggestion tracking check: ensures only the EXACT subscription
   // (same merchant + similar amount + similar billing day) is excluded,
   // NOT the entire merchant cluster.
@@ -1275,7 +1273,7 @@ export async function auditSubscriptions(userId) {
   const filter = userId ? { userId } : {};
   const recurring = await getAll('recurring', filter);
   const transactions = await getAll('transactions', filter);
-  const active = recurring.filter(r => r.active !== false);
+  const active = recurring.filter(r => r.active !== false && r.status !== 'cancelled' && r.status !== 'paused');
   const results = [];
 
   for (const sub of active) {

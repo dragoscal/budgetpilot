@@ -70,7 +70,10 @@ export default function Recurring() {
         const patterns = await detectRecurringPatterns(effectiveUserId, txData, data);
         if (loadVersion.current !== version) return;
         setSuggestions(patterns);
-        if (patterns.filter(s => s.merchant && s.confidence >= 0.6).length > 0) {
+        // Only auto-open scan panel if there are un-dismissed suggestions
+        const dismissedSet = dismissed?.length ? new Set(dismissed) : new Set();
+        const getSK = (s) => `${(s.merchant || '').toLowerCase()}|${s.amount}|${s.billingDay}`;
+        if (patterns.filter(s => s.merchant && !dismissedSet.has(getSK(s)) && s.confidence >= 0.6).length > 0) {
           setShowScanResults(true);
         }
         getCachedRates().then(setRates).catch(() => {});
@@ -143,6 +146,7 @@ export default function Recurring() {
     try {
       const data = {
         ...form,
+        merchant: form.name,
         amount: parsedAmount,
         billingDay: Math.min(31, Math.max(1, Number(form.billingDay) || 1)),
         billingMonth: Math.min(12, Math.max(1, Number(form.billingMonth) || 1)),
@@ -152,6 +156,7 @@ export default function Recurring() {
         isVariable: form.isVariable ? 1 : 0,
         recurringType: form.recurringType || 'bill',
         active: true,
+        status: 'active',
         userId: effectiveUserId,
       };
       if (editItem) {
@@ -246,6 +251,8 @@ export default function Recurring() {
         billingMonth: suggestion.billingMonth || 1,
         frequency: suggestion.frequency || 'monthly',
         active: true,
+        status: 'active',
+        autoDebit: 0,
         userId: effectiveUserId,
         autoDetected: true,
         isVariable: suggestion.isVariable ? 1 : 0,
@@ -263,10 +270,11 @@ export default function Recurring() {
   const dismissSuggestion = (suggestion) => {
     const next = new Set([...dismissedSuggestions, getSuggestionKey(suggestion)]);
     setDismissedSuggestions(next);
-    setSetting('dismissedRecurringSuggestions', [...next]);
+    setSetting('dismissedRecurringSuggestions', [...next]).catch(() => {});
   };
 
   const handleScanTransactions = async () => {
+    const version = ++loadVersion.current;
     setScanning(true);
     try {
       // Re-fetch fresh data from server to ensure we scan the latest transactions
@@ -274,9 +282,11 @@ export default function Recurring() {
         recurringApi.getAll({ userId: effectiveUserId }),
         txApi.getAll({ userId: effectiveUserId }),
       ]);
+      if (loadVersion.current !== version) return;
       setItems(freshRecurring);
       setAllTransactions(freshTx);
       const patterns = await detectRecurringPatterns(effectiveUserId, freshTx, freshRecurring);
+      if (loadVersion.current !== version) return;
       setSuggestions(patterns);
       setShowScanResults(true);
       const filtered = patterns.filter(s => s.merchant && !dismissedSuggestions.has(getSuggestionKey(s)) && s.confidence >= 0.6);

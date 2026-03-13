@@ -51,11 +51,14 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
   // Format per-period label
   const periodLabel = (() => {
     switch (item.frequency) {
+      case 'daily': return t('recurring.perDay');
       case 'weekly': return t('recurring.perWk');
       case 'biweekly': return t('recurring.per2Wk');
+      case 'bimonthly': return t('recurring.per2Mo');
       case 'quarterly': return t('recurring.perQtr');
       case 'semiannual': return t('recurring.per6Mo');
       case 'annual': return t('recurring.perYr');
+      case 'biannual': return t('recurring.per2Yr');
       default: return t('recurring.perMo');
     }
   })();
