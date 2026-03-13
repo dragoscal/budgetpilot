@@ -331,21 +331,40 @@ export async function pullAllDataToCache() {
   }
 
   try {
-    const data = await apiFetch(apiUrl, '/api/sync/pull?since=1970-01-01T00:00:00.000Z&limit=10000');
-    if (data) {
+    // Paginated pull: keep fetching until all tables return fewer than limit (#16)
+    const PAGE_LIMIT = 10000;
+    let offset = 0;
+    let hasMore = true;
+    const allTables = {};
+
+    while (hasMore) {
+      const data = await apiFetch(apiUrl, `/api/sync/pull?since=1970-01-01T00:00:00.000Z&limit=${PAGE_LIMIT}&offset=${offset}`);
+      if (!data) break;
       const tables = data.data || data;
+      hasMore = false;
+
       for (const [serverTable, records] of Object.entries(tables)) {
         if (serverTable === 'syncedAt') continue;
-        const localStore = toLocalStore(serverTable);
-        try {
-          // Atomic: clear + bulk write in a single IndexedDB transaction
-          await storage.clearStore(localStore);
-          if (Array.isArray(records) && records.length > 0) {
-            await storage.bulkImport(localStore, records);
-          }
-        } catch (err) {
-          console.warn(`Failed to cache ${localStore}:`, err.message);
+        if (!Array.isArray(records)) continue;
+        if (!allTables[serverTable]) allTables[serverTable] = [];
+        allTables[serverTable].push(...records);
+        // If any table returned a full page, there may be more
+        if (records.length >= PAGE_LIMIT) hasMore = true;
+      }
+      offset += PAGE_LIMIT;
+      // Safety: cap at 5 pages (50K records per table)
+      if (offset >= PAGE_LIMIT * 5) break;
+    }
+
+    for (const [serverTable, records] of Object.entries(allTables)) {
+      const localStore = toLocalStore(serverTable);
+      try {
+        await storage.clearStore(localStore);
+        if (records.length > 0) {
+          await storage.bulkImport(localStore, records);
         }
+      } catch (err) {
+        console.warn(`Failed to cache ${localStore}:`, err.message);
       }
     }
 

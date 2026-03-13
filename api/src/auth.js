@@ -54,10 +54,39 @@ export async function verifyToken(token, secret) {
   return payload;
 }
 
-export async function hashPassword(password, salt) {
+// Legacy SHA-256 hash (for verifying old passwords during migration)
+async function hashPasswordLegacy(password, salt) {
   const data = encoder.encode(password + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   return btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
+}
+
+// PBKDF2 with 100K iterations — proper password KDF
+export async function hashPassword(password, salt) {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hashBuffer = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: encoder.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return 'pbkdf2:' + btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
+}
+
+// Verify password against stored hash (supports both legacy SHA-256 and PBKDF2)
+export async function verifyPassword(password, salt, storedHash) {
+  if (storedHash.startsWith('pbkdf2:')) {
+    const newHash = await hashPassword(password, salt);
+    return newHash === storedHash;
+  }
+  // Legacy SHA-256 verification
+  const legacyHash = await hashPasswordLegacy(password, salt);
+  return legacyHash === storedHash;
+}
+
+// Check if a hash needs migration to PBKDF2
+export function needsHashMigration(storedHash) {
+  return !storedHash.startsWith('pbkdf2:');
 }
 
 export function generateSalt() {

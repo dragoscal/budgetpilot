@@ -1,6 +1,6 @@
 // BudgetPilot Admin Routes — privacy-safe, aggregate data only
 import { json } from './router.js';
-import { hashPassword, generateSalt } from './auth.js';
+import { hashPassword, generateSalt, verifyPassword } from './auth.js';
 import { logActivity } from './index.js';
 
 function requireAdmin(ctx) {
@@ -128,11 +128,17 @@ export function registerAdminRoutes(router) {
     const user = await ctx.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(id).first();
     if (!user) return json({ error: 'User not found' }, 404);
 
-    const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'wishlist', 'settings', 'sync_log', 'activity_log'];
+    // Sync with self-deletion endpoint (index.js DELETE /api/auth/account)
+    const tables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'settings', 'sync_log', 'activity_log', 'loans', 'loan_payments', 'feedback', 'challenges', 'receipts', 'settlement_history'];
     for (const table of tables) {
       await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(id).run();
     }
     await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
+    await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
+    // Clean family data
+    await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(id).run();
+    await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(id).run();
+    await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(id).run();
     await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();
 
     await logActivity(ctx.env.DB, ctx.user.id, 'admin_delete_user', { targetUserId: id });

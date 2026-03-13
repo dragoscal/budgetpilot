@@ -39,8 +39,7 @@ export function SettingsProvider({ children }) {
     return false;
   };
 
-  if (!loaded) return null;
-
+  // Render immediately with defaults instead of blocking (#20)
   return (
     <SettingsContext.Provider value={{ hideAmounts, updateHideAmounts, shouldHide }}>
       {children}

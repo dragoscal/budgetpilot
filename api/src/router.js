@@ -32,7 +32,7 @@ export class Router {
 
     // CORS preflight
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders() });
+      return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
 
     // Create context object
@@ -55,7 +55,7 @@ export class Router {
     // Run middlewares
     for (const mw of this.middlewares) {
       const result = await mw(reqCtx);
-      if (result instanceof Response) return addCors(result);
+      if (result instanceof Response) return addCors(result, request);
     }
 
     // Re-read path after middleware (e.g., API versioning may rewrite it)
@@ -74,14 +74,14 @@ export class Router {
 
       try {
         const response = await route.handler(reqCtx);
-        return addCors(response);
+        return addCors(response, request);
       } catch (err) {
         console.error('Route error:', err);
-        return addCors(json({ error: err.message || 'Internal error' }, 500));
+        return addCors(json({ error: err.message || 'Internal error' }, 500), request);
       }
     }
 
-    return addCors(json({ error: 'Not found' }, 404));
+    return addCors(json({ error: 'Not found' }, 404), request);
   }
 }
 
@@ -92,18 +92,30 @@ export function json(data, status = 200) {
   });
 }
 
-function corsHeaders() {
+const ALLOWED_ORIGINS = [
+  'https://budgetpilot.pages.dev',
+  'http://localhost:5173',
+  'http://localhost:4173',
+];
+
+function getCorsOrigin(request) {
+  const origin = request?.headers?.get('Origin') || '';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function corsHeaders(request) {
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': getCorsOrigin(request),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
     'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
   };
 }
 
-function addCors(response) {
+function addCors(response, request) {
   const headers = new Headers(response.headers);
-  for (const [k, v] of Object.entries(corsHeaders())) {
+  for (const [k, v] of Object.entries(corsHeaders(request))) {
     headers.set(k, v);
   }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });

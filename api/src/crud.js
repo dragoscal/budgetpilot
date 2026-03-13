@@ -212,6 +212,36 @@ export function registerCrudRoutes(router) {
     return json({ success: true, linkedTo: realMemberId });
   });
 
+  // GET /api/families/:familyId/transactions — get ALL family members' transactions (#15)
+  router.get('/api/families/:familyId/transactions', async (ctx) => {
+    const { familyId } = ctx.params;
+
+    // Verify requesting user is a member of this family
+    const myMembership = await ctx.env.DB.prepare(
+      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
+
+    // Get all member userIds for this family
+    const membersResult = await ctx.env.DB.prepare(
+      'SELECT userId FROM family_members WHERE familyId = ?'
+    ).bind(familyId).all();
+    const memberIds = (membersResult.results || []).map(m => m.userId);
+    if (memberIds.length === 0) return json({ data: [] });
+
+    const placeholders = memberIds.map(() => '?').join(',');
+    const startDate = ctx.query.startDate || '1970-01-01';
+    const endDate = ctx.query.endDate || '2099-12-31';
+
+    const result = await ctx.env.DB.prepare(
+      `SELECT * FROM transactions WHERE userId IN (${placeholders})
+       AND date >= ? AND date <= ? AND (deletedAt IS NULL OR deletedAt = '')
+       ORDER BY date DESC LIMIT 5000`
+    ).bind(...memberIds, startDate, endDate).all();
+
+    return json({ data: (result.results || []).map(r => deserializeRow('transactions', r)) });
+  });
+
   // POST /api/families/join — join a family by invite code (searches ALL families, not just user's)
   router.post('/api/families/join', async (ctx) => {
     const { inviteCode } = ctx.body;
@@ -319,12 +349,40 @@ export function registerCrudRoutes(router) {
 
     const tables = {};
     for (const table of ALLOWED_TABLES) {
-      const userCol = getUserColumn(table);
-      // Exclude soft-deleted transactions (they have deletedAt set)
-      const deletedFilter = table === 'transactions' ? ' AND (deletedAt IS NULL OR deletedAt = "")' : '';
-      const result = await ctx.env.DB.prepare(
-        `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ?${deletedFilter} ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
-      ).bind(userId, since, limit, offset).all();
+      let result;
+
+      if (table === 'families') {
+        // #10: Include families the user joined (via family_members), not just created
+        result = await ctx.env.DB.prepare(
+          `SELECT DISTINCT f.* FROM families f
+           LEFT JOIN family_members fm ON f.id = fm.familyId
+           WHERE (f.createdBy = ? OR fm.userId = ?) AND f.updatedAt > ?
+           ORDER BY f.updatedAt ASC LIMIT ? OFFSET ?`
+        ).bind(userId, userId, since, limit, offset).all();
+      } else if (table === 'family_members') {
+        // #11: Include all members of families the user belongs to
+        result = await ctx.env.DB.prepare(
+          `SELECT fm.* FROM family_members fm
+           WHERE fm.familyId IN (SELECT familyId FROM family_members WHERE userId = ?)
+           AND fm.updatedAt > ?
+           ORDER BY fm.updatedAt ASC LIMIT ? OFFSET ?`
+        ).bind(userId, since, limit, offset).all();
+      } else if (table === 'shared_expenses') {
+        // #4: Include all shared expenses from families the user belongs to
+        result = await ctx.env.DB.prepare(
+          `SELECT se.* FROM shared_expenses se
+           WHERE se.familyId IN (SELECT familyId FROM family_members WHERE userId = ?)
+           AND se.updatedAt > ?
+           ORDER BY se.updatedAt ASC LIMIT ? OFFSET ?`
+        ).bind(userId, since, limit, offset).all();
+      } else {
+        const userCol = getUserColumn(table);
+        const deletedFilter = table === 'transactions' ? ' AND (deletedAt IS NULL OR deletedAt = "")' : '';
+        result = await ctx.env.DB.prepare(
+          `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ?${deletedFilter} ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
+        ).bind(userId, since, limit, offset).all();
+      }
+
       tables[table] = (result.results || []).map(r => deserializeRow(table, r));
     }
 

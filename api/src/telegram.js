@@ -135,8 +135,16 @@ export function registerTelegramRoutes(router) {
     // Validate webhook secret token if configured
     const secretToken = ctx.env.TELEGRAM_WEBHOOK_SECRET;
     if (secretToken) {
-      const headerSecret = ctx.request.headers.get('x-telegram-bot-api-secret-token');
-      if (headerSecret !== secretToken) {
+      const headerSecret = ctx.request.headers.get('x-telegram-bot-api-secret-token') || '';
+      // Constant-time comparison to prevent timing attacks
+      if (headerSecret.length !== secretToken.length) {
+        return json({ error: 'Unauthorized' }, 403);
+      }
+      let mismatch = 0;
+      for (let i = 0; i < secretToken.length; i++) {
+        mismatch |= secretToken.charCodeAt(i) ^ headerSecret.charCodeAt(i);
+      }
+      if (mismatch !== 0) {
         return json({ error: 'Unauthorized' }, 403);
       }
     }
@@ -254,12 +262,15 @@ export function registerTelegramRoutes(router) {
 }
 
 async function getBotToken(env) {
-  // Try env var first, then check settings
+  // Only use the environment variable — never read bot tokens from user settings
+  // (unscoped DB query would let any user inject a rogue bot token)
   if (env.TELEGRAM_BOT_TOKEN) return env.TELEGRAM_BOT_TOKEN;
 
-  // Check if any user has a bot token in settings
+  // Fallback: only admin users' bot tokens (scoped query)
   const row = await env.DB.prepare(
-    `SELECT value FROM settings WHERE key = 'telegramBotToken' LIMIT 1`
+    `SELECT s.value FROM settings s
+     INNER JOIN users u ON s.userId = u.id
+     WHERE s.key = 'telegramBotToken' AND u.role = 'admin' LIMIT 1`
   ).first();
 
   if (row?.value) {

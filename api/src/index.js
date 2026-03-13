@@ -1,6 +1,6 @@
 // BudgetPilot API — Cloudflare Worker
 import { Router, json } from './router.js';
-import { createToken, verifyToken, hashPassword, generateSalt, generateId } from './auth.js';
+import { createToken, verifyToken, hashPassword, verifyPassword, needsHashMigration, generateSalt, generateId } from './auth.js';
 import { registerCrudRoutes } from './crud.js';
 import { registerTelegramRoutes } from './telegram.js';
 import { registerAdminRoutes } from './admin.js';
@@ -25,8 +25,8 @@ async function checkRateLimit(db, ip, path, maxRequests = 10, windowMs = 60000) 
     ).bind(ip, path, windowStart).first();
     return (result?.count || 0) < maxRequests;
   } catch {
-    // If query fails, allow the request (fail open)
-    return true;
+    // If query fails, deny the request (fail closed for security)
+    return false;
   }
 }
 
@@ -56,7 +56,9 @@ router.use(async (ctx) => {
       `SELECT userId FROM settings WHERE key = 'apiKey' AND value = ?`
     ).bind(apiKey).first();
     if (!setting) return json({ error: 'Invalid API key' }, 401);
-    const user = await ctx.env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(setting.userId).first();
+    const user = await ctx.env.DB.prepare(
+      `SELECT id, email, name, defaultCurrency, onboardingComplete, role, suspended, createdAt FROM users WHERE id = ?`
+    ).bind(setting.userId).first();
     if (!user) return json({ error: 'User not found' }, 401);
     if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
     ctx.user = user;
@@ -70,9 +72,16 @@ router.use(async (ctx) => {
   try {
     const token = authHeader.slice(7);
     const payload = await verifyToken(token, ctx.env.JWT_SECRET);
-    const user = await ctx.env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(payload.sub).first();
+    // #9: Check tokenIssuedAt — reject tokens issued before last password change
+    const user = await ctx.env.DB.prepare(
+      `SELECT id, email, name, defaultCurrency, onboardingComplete, role, suspended, createdAt, tokenIssuedAt FROM users WHERE id = ?`
+    ).bind(payload.sub).first();
     if (!user) return json({ error: 'User not found' }, 401);
     if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
+    // Reject tokens issued before last password change
+    if (user.tokenIssuedAt && payload.iat && payload.iat < Math.floor(new Date(user.tokenIssuedAt).getTime() / 1000)) {
+      return json({ error: 'Token invalidated. Please log in again.' }, 401);
+    }
     ctx.user = user;
   } catch (err) {
     return json({ error: 'Invalid token: ' + err.message }, 401);
@@ -93,6 +102,11 @@ router.post('/api/auth/register', async (ctx) => {
 
   if (!email || !password || !name) {
     return json({ error: 'Email, password, and name are required' }, 400);
+  }
+
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: 'Invalid email format' }, 400);
   }
 
   if (password.length < 8) {
@@ -134,8 +148,19 @@ router.post('/api/auth/login', async (ctx) => {
 
   if (user.suspended) return json({ error: 'Account suspended. Contact administrator.' }, 403);
 
-  const hash = await hashPassword(password, user.salt);
-  if (hash !== user.passwordHash) return json({ error: 'Invalid credentials' }, 401);
+  // Verify password (supports both legacy SHA-256 and PBKDF2)
+  const passwordValid = await verifyPassword(password, user.salt, user.passwordHash);
+  if (!passwordValid) return json({ error: 'Invalid credentials' }, 401);
+
+  // Rolling migration: upgrade legacy SHA-256 hashes to PBKDF2
+  if (needsHashMigration(user.passwordHash)) {
+    const newSalt = generateSalt();
+    const newHash = await hashPassword(password, newSalt);
+    ctx.ctx.waitUntil(
+      ctx.env.DB.prepare('UPDATE users SET passwordHash = ?, salt = ?, updatedAt = ? WHERE id = ?')
+        .bind(newHash, newSalt, new Date().toISOString(), user.id).run().catch(() => {})
+    );
+  }
 
   const token = await createToken({ sub: user.id, email: user.email }, ctx.env.JWT_SECRET);
 
@@ -210,19 +235,30 @@ router.put('/api/auth/profile', async (ctx) => {
 router.put('/api/auth/password', async (ctx) => {
   const { currentPassword, newPassword } = ctx.body;
 
-  const hash = await hashPassword(currentPassword, ctx.user.salt);
-  if (hash !== ctx.user.passwordHash) return json({ error: 'Current password is incorrect' }, 401);
+  // Re-query password hash specifically for this route (not on ctx.user for security)
+  const userCreds = await ctx.env.DB.prepare(
+    'SELECT passwordHash, salt FROM users WHERE id = ?'
+  ).bind(ctx.user.id).first();
+  if (!userCreds) return json({ error: 'User not found' }, 404);
+
+  const passwordValid = await verifyPassword(currentPassword, userCreds.salt, userCreds.passwordHash);
+  if (!passwordValid) return json({ error: 'Current password is incorrect' }, 401);
 
   if (newPassword.length < 8) return json({ error: 'New password must be at least 8 characters' }, 400);
 
   const salt = generateSalt();
   const newHash = await hashPassword(newPassword, salt);
+  const now = new Date().toISOString();
 
+  // Set tokenIssuedAt to invalidate all existing tokens
   await ctx.env.DB.prepare(
-    `UPDATE users SET passwordHash = ?, salt = ?, updatedAt = ? WHERE id = ?`
-  ).bind(newHash, salt, new Date().toISOString(), ctx.user.id).run();
+    `UPDATE users SET passwordHash = ?, salt = ?, tokenIssuedAt = ?, updatedAt = ? WHERE id = ?`
+  ).bind(newHash, salt, now, now, ctx.user.id).run();
 
-  return json({ success: true });
+  // Issue a fresh token for the current session
+  const newToken = await createToken({ sub: ctx.user.id, email: ctx.user.email }, ctx.env.JWT_SECRET);
+
+  return json({ success: true, token: newToken });
 });
 
 // ─── Delete Own Account ──────────────────────────────────
@@ -324,6 +360,12 @@ router.get('/api/feedback', async (ctx) => {
 // Forwards text deltas to browser as SSE events so no connection times out.
 // Protocol: sends {t:"chunk"} for text, {d:true} when done, {error:"msg"} on error.
 router.post('/api/ai/process', async (ctx) => {
+  // Rate limit AI proxy: 30 requests per minute per user
+  const aiIp = ctx.request.headers.get('CF-Connecting-IP') || 'unknown';
+  if (!(await checkRateLimit(ctx.env.DB, aiIp, '/api/ai/process', 30, 60000))) {
+    return json({ error: 'AI rate limit exceeded. Try again in a minute.' }, 429);
+  }
+
   const anthropicKey = ctx.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return json({ error: 'Anthropic API key not configured on server' }, 503);
 
@@ -343,6 +385,15 @@ router.post('/api/ai/process', async (ctx) => {
   const { messages, maxTokens, system, model } = ctx.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return json({ error: 'messages array is required' }, 400);
+  }
+  // Validate message structure
+  for (const msg of messages) {
+    if (!msg.role || !msg.content) {
+      return json({ error: 'Each message must have role and content' }, 400);
+    }
+    if (!['user', 'assistant'].includes(msg.role)) {
+      return json({ error: 'Invalid message role' }, 400);
+    }
   }
   // Model whitelist — prevent users from using expensive models
   const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];

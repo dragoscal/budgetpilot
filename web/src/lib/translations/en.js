@@ -2205,6 +2205,11 @@ const en = {
   'changelog.v210selectAllFiltered': 'Select all filtered — select across pages, not just visible items',
   'changelog.v210batchOperations': 'New batch operations — change date, add/remove tags, and export selected transactions to CSV',
 
+  // v3.2.0
+  'changelog.v320securityHardening': 'Security hardening — PBKDF2 password hashing, token invalidation on password change, CORS origin whitelist, fail-closed rate limiting',
+  'changelog.v320familyDataIsolation': 'Fixed family data sync — joined families, members, and shared expenses now sync correctly across all users',
+  'changelog.v320syncPagination': 'Sync now handles large datasets with pagination — up to 50K records per table',
+
   // v3.1.0
   'changelog.v310familyInviteFix': 'Fixed family invite codes showing as NULL — backfilled existing codes and added self-healing',
   'changelog.v310serverJoin': 'Family join now uses server-side lookup — members can join families created by other users',

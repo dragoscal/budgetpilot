@@ -9,13 +9,35 @@ async function getApiUrl() {
   return (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
 }
 
-// Hash password using Web Crypto API (SHA-256 with salt)
-// NOTE: Must match backend auth.js format: password + salt, output as base64
-async function hashPassword(password, salt) {
+// Legacy SHA-256 hash (for verifying old local passwords)
+async function hashPasswordLegacy(password, salt) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   return btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
+}
+
+// PBKDF2 with 100K iterations — must match backend auth.js
+async function hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hashBuffer = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: encoder.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return 'pbkdf2:' + btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
+}
+
+// Verify password against stored hash (supports both legacy and PBKDF2)
+async function verifyLocalPassword(password, salt, storedHash) {
+  if (storedHash.startsWith('pbkdf2:')) {
+    const newHash = await hashPassword(password, salt);
+    return newHash === storedHash;
+  }
+  const legacyHash = await hashPasswordLegacy(password, salt);
+  return legacyHash === storedHash;
 }
 
 // NOTE: Must match backend auth.js format: base64 output
@@ -49,9 +71,10 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
         throw new Error(err.error || 'Registration failed');
       }
       const data = await res.json();
-      localStorage.setItem(TOKEN_KEY, data.token);
+      // Use sessionStorage by default (same as login without "remember me")
+      sessionStorage.setItem(TOKEN_KEY, data.token);
       const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
       // Derive encryption key from password for future AI key encryption
       try {
@@ -159,8 +182,8 @@ export async function login({ email, password, remember = false }) {
     throw new Error('Invalid email or password');
   }
 
-  const hash = await hashPassword(password, user.salt);
-  if (hash !== user.passwordHash) {
+  const passwordValid = await verifyLocalPassword(password, user.salt, user.passwordHash);
+  if (!passwordValid) {
     throw new Error('Invalid email or password');
   }
 
@@ -282,8 +305,8 @@ export async function changePassword(userId, currentPassword, newPassword) {
   const user = await getById('users', userId);
   if (!user) throw new Error('User not found');
 
-  const currentHash = await hashPassword(currentPassword, user.salt);
-  if (currentHash !== user.passwordHash) {
+  const passwordValid = await verifyLocalPassword(currentPassword, user.salt, user.passwordHash);
+  if (!passwordValid) {
     throw new Error('Current password is incorrect');
   }
 

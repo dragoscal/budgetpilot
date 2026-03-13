@@ -2205,6 +2205,11 @@ const ro = {
   'changelog.v210selectAllFiltered': 'Selectează tot filtrat — selectează pe toate paginile, nu doar cele vizibile',
   'changelog.v210batchOperations': 'Operații noi în grup — schimbă data, adaugă/elimină tag-uri și exportă selecția în CSV',
 
+  // v3.2.0
+  'changelog.v320securityHardening': 'Securitate consolidată — hash parole PBKDF2, invalidare token la schimbarea parolei, CORS cu listă de origini, limitare cereri fail-closed',
+  'changelog.v320familyDataIsolation': 'Sincronizare date familie reparată — familiile la care ești membru, membrii și cheltuielile comune se sincronizează corect',
+  'changelog.v320syncPagination': 'Sincronizarea gestionează acum seturi mari de date cu paginare — până la 50K înregistrări per tabel',
+
   // v3.1.0
   'changelog.v310familyInviteFix': 'Codurile de invitație familie arătau NULL — s-au regenerat codurile existente și s-a adăugat auto-reparare',
   'changelog.v310serverJoin': 'Alăturarea la familie folosește acum căutare pe server — membrii pot intra în familii create de alți utilizatori',

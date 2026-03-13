@@ -10,8 +10,11 @@ const MEMBER_EMOJIS = ['😊', '😎', '🤓', '😄', '🥰', '🤗', '🦊', '
 
 function generateInviteCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  // Use crypto.getRandomValues for better entropy (#19)
+  const randomBytes = new Uint8Array(8);
+  crypto.getRandomValues(randomBytes);
   let code = '';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 8; i++) code += chars[randomBytes[i] % chars.length];
   return code;
 }
 
@@ -39,9 +42,10 @@ export function FamilyProvider({ children }) {
   const [sharedExpensesList, setSharedExpensesList] = useState([]);
 
   // Load families on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadFamilies();
-  }, [effectiveUserId]);
+  }, [loadFamilies]);
 
   const loadFamilies = useCallback(async () => {
     setLoading(true);
