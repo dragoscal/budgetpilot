@@ -691,7 +691,7 @@ export default function Dashboard() {
             {showWidgetSettings && (
               <>
                 <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setShowWidgetSettings(false)} />
-                <div className="fixed inset-x-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-72 max-h-[70vh] overflow-y-auto bg-white dark:bg-dark-card border-t sm:border border-cream-200 dark:border-dark-border sm:rounded-2xl rounded-t-2xl shadow-xl p-4 space-y-3">
+                <div className="fixed inset-x-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-72 max-h-[70vh] overflow-y-auto bg-white dark:bg-dark-card border-t sm:border border-cream-200 dark:border-dark-border sm:rounded-xl rounded-t-xl shadow-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-cream-500">{t('dashboard.widgetOrder')}</h4>
                     <button onClick={resetWidgets} className="text-[10px] text-accent-600 dark:text-accent-400 font-medium hover:underline">
@@ -832,8 +832,7 @@ export default function Dashboard() {
 
       {/* Welcome Card — shown once for new users */}
       {showWelcome && (
-        <div className="card-hero relative overflow-hidden border-accent/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-gold-50/60 via-transparent to-accent-50/40 dark:from-gold-900/20 dark:to-accent-900/20" />
+        <div className="card relative overflow-hidden border-accent-200 dark:border-accent-500/20">
           <button onClick={dismissWelcome} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-400 hover:text-cream-600 transition-colors z-10">
             <X size={16} />
           </button>
@@ -995,16 +994,16 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
-        <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/add?tab=quick" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-400 text-sm font-medium whitespace-nowrap hover:bg-accent-100 dark:hover:bg-accent-500/15 transition-colors shrink-0">
           <Zap size={16} /> {t('dashboard.quickAdd')}
         </Link>
-        <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cream-100 dark:bg-cream-800 text-cream-700 dark:text-cream-300 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <Camera size={16} /> {t('dashboard.scanReceipt')}
         </Link>
-        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cream-100 dark:bg-dark-border text-cream-700 dark:text-cream-400 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cream-100 dark:bg-cream-800 text-cream-700 dark:text-cream-300 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <RotateCcw size={16} /> {t('dashboard.recurring')}
         </Link>
-        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-gold-200 dark:border-gold-700/30 text-gold-700 dark:text-gold-300 text-sm font-medium whitespace-nowrap hover:bg-gold-50 dark:hover:bg-gold-900/20 transition-all hover:-translate-y-0.5 shrink-0">
+        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-accent-200 dark:border-accent-500/20 text-accent-600 dark:text-accent-400 text-sm font-medium whitespace-nowrap hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors shrink-0">
           <TrendingUp size={16} /> {t('dashboard.analytics')}
         </Link>
       </div>
@@ -1111,9 +1110,8 @@ export default function Dashboard() {
                 )}
 
                 {/* In My Pocket + Month Comparison + No-spend days */}
-                <div className="mt-4 card-hero relative overflow-hidden border-success/20 !p-3 md:!p-5">
-                  <div className="absolute inset-0 bg-gradient-to-r from-success/5 via-transparent to-gold-50/30 dark:from-success/8 dark:to-gold-900/10" />
-                  <div className="relative flex items-center justify-between gap-2">
+                <div className="mt-4 card relative overflow-hidden border-success/20 !p-3 md:!p-5">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 shrink-0">
                       <p className="text-[10px] md:text-[11px] font-bold text-success uppercase tracking-wider">{t('dashboard.inMyPocket')}</p>
                       <p className="text-xs md:text-sm text-cream-500 dark:text-cream-400 mt-0.5">{t('dashboard.safeToSpend')}</p>
@@ -1122,7 +1120,7 @@ export default function Dashboard() {
                       {hidden ? '••••••' : formatCurrency(Math.max(0, stats.inMyPocket), currency)}
                     </p>
                   </div>
-                  <div className="relative flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-success/10 flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-success/10 flex-wrap">
                     {monthComparison && (
                       <span className={`flex items-center gap-1 text-[11px] font-medium ${monthComparison.isGood ? 'text-success' : 'text-warning'}`}>
                         {monthComparison.isGood ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
@@ -1183,17 +1181,17 @@ export default function Dashboard() {
                         <AreaChart data={spendingChartData}>
                           <defs>
                             <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#e11d48" stopOpacity={0.15} />
-                              <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1} />
+                              <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94A3B8' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                           <YAxis hide />
                           <Tooltip
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.08)', fontSize: '12px' }}
+                            contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,.06)', fontSize: '12px' }}
                             formatter={(val) => [hidden ? '••••••' : formatCurrency(val, currency), '']}
                           />
-                          <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#e11d48'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
+                          <Area type="monotone" dataKey="cumulative" stroke={hidden ? 'transparent' : '#4F46E5'} fill={hidden ? 'transparent' : 'url(#spendGrad)'} strokeWidth={2} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>

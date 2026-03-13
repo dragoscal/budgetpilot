@@ -31,17 +31,17 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
   const subcatLabel = subcat ? (t(`subcategories.${subcat.id}`) || subcat.name) : null;
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-4 hover:bg-cream-50/80 dark:hover:bg-dark-border/30 rounded-xl transition-all group">
+    <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-4 hover:bg-cream-100 dark:hover:bg-cream-800/40 rounded-lg transition-colors group">
       {onSelect && (
         <input
           type="checkbox"
           checked={selected}
           onChange={(e) => onSelect(transaction.id, e.target.checked)}
-          className="w-4 h-4 rounded border-cream-300 accent-gold-500 shrink-0"
+          className="w-4 h-4 rounded border-cream-300 accent-accent-600 shrink-0"
         />
       )}
       <div
-        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0"
+        className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-base sm:text-lg shrink-0"
         style={{ backgroundColor: cat.color ? `${cat.color}15` : undefined }}
       >
         {subcat?.icon || cat.icon}
@@ -76,7 +76,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
       </div>
       <div className="text-right shrink-0">
         <p className={`text-sm stat-value ${
-          isIncome ? 'text-income' : isExpense ? 'text-danger' : 'text-info'
+          isIncome ? 'text-success' : isExpense ? '' : 'text-info'
         }`}>
           {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(transaction.amount, transaction.currency, { hide })}
         </p>
