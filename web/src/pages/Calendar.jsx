@@ -490,22 +490,22 @@ export default function CalendarPage() {
                                 )}
                               </div>
 
-                              {/* Desktop: transaction list */}
+                              {/* Desktop: icon + amount list */}
                               <div className="hidden sm:flex sm:flex-col gap-px overflow-hidden">
-                                {data.transactions.slice(0, 2).map((tx) => {
+                                {data.transactions.slice(0, 3).map((tx) => {
                                   const isIncome = tx.type === 'income';
-                                  const label = tx.merchant || tx.description || '';
+                                  const cat = getCategoryById(tx.category);
                                   return (
-                                    <div key={tx.id} className="flex items-center gap-1 text-[10px] lg:text-[11px] leading-tight truncate">
-                                      <span className="truncate text-cream-600 dark:text-cream-400">{label}</span>
-                                      <span className={`shrink-0 font-bold money ml-auto ${isIncome ? 'text-success' : 'text-cream-800 dark:text-cream-200'}`}>
+                                    <div key={tx.id} className="flex items-center gap-1 text-[10px] lg:text-[11px] leading-tight">
+                                      <span className="shrink-0 text-[9px]">{cat?.icon}</span>
+                                      <span className={`shrink-0 font-bold money ${isIncome ? 'text-success' : 'text-cream-800 dark:text-cream-200'}`}>
                                         {isIncome ? '+' : ''}{chipAmt(tx.amount, tx.currency || currency)}
                                       </span>
                                     </div>
                                   );
                                 })}
-                                {data.transactions.length > 2 && (
-                                  <span className="text-[9px] text-cream-400 font-medium">+{data.transactions.length - 2} more</span>
+                                {data.transactions.length > 3 && (
+                                  <span className="text-[9px] text-cream-400 font-medium">+{data.transactions.length - 3}</span>
                                 )}
                               </div>
                             </div>
@@ -586,25 +586,25 @@ export default function CalendarPage() {
                           'border-transparent hover:bg-cream-50 dark:hover:bg-cream-800/30'
                         }`}
                       >
-                        {/* Transaction list */}
-                        <div className="hidden sm:flex sm:flex-col gap-1">
+                        {/* Transaction list — icon + amount */}
+                        <div className="hidden sm:flex sm:flex-col gap-0.5">
                           {data.bills.map((b) => {
                             const cat = getCategoryById(b.category);
                             return (
-                              <div key={b.id} className="flex items-center gap-1 text-[11px] text-cream-600 dark:text-cream-400">
-                                <Bell size={9} className="text-warning shrink-0" />
-                                <span className="truncate">{cat.icon} {b.name}</span>
-                                <span className="font-bold money ml-auto shrink-0">{chipAmt(b.amount, b.currency || currency)}</span>
+                              <div key={b.id} className="flex items-center gap-1.5 text-[11px]">
+                                <span className="shrink-0 text-[10px]">{cat?.icon || '📋'}</span>
+                                <span className="font-bold money shrink-0 text-cream-800 dark:text-cream-200">{chipAmt(b.amount, b.currency || currency)}</span>
+                                <Bell size={8} className="text-warning shrink-0 ml-auto" />
                               </div>
                             );
                           })}
                           {sortByDate(data.transactions, 'date', 'asc').map((tx) => {
                             const isIncome = tx.type === 'income';
-                            const label = tx.merchant || tx.description || '';
+                            const cat = getCategoryById(tx.category);
                             return (
-                              <div key={tx.id} className="flex items-center gap-1 text-[11px]">
-                                <span className="truncate text-cream-600 dark:text-cream-400">{label}</span>
-                                <span className={`font-bold money ml-auto shrink-0 ${isIncome ? 'text-success' : 'text-cream-800 dark:text-cream-200'}`}>
+                              <div key={tx.id} className="flex items-center gap-1.5 text-[11px]">
+                                <span className="shrink-0 text-[10px]">{cat?.icon}</span>
+                                <span className={`font-bold money shrink-0 ${isIncome ? 'text-success' : 'text-cream-800 dark:text-cream-200'}`}>
                                   {isIncome ? '+' : ''}{chipAmt(tx.amount, tx.currency || currency)}
                                 </span>
                               </div>
