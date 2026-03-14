@@ -18,6 +18,36 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── PWA Install Tracking ──────────────────────────────────────
+async function reportPwaInstall() {
+  try {
+    const { getSetting } = await import('./lib/storage.js');
+    const { settings: settingsApi } = await import('./lib/api.js');
+    const apiUrl = await getSetting('apiUrl');
+    if (!apiUrl) return; // offline-only user, skip
+    const platform = /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'ios'
+      : /Android/.test(navigator.userAgent) ? 'android' : 'desktop';
+    await settingsApi.set('pwaInstalled', 'true');
+    await settingsApi.set('pwaInstalledAt', new Date().toISOString());
+    await settingsApi.set('pwaPlatform', platform);
+  } catch { /* best-effort, non-blocking */ }
+}
+
+// Track fresh PWA installation via browser prompt
+window.addEventListener('appinstalled', () => {
+  localStorage.setItem('bp_pwaInstalled', '1');
+  reportPwaInstall();
+});
+
+// Detect standalone mode on load (user already installed previously)
+if (
+  (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) &&
+  !localStorage.getItem('bp_pwaInstalled')
+) {
+  localStorage.setItem('bp_pwaInstalled', '1');
+  reportPwaInstall();
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

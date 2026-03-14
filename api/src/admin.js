@@ -191,7 +191,7 @@ export function registerAdminRoutes(router) {
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
     const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [totalUsers, activeToday, activeWeek, activeMonth, totalTransactions, totalApiCalls, avgResponseTime, errorCount, recentSignups] = await Promise.all([
+    const [totalUsers, activeToday, activeWeek, activeMonth, totalTransactions, totalApiCalls, avgResponseTime, errorCount, recentSignups, pwaInstalls, pwaPlatforms] = await Promise.all([
       ctx.env.DB.prepare('SELECT COUNT(*) as count FROM users').first(),
       ctx.env.DB.prepare('SELECT COUNT(DISTINCT userId) as count FROM activity_log WHERE timestamp >= ?').bind(todayStr + 'T00:00:00.000Z').first(),
       ctx.env.DB.prepare('SELECT COUNT(DISTINCT userId) as count FROM activity_log WHERE timestamp >= ?').bind(weekAgo).first(),
@@ -201,6 +201,9 @@ export function registerAdminRoutes(router) {
       ctx.env.DB.prepare('SELECT AVG(responseTime) as avg FROM api_logs').first(),
       ctx.env.DB.prepare('SELECT COUNT(*) as count FROM api_logs WHERE status >= 400').first(),
       ctx.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE createdAt >= ?').bind(weekAgo).first(),
+      // PWA install tracking
+      ctx.env.DB.prepare("SELECT COUNT(DISTINCT userId) as count FROM settings WHERE key = 'pwaInstalled' AND value = 'true'").first(),
+      ctx.env.DB.prepare("SELECT value as platform, COUNT(*) as count FROM settings WHERE key = 'pwaPlatform' GROUP BY value").all(),
     ]);
 
     const apiCallsByDay = await ctx.env.DB.prepare(`
@@ -226,6 +229,8 @@ export function registerAdminRoutes(router) {
         avgResponseTime: Math.round(avgResponseTime?.avg || 0),
         errorCount: errorCount?.count || 0,
         recentSignups: recentSignups?.count || 0,
+        pwaInstalls: pwaInstalls?.count || 0,
+        pwaPlatforms: pwaPlatforms?.results || [],
         apiCallsByDay: apiCallsByDay?.results || [],
         featureUsage: featureUsage?.results || [],
       }

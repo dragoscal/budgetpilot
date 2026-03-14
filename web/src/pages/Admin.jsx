@@ -17,7 +17,7 @@ import {
   MessageSquare, Bug, Lightbulb, ChevronDown, ChevronUp, Loader2, Image,
   Search, Download, ArrowUpDown, Server, Clock, TrendingUp,
   CheckSquare, Square, Database, Globe, Sparkles, BarChart3, Eye, EyeOff,
-  Mail, Copy, Hash, Gauge, Wifi, WifiOff, CircleDot,
+  Mail, Copy, Hash, Gauge, Wifi, WifiOff, CircleDot, Smartphone,
 } from 'lucide-react';
 
 const ACTION_LABEL_KEYS = {
@@ -490,6 +490,38 @@ function OverviewTab({ stats, onCleanup }) {
             </p>
             <p className="text-xs text-cream-500 mt-0.5">{stats.errorCount} {t('admin.totalErrorsLabel')}</p>
           </div>
+        </div>
+      </div>
+
+      {/* PWA Install Stats */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2 mb-4">
+          <Smartphone size={14} /> {t('admin.pwaInstalls')}
+        </h3>
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <p className="text-3xl font-heading font-bold text-cream-900 dark:text-dark-text">{stats.pwaInstalls || 0}</p>
+            <p className="text-xs text-cream-500 mt-1">{t('admin.pwaInstalls')}</p>
+          </div>
+          {stats.pwaPlatforms && stats.pwaPlatforms.length > 0 ? (
+            <div className="flex-1 space-y-2">
+              {stats.pwaPlatforms.map((p) => {
+                const pct = stats.pwaInstalls > 0 ? Math.round((p.count / stats.pwaInstalls) * 100) : 0;
+                const label = p.platform === 'ios' ? 'iOS' : p.platform === 'android' ? 'Android' : 'Desktop';
+                return (
+                  <div key={p.platform} className="flex items-center gap-3">
+                    <span className="text-xs text-cream-600 dark:text-cream-400 w-14">{label}</span>
+                    <div className="flex-1 h-2 rounded-full bg-cream-200 dark:bg-dark-border overflow-hidden">
+                      <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-cream-500 w-12 text-right">{p.count} ({pct}%)</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-cream-500">{t('admin.pwaNone')}</p>
+          )}
         </div>
       </div>
 
