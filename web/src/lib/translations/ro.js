@@ -2007,6 +2007,9 @@ const ro = {
   'install.install': 'Instalează',
   'install.dismiss': 'Nu acum',
   'install.notNow': 'Nu acum',
+  'install.iosStep1': 'Apasă butonul Partajare',
+  'install.iosStep2': 'apoi selectează "Adaugă pe ecranul principal"',
+  'install.gotIt': 'Am înțeles',
 
   // ─── Categorii ───────────────────────────────────────
   'categories.groceries': 'Alimente',
@@ -2394,6 +2397,8 @@ const ro = {
   'recurring.weeksInRow': '{count} săptămâni consecutive',
   'recurring.quartersInRow': '{count} trimestre consecutive',
   'recurring.yearsInRow': '{count} ani consecutivi',
+  'changelog.v452pwa': 'Instalează ca aplicație pe iOS, Android și desktop — cu pictograme corecte și ghid iOS',
+  'changelog.v452universal': 'Exemple NLP universale — funcționează în engleză și română, cu comercianți internaționali',
   'changelog.v451security': 'Securitate backend consolidată — autentificare cu timp constant, operații atomice, corecții CORS',
   'changelog.v451performance': 'Creștere de performanță — toate contextele React stabilizate cu useMemo, prognoze îmbunătățite',
   'changelog.v451errorHandling': 'Gestionare erori îmbunătățită — notificări vizibile la eșecul încărcării datelor',

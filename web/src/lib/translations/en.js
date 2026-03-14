@@ -2007,6 +2007,9 @@ const en = {
   'install.install': 'Install',
   'install.dismiss': 'Not now',
   'install.notNow': 'Not now',
+  'install.iosStep1': 'Tap the Share button',
+  'install.iosStep2': 'then select "Add to Home Screen"',
+  'install.gotIt': 'Got it',
 
   // ─── Categories ──────────────────────────────────────
   'categories.groceries': 'Groceries',
@@ -2394,6 +2397,8 @@ const en = {
   'recurring.weeksInRow': '{count} weeks in a row',
   'recurring.quartersInRow': '{count} quarters in a row',
   'recurring.yearsInRow': '{count} years in a row',
+  'changelog.v452pwa': 'Install as app on iOS, Android, and desktop — with proper icons and iOS install guide',
+  'changelog.v452universal': 'Universal NLP examples — works in English and Romanian, with international merchants',
   'changelog.v451security': 'Backend security hardened — constant-time auth, atomic operations, CORS fixes',
   'changelog.v451performance': 'Performance boost — all React contexts stabilized with useMemo, forecasting accuracy improved',
   'changelog.v451errorHandling': 'Error handling improved — user-facing toasts on all data load failures',
