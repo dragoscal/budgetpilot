@@ -313,10 +313,25 @@ export default function People() {
       toast.error(t('people.settleAllDebtsFirst'));
       return;
     }
-    await peopleApi.remove(person.id);
-    toast.success(t('people.deleted'));
-    if (selectedPerson === person.id) setSelectedPerson(null);
-    loadData();
+    if (!confirm(t('people.deletePersonConfirm', { name: person.name }))) return;
+    try {
+      // Cascade: delete all payments and debts for this person first
+      const personDebts = debtsList.filter(d => d.personId === person.id);
+      for (const debt of personDebts) {
+        const debtPays = paymentsList.filter(p => p.debtId === debt.id);
+        for (const p of debtPays) {
+          await paymentsApi.remove(p.id);
+        }
+        await debtsApi.remove(debt.id);
+      }
+      // Now delete the person
+      await peopleApi.remove(person.id);
+      toast.success(t('people.deleted'));
+      if (selectedPerson === person.id) setSelectedPerson(null);
+      loadData();
+    } catch (err) {
+      toast.error(err.message || t('people.failedDelete'));
+    }
   };
 
   const getPersonDebts = (personId) => {

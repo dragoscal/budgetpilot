@@ -30,6 +30,12 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
   const catLabel = getCategoryLabel(cat, t);
   const subcatLabel = subcat ? (t(`subcategories.${subcat.id}`) || subcat.name) : null;
 
+  // Build display name: skip "Unknown" merchant, fall back to description or category
+  const hasMerchant = transaction.merchant && transaction.merchant.toLowerCase() !== 'unknown';
+  const displayName = hasMerchant
+    ? transaction.merchant
+    : transaction.description || (subcatLabel ? `${catLabel} · ${subcatLabel}` : catLabel);
+
   return (
     <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-4 hover:bg-cream-100 dark:hover:bg-cream-800/40 rounded-lg transition-colors group">
       {onSelect && (
@@ -48,7 +54,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-medium truncate">{transaction.merchant || transaction.description}</p>
+          <p className="text-sm font-medium truncate">{displayName}</p>
           {source.icon ? <span className="text-xs shrink-0" title={source.label}>{source.icon}</span> : null}
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-cream-500 flex-wrap">
@@ -71,7 +77,7 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
           )}
         </div>
         {transaction.originalText && (
-          <p className="text-[10px] text-cream-400 italic truncate">&ldquo;{transaction.originalText}&rdquo;</p>
+          <p className="text-[11px] text-accent-600/70 dark:text-accent-400/70 italic truncate mt-0.5">&ldquo;{transaction.originalText}&rdquo;</p>
         )}
       </div>
       <div className="text-right shrink-0">
