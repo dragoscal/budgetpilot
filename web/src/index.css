@@ -10,6 +10,18 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Prevent iOS Safari zoom on input focus (font-size < 16px triggers auto-zoom) */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  @media (min-width: 768px) {
+    input, select, textarea {
+      font-size: inherit !important;
+    }
+  }
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

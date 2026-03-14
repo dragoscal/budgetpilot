@@ -10,9 +10,11 @@ import {
   Calendar, TrendingUp, Landmark, BarChart3, Users, Star, FileText,
   Settings, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Shield,
   Building2, Menu, X, MessageSquare, Heart, ClipboardList, Trophy, Camera, Home, HelpCircle, FileSpreadsheet,
+  Download,
 } from 'lucide-react';
 import FamilyPicker from './FamilyPicker';
 import NotificationCenter from './NotificationCenter';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bp_sidebarCollapsed') === 'true');
@@ -23,6 +25,16 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { canInstallNatively, isInstalled, triggerInstall } = usePwaInstall();
+
+  const handleInstallClick = () => {
+    if (canInstallNatively) {
+      triggerInstall();
+    } else {
+      navigate('/settings');
+      setMobileMenuOpen(false);
+    }
+  };
 
   const NAV_SECTIONS = useMemo(() => [
     {
@@ -193,6 +205,17 @@ export default function Sidebar() {
             {!collapsed && <span>{t('nav.guide')}</span>}
           </NavLink>
 
+          {!isInstalled && (
+            <button
+              onClick={handleInstallClick}
+              className={`flex items-center gap-2.5 px-2 py-[7px] rounded-lg text-[13px] font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 w-full transition-colors ${collapsed ? 'justify-center px-2' : ''}`}
+              title={collapsed ? t('nav.installApp') : undefined}
+            >
+              <Download size={18} strokeWidth={1.5} className="shrink-0" />
+              {!collapsed && <span>{t('nav.installApp')}</span>}
+            </button>
+          )}
+
           <NavLink to="/settings" className={navLinkClass} title={collapsed ? t('nav.settings') : undefined}>
             <Settings size={18} strokeWidth={1.5} className="shrink-0" />
             {!collapsed && <span>{t('nav.settings')}</span>}
@@ -299,6 +322,15 @@ export default function Sidebar() {
                     <HelpCircle size={18} className="shrink-0" />
                     <span>{t('nav.guide')}</span>
                   </NavLink>
+                  {!isInstalled && (
+                    <button
+                      onClick={handleInstallClick}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-accent-600 dark:text-accent-400 w-full"
+                    >
+                      <Download size={18} className="shrink-0" />
+                      <span>{t('nav.installApp')}</span>
+                    </button>
+                  )}
                   <NavLink
                     to="/settings"
                     onClick={() => setMobileMenuOpen(false)}

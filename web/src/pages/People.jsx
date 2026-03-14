@@ -290,6 +290,23 @@ export default function People() {
     loadData();
   };
 
+  const handleDeleteDebt = async (debt) => {
+    if (!confirm(t('people.deleteDebtConfirm'))) return;
+    try {
+      // Delete associated payments first
+      const debtPays = paymentsList.filter(p => p.debtId === debt.id);
+      for (const p of debtPays) {
+        await paymentsApi.remove(p.id);
+      }
+      // Delete the debt itself
+      await debtsApi.remove(debt.id);
+      toast.success(t('people.debtDeleted'));
+      loadData();
+    } catch (err) {
+      toast.error(err.message || t('people.failedDelete'));
+    }
+  };
+
   const handleDeletePerson = async (person) => {
     const personDebtsActive = debtsList.filter(d => d.personId === person.id && d.status !== 'settled');
     if (personDebtsActive.length > 0) {
@@ -738,8 +755,8 @@ export default function People() {
                         )}
 
                         {/* Action buttons */}
-                        {!isSettled && (
-                          <div className="mt-2 flex gap-2">
+                        <div className="mt-2 flex gap-2">
+                          {!isSettled && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -755,8 +772,18 @@ export default function People() {
                               <Banknote size={12} />
                               {isLent ? t('people.receive') : t('people.payBack')} {formatCurrency(remaining, currency)}
                             </button>
-                          </div>
-                        )}
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDebt(debt);
+                            }}
+                            className="py-1.5 px-3 text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-colors bg-danger/10 text-danger hover:bg-danger/20"
+                          >
+                            <Trash2 size={12} />
+                            {t('common.delete')}
+                          </button>
+                        </div>
                       </div>
                     );
                   })
