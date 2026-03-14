@@ -273,7 +273,6 @@ export const AI_PROVIDERS = [
     models: [
       { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5 (fastest, cheapest)' },
       { id: 'claude-sonnet-4-20250514', name: 'Sonnet 4 (balanced)' },
-      { id: 'claude-opus-4-20250514', name: 'Opus 4 (best quality)' },
     ],
     defaultModel: 'claude-sonnet-4-20250514',
   },

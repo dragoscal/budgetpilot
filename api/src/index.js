@@ -448,7 +448,7 @@ router.post('/api/ai/process', async (ctx) => {
     }
   }
   // Model whitelist — prevent users from using expensive models
-  const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-haiku-4-5-20251001', 'claude-opus-4-20250514'];
+  const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-haiku-4-5-20251001'];
   const usedModel = ALLOWED_MODELS.includes(model) ? model : 'claude-sonnet-4-20250514';
   // Cap max tokens to prevent abuse
   const cappedMaxTokens = Math.min(Math.max(1, maxTokens || 2000), 16384);
