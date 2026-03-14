@@ -33,9 +33,10 @@ export function registerAdminRoutes(router) {
       ORDER BY u.createdAt DESC
     `).all();
 
-    // Normalize aiProxyAllowed to boolean
+    // Normalize SQLite integers and settings to proper booleans
     const normalized = (users.results || []).map(u => ({
       ...u,
+      suspended: !!u.suspended,
       aiProxyAllowed: u.aiProxyAllowed === 'true',
     }));
 
@@ -310,11 +311,15 @@ export function registerAdminRoutes(router) {
     const denied = requireAdmin(ctx);
     if (denied) return denied;
 
-    // Pricing per million tokens (USD)
+    // Pricing per million tokens (USD) — keep in sync with ALLOWED_MODELS in index.js
     const MODEL_PRICING = {
-      'claude-sonnet-4-20250514': { input: 3, output: 15 },
-      'claude-haiku-3-20240307':  { input: 0.25, output: 1.25 },
-      'claude-haiku-3.5':         { input: 1, output: 5 },
+      'claude-sonnet-4-20250514':  { input: 3, output: 15 },
+      'claude-haiku-4-20250414':   { input: 0.25, output: 1.25 },
+      'claude-haiku-4-5-20251001': { input: 1, output: 5 },
+      'claude-opus-4-20250514':    { input: 15, output: 75 },
+      // Legacy models (may still appear in old activity logs)
+      'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
+      'claude-3-5-haiku-20241022':  { input: 1, output: 5 },
     };
     const DEFAULT_PRICING = { input: 3, output: 15 }; // fallback to Sonnet pricing
 

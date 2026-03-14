@@ -741,7 +741,7 @@ function UsersTab({ users, onResetPassword, onToggle, onToggleAi, onDelete, curr
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                       u.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-cream-200 text-cream-600 dark:bg-dark-border dark:text-cream-500'
                     }`}>{u.role || t('admin.roleUser')}</span>
-                    {u.suspended && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{t('admin.suspended')}</span>}
+                    {u.suspended ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{t('admin.suspended')}</span> : null}
                   </div>
                   <p className="text-xs text-cream-500 truncate">{u.email}</p>
                 </div>

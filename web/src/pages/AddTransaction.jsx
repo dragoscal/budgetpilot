@@ -1025,7 +1025,7 @@ export default function AddTransaction() {
                     {receiptMeta.receipt.paymentMethod && receiptMeta.receipt.paymentMethod !== 'unknown' && ` · ${receiptMeta.receipt.paymentMethod}`}
                   </p>
                 </div>
-                {receiptMeta.receipt.total && (
+                {receiptMeta.receipt.total != null && (
                   <p className="ml-auto stat-value text-lg">
                     {formatCurrency(receiptMeta.receipt.total, receiptMeta.receipt.currency || 'RON')}
                   </p>
