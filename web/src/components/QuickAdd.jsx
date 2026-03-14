@@ -6,12 +6,12 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { todayLocal } from '../lib/helpers';
 
 const EXAMPLES = [
-  '45 lei Bolt taxi',
-  'netflix 55 lei',
-  'salary 8000 lei',
-  '150 lei dinner #friends',
-  'Ioana 80 lei paine',
-  'datorie Titi 100 lei KFC',
+  '12.50 Uber taxi',
+  'Netflix 15',
+  'salary 3000',
+  '35 dinner #friends',
+  'Maria 20 coffee',
+  'debt Alex 50 pizza',
 ];
 
 export default function QuickAdd({ onResult, onError, initialValue = '' }) {

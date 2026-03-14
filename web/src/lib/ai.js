@@ -133,43 +133,47 @@ SPLITTING RULES:
 function buildNLPPrompt(customCats = []) {
   const allSubs = { ...SUBCATEGORIES };
   for (const c of customCats) { if (c.subcategories?.length) allSubs[c.id] = c.subcategories; }
-  return `You parse natural language expense/income inputs for a Romanian budgeting app.
+  return `You parse natural language expense/income inputs for a multilingual budgeting app. Users may write in English, Romanian, or mixed.
 
-Input examples: "45 lei bolt taxi", "netflix 55 lei", "salary 8000 lei", "150 lei dinner with friends", "25 eur coffee shop"
+Input examples: "12.50 Uber taxi", "Netflix 15", "salary 3000", "35 dinner #friends", "25 eur coffee shop", "50 lei paine"
 
 CATEGORIES: ${[...CATEGORIES, ...customCats].map((c) => `${c.id} (${c.name})`).join(', ')}
 
 MERCHANT vs DESCRIPTION — CRITICAL DISTINCTION:
-- "merchant" = a STORE, COMPANY, or BRAND name (Lidl, Bolt, Netflix, KFC, Starbucks, Emag, etc.)
+- "merchant" = a STORE, COMPANY, or BRAND name (Walmart, Uber, Netflix, KFC, Starbucks, Amazon, Lidl, Kaufland, etc.)
 - "description" = what was purchased — a PRODUCT, FOOD ITEM, or GENERIC purchase
 - If the input only has a product/food name WITHOUT a store name, set merchant to "" (empty) and put the product in description
-- Romanian food/product words are NOT merchants: paine (bread), lapte (milk), pui (chicken), carne (meat), legume (vegetables), fructe (fruits), benzina (fuel), cafea (coffee), bere (beer), apa (water), medicamente (medicine), haine (clothes), etc.
+- Food/product words are NOT merchants: bread, milk, chicken, meat, vegetables, fruits, fuel, coffee, beer, water, medicine, clothes
+- Romanian food words are also NOT merchants: paine, lapte, pui, carne, legume, fructe, benzina, cafea, bere, apa, medicamente, haine
 
 Examples:
+- "15 bread" → merchant: "", description: "Bread", category: "groceries", subcategory: "groceries:bakery"
 - "50 lei paine" → merchant: "", description: "Paine", category: "groceries", subcategory: "groceries:bakery"
-- "30 lei lapte si oua" → merchant: "", description: "Lapte si oua", category: "groceries", subcategory: "groceries:dairy"
-- "200 lei benzina" → merchant: "", description: "Benzina", category: "transport", subcategory: "transport:fuel"
-- "45 lei bolt taxi" → merchant: "Bolt", description: "Taxi", category: "transport", subcategory: "transport:rideshare"
-- "100 lei lidl cumparaturi" → merchant: "Lidl", description: "Cumparaturi", category: "groceries"
-- "netflix 55 lei" → merchant: "Netflix", description: "", category: "subscriptions", subcategory: "subscriptions:streaming"
+- "30 milk and eggs" → merchant: "", description: "Milk and eggs", category: "groceries", subcategory: "groceries:dairy"
+- "40 fuel" → merchant: "", description: "Fuel", category: "transport", subcategory: "transport:fuel"
+- "12.50 Uber taxi" → merchant: "Uber", description: "Taxi", category: "transport", subcategory: "transport:rideshare"
+- "100 Lidl groceries" → merchant: "Lidl", description: "Groceries", category: "groceries"
+- "Netflix 15" → merchant: "Netflix", description: "", category: "subscriptions", subcategory: "subscriptions:streaming"
 
-MERCHANT→CATEGORY: Lidl/Kaufland/Carrefour/Mega Image/Auchan/Profi/Penny = groceries, Bolt/Uber = transport, Netflix/Spotify = subscriptions, Enel/Digi/Vodafone = utilities, restaurant/dinner/lunch = dining, salary/freelance = income
+MERCHANT→CATEGORY: Walmart/Costco/Lidl/Kaufland/Carrefour/Auchan/Tesco = groceries, Uber/Lyft/Bolt = transport, Netflix/Spotify/Disney+ = subscriptions, electricity/internet/phone = utilities, restaurant/dinner/lunch = dining, salary/freelance/paycheck = income
 
 SUBCATEGORIES (use when clear from context):
 ${Object.entries(allSubs).map(([parentId, subs]) => `- ${parentId}: ${subs.map(s => s.id).join(', ')}`).join('\n')}
 ${customCats.length > 0 ? '\nCUSTOM CATEGORY KEYWORDS (user-defined — PREFER these when input matches keywords):\n' + customCats.map(c => `- ${c.id} (${c.name}): ${(c.keywords || []).join(', ')}${c.description ? ' — ' + c.description : ''}`).join('\n') : ''}
 Examples: "coffee at starbucks" → dining, dining:cafe; "uber ride" → transport, transport:rideshare; "gym membership" → health, health:gym
-Romanian product → subcategory: paine/covrigi/corn = groceries:bakery, lapte/iaurt/branza/smantana/oua = groceries:dairy, pui/carne/peste = groceries:meat, legume/fructe/rosii/cartofi = groceries:produce, cafea = dining:cafe, benzina/motorina = transport:fuel, farmacie/medicamente = health:pharmacy
+Product → subcategory: bread/pastry = groceries:bakery, milk/yogurt/cheese/eggs = groceries:dairy, chicken/meat/fish = groceries:meat, vegetables/fruits = groceries:produce, coffee = dining:cafe, fuel/gas = transport:fuel, pharmacy/medicine = health:pharmacy
+Romanian: paine/covrigi/corn = groceries:bakery, lapte/iaurt/branza/smantana/oua = groceries:dairy, pui/carne/peste = groceries:meat, legume/fructe = groceries:produce, cafea = dining:cafe, benzina/motorina = transport:fuel, farmacie/medicamente = health:pharmacy
 
 FAMILY MEMBER DETECTION:
-If the input starts with or contains a person's NAME (Romanian names like Ioana, Andrei, Maria, Titi, Ana, Mihai, etc.) followed by amount+description, that person PAID this expense. Set "paidBy" to the person's name.
-Examples: "Ioana 100 lei paine" → paidBy: "Ioana", merchant: "", description: "Paine", amount: 100, category: "groceries", subcategory: "groceries:bakery"
-"Andrei 50 lei benzina" → paidBy: "Andrei", merchant: "", description: "Benzina", category: "transport", subcategory: "transport:fuel"
+If the input starts with or contains a person's NAME followed by amount+description, that person PAID this expense. Set "paidBy" to the person's name.
+Examples: "Maria 20 coffee" → paidBy: "Maria", merchant: "", description: "Coffee", amount: 20, category: "dining", subcategory: "dining:cafe"
+"Alex 50 groceries" → paidBy: "Alex", merchant: "", description: "Groceries", category: "groceries"
 
-DEBT/LOAN DETECTION (Romanian: "datorie", "imprumut", "datorez", "mi-a dat", "i-am dat"):
+DEBT/LOAN DETECTION (English: "debt", "owe", "loan", "lent", "borrowed"; Romanian: "datorie", "imprumut", "datorez", "mi-a dat", "i-am dat"):
 If input contains debt keywords + a person name + amount, it's a debt entry. Set "isDebt": true and "debtTo": person name.
-Examples: "datorie titi 100 ron mancare kfc" → isDebt: true, debtTo: "Titi", merchant: "KFC", category: "dining"
-"imprumut ana 500 lei" → isDebt: true, debtTo: "Ana"
+Examples: "debt Alex 50 pizza" → isDebt: true, debtTo: "Alex", merchant: "", description: "Pizza", category: "dining"
+"owe Sarah 100 dinner" → isDebt: true, debtTo: "Sarah", category: "dining"
+"datorie Titi 100 KFC" → isDebt: true, debtTo: "Titi", merchant: "KFC", category: "dining"
 
 Return JSON:
 {

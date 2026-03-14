@@ -69,7 +69,7 @@ export default function QuickAddFAB() {
     setLoading(false);
   };
 
-  const examples = ['45 lei taxi', 'netflix 55 lei', '25 eur coffee'];
+  const examples = ['12.50 Uber taxi', 'Netflix 15', '25 eur coffee'];
 
   return (
     <>

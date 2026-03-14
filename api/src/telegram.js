@@ -20,10 +20,10 @@ function parseExpenseText(text) {
   const lower = text.toLowerCase().trim();
 
   // Patterns to match:
-  // "45 lei bolt taxi"
-  // "netflix 55 lei"
-  // "150 dinner friends"
-  // "salary 8000 lei" (income)
+  // "12.50 Uber taxi"
+  // "Netflix 15"
+  // "35 dinner friends"
+  // "salary 3000" (income)
   // "rent 2000"
 
   // Check for income keywords
@@ -190,7 +190,7 @@ export function registerTelegramRoutes(router) {
     const tx = parseExpenseText(text);
     if (!tx) {
       await sendTelegramMessage(botToken, chatId,
-        "🤔 Couldn't parse that. Try:\n<code>45 lei Bolt taxi</code>\n<code>netflix 55 lei</code>\n<code>salary 8000 lei</code>"
+        "🤔 Couldn't parse that. Try:\n<code>12.50 Uber taxi</code>\n<code>Netflix 15</code>\n<code>salary 3000</code>"
       );
       return json({ ok: true });
     }
@@ -288,7 +288,7 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
     case '/start':
       await sendTelegramMessage(botToken, chatId,
         "👋 <b>Welcome to BudgetPilot!</b>\n\nI can track your expenses. Just send me a message like:\n\n" +
-        "<code>45 lei Bolt taxi</code>\n<code>netflix 55 lei</code>\n<code>salary 8000 lei</code>\n\n" +
+        "<code>12.50 Uber taxi</code>\n<code>Netflix 15</code>\n<code>salary 3000</code>\n\n" +
         "Commands:\n/today — Today's spending\n/month — This month summary\n/budget — Budget status\n/help — Show help"
       );
       break;
@@ -401,9 +401,9 @@ async function handleCommand(ctx, botToken, chatId, userId, text) {
       await sendTelegramMessage(botToken, chatId,
         "📖 <b>BudgetPilot Help</b>\n\n" +
         "Send any expense in natural language:\n" +
-        "<code>45 lei Bolt taxi</code>\n" +
-        "<code>netflix 55 lei</code>\n" +
-        "<code>salary 8000 lei</code>\n" +
+        "<code>12.50 Uber taxi</code>\n" +
+        "<code>Netflix 15</code>\n" +
+        "<code>salary 3000</code>\n" +
         "<code>25 eur coffee shop</code>\n\n" +
         "Commands:\n" +
         "/today — Today's spending\n" +
