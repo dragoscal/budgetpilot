@@ -129,8 +129,11 @@ function groupByAmountSimilarity(txns, tolerance = 0.20) {
   let currentGroup = [sorted[0]];
 
   for (let i = 1; i < sorted.length; i++) {
-    const groupAvg = currentGroup.reduce((s, t) => s + t.amount, 0) / currentGroup.length;
-    if (groupAvg > 0 && Math.abs(sorted[i].amount - groupAvg) / groupAvg <= tolerance) {
+    // Compare against the FIRST element in the group (anchor), not running average.
+    // This prevents drift where gradually increasing amounts all cluster together
+    // (e.g., 100→110→120→130→140 would all pass running-avg but 100 vs 140 is 40% apart)
+    const anchor = currentGroup[0].amount;
+    if (anchor > 0 && Math.abs(sorted[i].amount - anchor) / anchor <= tolerance) {
       currentGroup.push(sorted[i]);
     } else {
       groups.push(currentGroup);
@@ -965,10 +968,22 @@ export async function inferCategorySmart(merchant) {
   }
 
   // 3. Check hardcoded keyword map (with subcategory support)
-  for (const [key, cat] of Object.entries(MERCHANT_CATEGORY_MAP)) {
-    if (lower.includes(key)) {
-      const subcat = KEYWORD_SUBCATEGORY_MAP[key] || null;
-      return { category: cat, subcategory: subcat };
+  // Sort by key length desc so "bolt food" matches before "bolt"
+  const mapEntries = Object.entries(MERCHANT_CATEGORY_MAP).sort((a, b) => b[0].length - a[0].length);
+  for (const [key, cat] of mapEntries) {
+    // For short keys (≤4 chars), require word boundaries to prevent
+    // false positives (e.g., "vin" matching "Vintage", "suc" matching "Success")
+    if (key.length <= 4) {
+      const regex = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (regex.test(lower)) {
+        const subcat = KEYWORD_SUBCATEGORY_MAP[key] || null;
+        return { category: cat, subcategory: subcat };
+      }
+    } else {
+      if (lower.includes(key)) {
+        const subcat = KEYWORD_SUBCATEGORY_MAP[key] || null;
+        return { category: cat, subcategory: subcat };
+      }
     }
   }
 

@@ -13,9 +13,10 @@ import { Camera, Search, X, Receipt, ExternalLink, Calendar, Tag } from 'lucide-
 import HelpButton from '../components/HelpButton';
 
 export default function ReceiptGallery() {
-  const { effectiveUserId } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const defaultCurrency = user?.defaultCurrency || 'RON';
   const [receipts, setReceipts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +138,7 @@ export default function ReceiptGallery() {
             const linked = getLinkedTransaction(receipt);
             const merchant = receipt.merchant || receipt.receipt?.store || receipt.result?.merchant || 'Unknown';
             const total = receipt.total ?? receipt.receipt?.total ?? receipt.result?.total;
-            const currency = receipt.currency || receipt.receipt?.currency || receipt.result?.currency || 'RON';
+            const currency = receipt.currency || receipt.receipt?.currency || receipt.result?.currency || defaultCurrency;
             const date = receipt.processedAt || receipt.createdAt;
             const hasImage = receipt.imageData && receipt.imageData.length > 300;
 
@@ -200,7 +201,7 @@ export default function ReceiptGallery() {
         {selected && (() => {
           const merchant = selected.merchant || selected.receipt?.store || selected.result?.merchant || 'Unknown';
           const total = selected.total ?? selected.receipt?.total ?? selected.result?.total;
-          const currency = selected.currency || selected.receipt?.currency || selected.result?.currency || 'RON';
+          const currency = selected.currency || selected.receipt?.currency || selected.result?.currency || defaultCurrency;
           const items = selected.items || selected.result?.items || selected.transactions?.[0]?.items || [];
           const date = selected.processedAt || selected.createdAt;
           const category = selected.category || selected.transactions?.[0]?.category || selected.result?.category;

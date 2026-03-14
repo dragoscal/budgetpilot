@@ -5,6 +5,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, sumBy, groupBy, getCategoryById, percentOf, trendIndicator, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
+import { useToast } from '../contexts/ToastContext';
 import MonthPicker from '../components/MonthPicker';
 
 import { SkeletonPage } from '../components/LoadingSkeleton';
@@ -13,6 +14,7 @@ import HelpButton from '../components/HelpButton';
 
 export default function MonthlyReview() {
   const { user, effectiveUserId } = useAuth();
+  const { toast } = useToast();
   const { t } = useTranslation();
   const [month, setMonth] = useState(new Date());
   const [currentTx, setCurrentTx] = useState([]);
@@ -49,10 +51,10 @@ export default function MonthlyReview() {
         setGoals(goals);
         setRecurring(rec.filter((r) => r.active !== false));
         getCachedRates().then(setRates).catch(() => {});
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error(err); toast.error(t('review.failedLoad')); }
       finally { if (version === loadVersion.current) setLoading(false); }
     })();
-  }, [month, effectiveUserId]);
+  }, [month, effectiveUserId, toast, t]);
 
   const income = sumAmountsMultiCurrency(currentTx.filter((tx) => tx.type === 'income'), currency, rates);
   const expenses = sumAmountsMultiCurrency(currentTx.filter((tx) => tx.type === 'expense'), currency, rates);

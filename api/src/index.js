@@ -17,12 +17,25 @@ export async function logActivity(db, userId, action, metadata = {}) {
 }
 
 // ─── Rate Limiting (D1-backed, shared across isolates) ───
+// LIMITATION: Rate limiting is per-IP, which means users behind shared IPs (corporate NAT,
+// VPNs, mobile carriers) share the same rate limit bucket. Per-user rate limiting would
+// require passing the authenticated userId here, but auth runs after rate limiting on
+// public routes (login/register). A hybrid approach (per-IP for public, per-user for
+// authenticated routes) would be more accurate but requires architectural changes.
 async function checkRateLimit(db, ip, path, maxRequests = 10, windowMs = 60000) {
   const windowStart = new Date(Date.now() - windowMs).toISOString();
   try {
     const result = await db.prepare(
       'SELECT COUNT(*) as count FROM api_logs WHERE ip = ? AND path = ? AND timestamp > ?'
     ).bind(ip, path, windowStart).first();
+
+    // Probabilistic cleanup: ~1% of rate-limit checks trigger old log pruning
+    // to prevent unbounded api_logs growth without needing a separate cron job
+    if (Math.random() < 0.01) {
+      db.prepare(`DELETE FROM api_logs WHERE timestamp < datetime('now', '-7 days')`)
+        .run().catch(() => {});
+    }
+
     return (result?.count || 0) < maxRequests;
   } catch {
     // If query fails, deny the request (fail closed for security)
@@ -264,34 +277,41 @@ router.put('/api/auth/password', async (ctx) => {
 // ─── Delete Own Account ──────────────────────────────────
 router.delete('/api/auth/account', async (ctx) => {
   const userId = ctx.user.id;
-  // Delete in FK-safe order: children before parents
-  // Phase 1: Leaf tables (debt_payments → debts, loan_payments → loans)
-  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(userId).run();
-  // Phase 2: Parent tables of phase 1 (debts → people)
-  await ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM people WHERE userId = ?`).bind(userId).run();
-  // Phase 3: Simple tables with only userId FK
-  const simpleTables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'wishlist', 'settings', 'sync_log', 'activity_log', 'feedback', 'challenges', 'receipts'];
-  for (const table of simpleTables) {
-    await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId).run();
-  }
-  // Phase 4: Family data (shared_expenses/family_members → families → users)
+
+  // Pre-fetch family IDs before batching (needed to build DELETE statements)
   const userFamilies = await ctx.env.DB.prepare(`SELECT id FROM families WHERE createdBy = ?`).bind(userId).all();
-  for (const fam of (userFamilies.results || [])) {
-    await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fam.id).run();
-    await ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fam.id).run();
-  }
-  await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
-  await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId).run();
-  // Phase 5: Orphan cleanup
-  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
-  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
-  // Phase 6: User record itself
-  await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(userId).run();
+  const familyIds = (userFamilies.results || []).map(f => f.id);
+
+  // Atomic batch delete — all-or-nothing to prevent partial account deletion.
+  // D1 batch() executes all statements in a single transaction.
+  const stmts = [
+    // Phase 1: Leaf tables
+    ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(userId),
+    // Phase 2: Parent tables
+    ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM people WHERE userId = ?`).bind(userId),
+    // Phase 3: Simple tables
+    ...['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'wishlist', 'settings', 'sync_log', 'activity_log', 'feedback', 'challenges', 'receipts']
+      .map(table => ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId)),
+    // Phase 4: Family data
+    ...familyIds.flatMap(fid => [
+      ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fid),
+      ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fid),
+    ]),
+    ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId),
+    // Phase 5: Orphan cleanup (scoped to user)
+    ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts) AND userId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans) AND userId = ?`).bind(userId),
+    // Phase 6: User record itself
+    ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(userId),
+  ];
+
+  await ctx.env.DB.batch(stmts);
   return json({ success: true });
 });
 
@@ -318,9 +338,13 @@ router.delete('/api/data/clear', async (ctx) => {
   }
   await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId).run();
   await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId).run();
-  // Orphan cleanup
-  await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
-  await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
+  // Orphan cleanup — scoped to current user to prevent cross-user data deletion
+  try {
+    await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts) AND userId = ?`).bind(userId).run();
+    await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans) AND userId = ?`).bind(userId).run();
+  } catch (e) {
+    console.error('Orphan cleanup failed during data clear:', e.message);
+  }
   ctx.ctx.waitUntil(logActivity(ctx.env.DB, userId, 'clear_all_data', {}));
   return json({ success: true });
 });
@@ -515,12 +539,11 @@ router.post('/api/ai/process', async (ctx) => {
     }
   })());
 
+  // CORS headers are added by the router's addCors() wrapper — do not hardcode '*' here
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
 });

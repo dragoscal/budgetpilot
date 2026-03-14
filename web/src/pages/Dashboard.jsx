@@ -238,7 +238,10 @@ export default function Dashboard() {
       // Welcome card check
       try { const seen = await settingsApi.get('hasSeenWelcome'); if (!seen) setShowWelcome(true); } catch (e) {}
     } catch (err) {
-      if (loadVersion.current === version) console.error('Dashboard load error:', err);
+      if (loadVersion.current === version) {
+        console.error('Dashboard load error:', err);
+        toast.error(t('dashboard.failedLoad'));
+      }
     } finally {
       if (loadVersion.current === version) setLoading(false);
     }

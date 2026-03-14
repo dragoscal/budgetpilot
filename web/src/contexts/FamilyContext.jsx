@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { families as familiesApi, familyMembers as membersApi, familyApi, transactions as txApi, sharedExpenses as sharedApi } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { generateId } from '../lib/helpers';
@@ -296,35 +296,21 @@ export function FamilyProvider({ children }) {
   const myMembership = members.find((m) => m.userId === effectiveUserId);
   const isAdmin = myMembership?.role === 'admin';
 
+  const value = useMemo(() => ({
+    myFamilies, activeFamily, members, loading, isFamilyMode, isAdmin, myMembership,
+    familyTransactions, familyTransactionsLoading, sharedExpensesList,
+    createFamily, joinFamily, switchFamily, updateFamily, leaveFamily,
+    createVirtualMember, removeVirtualMember, linkVirtualMember,
+    updateMember, updateMemberIncome, loadFamilies, loadFamilyTransactions,
+    FAMILY_EMOJIS, MEMBER_EMOJIS,
+  }), [myFamilies, activeFamily, members, loading, isFamilyMode, isAdmin, myMembership,
+    familyTransactions, familyTransactionsLoading, sharedExpensesList,
+    createFamily, joinFamily, switchFamily, updateFamily, leaveFamily,
+    createVirtualMember, removeVirtualMember, linkVirtualMember,
+    updateMember, updateMemberIncome, loadFamilies, loadFamilyTransactions]);
+
   return (
-    <FamilyContext.Provider
-      value={{
-        myFamilies,
-        activeFamily,
-        members,
-        loading,
-        isFamilyMode,
-        isAdmin,
-        myMembership,
-        familyTransactions,
-        familyTransactionsLoading,
-        sharedExpensesList,
-        createFamily,
-        joinFamily,
-        switchFamily,
-        updateFamily,
-        leaveFamily,
-        createVirtualMember,
-        removeVirtualMember,
-        linkVirtualMember,
-        updateMember,
-        updateMemberIncome,
-        loadFamilies,
-        loadFamilyTransactions,
-        FAMILY_EMOJIS,
-        MEMBER_EMOJIS,
-      }}
-    >
+    <FamilyContext.Provider value={value}>
       {children}
     </FamilyContext.Provider>
   );

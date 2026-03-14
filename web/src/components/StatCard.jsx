@@ -30,7 +30,7 @@ export default function StatCard({ label, value, trend, icon: Icon, className = 
               {trend.direction === 'up' ? <TrendingUp size={11} /> :
                trend.direction === 'down' ? <TrendingDown size={11} /> :
                <Minus size={11} />}
-              {trend.percent}%
+              {Number.isFinite(trend.percent) ? trend.percent : 0}%
             </div>
             <span className="text-[10px] md:text-[11px] text-cream-400 hidden sm:inline">{t('common.vsLastMonth')}</span>
           </div>

@@ -49,7 +49,7 @@ export default function Wishlist() {
       finally { if (loadVersion.current === version) setLoading(false); }
     };
     load();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   const loadItems = async () => {
     const version = ++loadVersion.current;
@@ -140,7 +140,7 @@ export default function Wishlist() {
                     )}
                     <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handlePurchase(item)} className="p-1.5 rounded-lg hover:bg-success/10 text-cream-400 hover:text-success" title={t('wishlist.markPurchased')}><ShoppingCart size={14} /></button>
-                      <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger"><Trash2 size={14} /></button>
+                      <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-400 hover:text-danger" title={t('wishlist.delete')} aria-label={t('wishlist.delete')}><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>

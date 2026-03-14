@@ -193,7 +193,7 @@ export default function Sidebar() {
             {!collapsed && <span>{t('nav.guide')}</span>}
           </NavLink>
 
-          <NavLink to="/settings" className={navLinkClass}>
+          <NavLink to="/settings" className={navLinkClass} title={collapsed ? t('nav.settings') : undefined}>
             <Settings size={18} strokeWidth={1.5} className="shrink-0" />
             {!collapsed && <span>{t('nav.settings')}</span>}
           </NavLink>

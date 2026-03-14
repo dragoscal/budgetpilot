@@ -69,7 +69,7 @@ export default function Reports() {
         }
       } finally { if (loadVersion.current === version) setLoading(false); }
     })();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   // Filter by date range
   const filtered = useMemo(() => {

@@ -43,8 +43,10 @@ export function ToastProvider({ children }) {
       addToast(msg, 'action', duration, { actionLabel, onAction, onExpire }),
   }), [addToast]);
 
+  const value = useMemo(() => ({ toasts, addToast, removeToast, toast }), [toasts, addToast, removeToast, toast]);
+
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, toast }}>
+    <ToastContext.Provider value={value}>
       {children}
     </ToastContext.Provider>
   );

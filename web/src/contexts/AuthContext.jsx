@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as auth from '../lib/auth';
 import { migrateLocalToUser } from '../lib/migration';
 import { pullAllDataToCache, resetCacheReady } from '../lib/api';
@@ -101,8 +101,12 @@ export function AuthProvider({ children }) {
   // effectiveUserId: real server userId when logged in w/ backend, 'local' otherwise
   const effectiveUserId = user?.id || 'local';
 
+  const value = useMemo(() => ({
+    user, loading, login, register, logout, updateProfile, effectiveUserId,
+  }), [user, loading, login, register, logout, updateProfile, effectiveUserId]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, effectiveUserId }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

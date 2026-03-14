@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { feedbackApi } from '../lib/api';
 import {
   Bug, Lightbulb, MessageSquare, Send, ChevronDown, ChevronUp,
@@ -10,7 +11,8 @@ import {
 
 export default function Feedback() {
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { effectiveUserId } = useAuth();
   const location = useLocation();
   const [type, setType] = useState('bug');
   const [title, setTitle] = useState('');
@@ -36,7 +38,7 @@ export default function Feedback() {
     closed: { label: t('feedback.statusClosed'), icon: CheckCircle, className: 'bg-cream-200 dark:bg-dark-border text-cream-500' },
   };
 
-  useEffect(() => { loadMyFeedback(); }, []);
+  useEffect(() => { loadMyFeedback(); }, [effectiveUserId]);
 
   const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
     return new Promise((resolve) => {
@@ -124,10 +126,12 @@ export default function Feedback() {
     }
   };
 
+  const locale = language === 'ro' ? 'ro-RO' : 'en-GB';
+
   const formatDate = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (

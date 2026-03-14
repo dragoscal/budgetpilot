@@ -59,14 +59,16 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
   );
 
   // Average daily spend by day-of-week (0=Sun, 6=Sat)
+  // Count unique dates per DOW (not transactions) to get correct per-day average
   const dowSpend = [0, 0, 0, 0, 0, 0, 0];
-  const dowCount = [0, 0, 0, 0, 0, 0, 0];
+  const dowDates = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
   for (const tx of recentExpenses) {
-    const dow = new Date(tx.date).getDay();
+    const d = new Date(tx.date);
+    const dow = d.getDay();
     dowSpend[dow] += tx.amount;
-    dowCount[dow]++;
+    dowDates[dow].add(tx.date);
   }
-  const dowAvg = dowSpend.map((total, i) => dowCount[i] > 0 ? total / dowCount[i] : 0);
+  const dowAvg = dowSpend.map((total, i) => dowDates[i].size > 0 ? total / dowDates[i].size : 0);
 
   // Overall average daily spend (fallback)
   const totalDays = Math.max(1, Math.ceil((now - ninetyDaysAgo) / (1000 * 60 * 60 * 24)));
@@ -130,6 +132,23 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
           });
         }
       }
+    } else if (frequency === 'biweekly') {
+      // Schedule every 14 days starting from the nearest occurrence
+      const targetDow = billingDay <= 6 ? billingDay : now.getDay();
+      const todayDow = now.getDay();
+      let firstOffset = (targetDow - todayDow + 7) % 7;
+      for (let d = firstOffset; d < days; d += 14) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        recurringEvents.push({
+          day: d,
+          date: dateToLocalISO(date),
+          amount: r.amount,
+          name: r.name || r.merchant || 'Recurring',
+          isIncome,
+          category: r.category,
+        });
+      }
     } else if (frequency === 'quarterly') {
       // Schedule on billingDay in quarter-boundary months (Jan, Apr, Jul, Oct)
       const quarterMonths = [1, 4, 7, 10];
@@ -145,6 +164,36 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
             isIncome,
             category: r.category,
           });
+        }
+      }
+    } else if (frequency === 'bimonthly') {
+      // Schedule on billingDay every 2 months
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        if (date.getDate() === billingDay) {
+          const monthDiff = (date.getFullYear() - now.getFullYear()) * 12 + date.getMonth() - now.getMonth();
+          if (monthDiff % 2 === 0) {
+            recurringEvents.push({
+              day: d, date: dateToLocalISO(date), amount: r.amount,
+              name: r.name || r.merchant || 'Recurring', isIncome, category: r.category,
+            });
+          }
+        }
+      }
+    } else if (frequency === 'semiannual' || frequency === 'biannual') {
+      // Schedule on billingDay every 6 months
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        if (date.getDate() === billingDay) {
+          const monthDiff = (date.getFullYear() - now.getFullYear()) * 12 + date.getMonth() - now.getMonth();
+          if (monthDiff % 6 === 0) {
+            recurringEvents.push({
+              day: d, date: dateToLocalISO(date), amount: r.amount,
+              name: r.name || r.merchant || 'Recurring', isIncome, category: r.category,
+            });
+          }
         }
       }
     } else {

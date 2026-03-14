@@ -44,7 +44,7 @@ export default function Goals() {
       }
     };
     load();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   const loadGoals = async () => {
     const version = ++loadVersion.current;

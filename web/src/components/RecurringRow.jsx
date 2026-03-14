@@ -146,6 +146,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
             onClick={() => onReactivate(item)}
             className="px-2 py-1.5 rounded-lg bg-success/10 text-success text-xs font-medium hover:bg-success/20 transition-colors flex items-center gap-1"
             title={t('recurring.reactivate')}
+            aria-label={t('recurring.reactivate')}
           >
             <RotateCcw size={12} /> {t('recurring.reactivate')}
           </button>
@@ -158,6 +159,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
                 onClick={() => onToggle(item)}
                 className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500"
                 title={item.active === false ? t('recurring.resume') : t('recurring.pause')}
+                aria-label={item.active === false ? t('recurring.resume') : t('recurring.pause')}
               >
                 {item.active === false ? <Play size={14} /> : <Pause size={14} />}
               </button>
@@ -167,17 +169,18 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
                 onClick={() => onCancel(item)}
                 className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger"
                 title={t('recurring.cancelSubscription')}
+                aria-label={t('recurring.cancelSubscription')}
               >
                 <XCircle size={14} />
               </button>
             )}
             {onEdit && (
-              <button onClick={() => onEdit(item)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500">
+              <button onClick={() => onEdit(item)} className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500" title={t('common.edit')} aria-label={t('common.edit')}>
                 <Edit3 size={14} />
               </button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger">
+              <button onClick={() => onDelete(item)} className="p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger" title={t('common.delete')} aria-label={t('common.delete')}>
                 <Trash2 size={14} />
               </button>
             )}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getSetting } from '../lib/storage';
 import { settings as settingsApi } from '../lib/api';
 
@@ -32,17 +32,21 @@ export function ThemeProvider({ children }) {
     return () => window.removeEventListener('settings-synced', handleSync);
   }, [dark]);
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    settingsApi.set('darkMode', next);
-  };
+  const toggleTheme = useCallback(() => {
+    setDark((prev) => {
+      const next = !prev;
+      document.documentElement.classList.toggle('dark', next);
+      settingsApi.set('darkMode', next);
+      return next;
+    });
+  }, []);
+
+  const value = useMemo(() => ({ dark, toggleTheme }), [dark, toggleTheme]);
 
   if (!loaded) return null;
 
   return (
-    <ThemeContext.Provider value={{ dark, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

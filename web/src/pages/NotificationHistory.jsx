@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { getAllNotifications, markRead, markAllRead, clearAllNotifications } from '../lib/notificationStore';
 import { Bell, CheckCheck, AlertTriangle, TrendingUp, RotateCcw, Info, Trophy, Trash2 } from 'lucide-react';
 import HelpButton from '../components/HelpButton';
+import Modal from '../components/Modal';
 
 const TYPE_ICONS = {
   budget_warning: AlertTriangle,
@@ -44,15 +45,16 @@ function timeAgo(dateStr, t) {
   return t('notifications.timeAgo').replace('{time}', `${days}d`);
 }
 
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
 export default function NotificationHistory() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const locale = language === 'ro' ? 'ro-RO' : 'en-GB';
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'unread'
@@ -65,6 +67,7 @@ export default function NotificationHistory() {
       setNotifications(all);
     } catch (err) {
       console.error('Failed to load notifications:', err);
+      toast.error(t('notifications.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -247,23 +250,13 @@ export default function NotificationHistory() {
       )}
 
       {/* Clear confirmation dialog */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
-                <Trash2 size={20} className="text-danger" />
-              </div>
-              <h3 className="text-sm font-semibold">{t('notifications.clearAll')}</h3>
-            </div>
-            <p className="text-xs text-cream-500 mb-4">{t('notifications.clearAllConfirm')}</p>
-            <div className="flex gap-2">
-              <button onClick={() => setShowClearConfirm(false)} className="btn-secondary flex-1 text-sm">{t('common.cancel')}</button>
-              <button onClick={handleClearAll} className="btn-primary flex-1 text-sm bg-danger hover:bg-danger/90">{t('notifications.clearAll')}</button>
-            </div>
-          </div>
+      <Modal open={showClearConfirm} onClose={() => setShowClearConfirm(false)} title={t('notifications.clearAll')}>
+        <p className="text-sm text-cream-500 mb-4">{t('notifications.clearAllConfirm')}</p>
+        <div className="flex gap-2">
+          <button onClick={() => setShowClearConfirm(false)} className="btn-secondary flex-1 text-sm">{t('common.cancel')}</button>
+          <button onClick={handleClearAll} className="btn-danger flex-1 text-sm">{t('notifications.clearAll')}</button>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

@@ -84,7 +84,7 @@ export default function Recurring() {
       }
     };
     load();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   const loadItems = async () => {
     const version = ++loadVersion.current;

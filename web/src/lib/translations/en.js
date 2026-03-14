@@ -247,6 +247,7 @@ const en = {
   'dashboard.recordAll': 'Record All',
   'dashboard.totalDue': 'Total due',
   'dashboard.viewRecurring': 'Manage recurring →',
+  'dashboard.failedLoad': 'Failed to load dashboard data',
 
   // ─── Transactions ────────────────────────────────────
   'transactions.title': 'Transactions',
@@ -815,6 +816,7 @@ const en = {
   'calendar.billPaid': 'Paid',
   'calendar.billPending': 'Pending',
   'calendar.selectDay': 'Select a day to see details',
+  'calendar.failedLoad': 'Failed to load calendar data',
 
   // ─── Cash Flow ───────────────────────────────────────
   'cashflow.title': 'Cash Flow',
@@ -854,6 +856,7 @@ const en = {
   'cashflow.projectedBalance': 'Projected balance ({days} days)',
   'cashflow.balance': 'Balance',
   'cashflow.upcomingBillsIncome': 'Upcoming bills & income',
+  'cashflow.failedLoad': 'Failed to load cash flow data',
 
   // ─── Net Worth ───────────────────────────────────────
   'networth.title': 'Net Worth',
@@ -928,6 +931,7 @@ const en = {
   'analytics.spendingByTag': 'Spending by tag',
   'analytics.subcategories': 'Subcategories',
   'analytics.clickCategory': 'Click a category to see subcategories',
+  'analytics.failedLoad': 'Failed to load analytics',
 
   // ─── People & Debts ──────────────────────────────────
   'people.title': 'People & Debts',
@@ -1468,6 +1472,7 @@ const en = {
   'review.recurringDesc': '{count} active subscriptions/bills totaling',
   'review.perMonth': '/month',
   'review.transactionsThisMonth': '{count} transactions this month',
+  'review.failedLoad': 'Failed to load monthly review',
 
   // ─── Settings ────────────────────────────────────────
   'settings.title': 'Settings',
@@ -2270,6 +2275,7 @@ const en = {
   'notifications.typeAchievement': 'Achievement',
   'notifications.typePace': 'Spending',
   'notifications.typeInfo': 'Info',
+  'notifications.failedLoad': 'Failed to load notifications',
 
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Share Target',
@@ -2388,6 +2394,10 @@ const en = {
   'recurring.weeksInRow': '{count} weeks in a row',
   'recurring.quartersInRow': '{count} quarters in a row',
   'recurring.yearsInRow': '{count} years in a row',
+  'changelog.v451security': 'Backend security hardened — constant-time auth, atomic operations, CORS fixes',
+  'changelog.v451performance': 'Performance boost — all React contexts stabilized with useMemo, forecasting accuracy improved',
+  'changelog.v451errorHandling': 'Error handling improved — user-facing toasts on all data load failures',
+  'changelog.v451accessibility': 'Accessibility improvements — aria labels, keyboard nav, NaN guards',
   'changelog.v450redesign': 'Complete visual redesign — warm editorial palette with teal accents replacing the old indigo theme',
   'changelog.v450typography': 'New typography — Newsreader serif headings and Instrument Sans body for a premium editorial feel',
   'changelog.v450darkMode': 'Dark mode refined with warm dark tones instead of cold blue-black',

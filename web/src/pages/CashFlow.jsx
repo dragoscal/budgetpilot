@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
@@ -15,6 +16,7 @@ import HelpButton from '../components/HelpButton';
 
 export default function CashFlow() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
   const [allTx, setAllTx] = useState([]);
   const [recurringItems, setRecurring] = useState([]);
@@ -45,10 +47,10 @@ export default function CashFlow() {
         const fc = await forecastCashFlow({ userId: effectiveUserId, days: forecastDays, defaultCurrency: currency });
         if (version !== loadVersion.current) return; // stale
         setForecast(fc);
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error(err); toast.error(t('cashflow.failedLoad')); }
       finally { if (version === loadVersion.current) setLoading(false); }
     })();
-  }, [forecastDays, effectiveUserId]);
+  }, [forecastDays, effectiveUserId, toast, t]);
 
   // Current month stats
   const now = new Date();

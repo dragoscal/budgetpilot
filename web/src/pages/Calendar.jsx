@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { transactions as txApi, recurring as recurringApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
 import { formatCurrency, getCategoryById, sortByDate, sumAmountsMultiCurrency } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
@@ -241,6 +242,7 @@ function MobileBottomSheet({ open, onClose, children }) {
 
 export default function CalendarPage() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
   const [month, setMonth] = useState(new Date());
   const [transactions, setTransactions] = useState([]);
@@ -272,7 +274,7 @@ export default function CalendarPage() {
         setTransactions(allTx.filter((tx) => { const d = new Date(tx.date); return d >= start && d <= end; }));
         setRecurring(rec.filter((r) => r.active !== false));
         getCachedRates().then(setRates).catch(() => {});
-      } catch (err) { if (loadVersion.current === version) console.error(err); }
+      } catch (err) { if (loadVersion.current === version) { console.error(err); toast.error(t('calendar.failedLoad')); } }
       finally { if (loadVersion.current === version) setLoading(false); }
     })();
   }, [month, effectiveUserId]);
@@ -445,6 +447,7 @@ export default function CalendarPage() {
                           <button
                             key={key}
                             onClick={() => handleDayClick(key)}
+                            aria-label={format(day, 'd MMMM yyyy')}
                             className={`
                               aspect-square sm:aspect-auto sm:h-24 lg:h-28
                               p-1 sm:p-1.5 lg:p-2
@@ -574,6 +577,7 @@ export default function CalendarPage() {
                     if (!data) {
                       return (
                         <button key={key} onClick={() => handleDayClick(key)}
+                          aria-label={format(day, 'd MMMM yyyy')}
                           className="rounded-lg bg-cream-50/30 dark:bg-cream-800/10 p-1.5 text-left opacity-40">
                           <p className="text-xs text-cream-400 text-center">{format(day, 'd')}</p>
                         </button>
@@ -584,6 +588,7 @@ export default function CalendarPage() {
                       <button
                         key={key}
                         onClick={() => handleDayClick(key)}
+                        aria-label={format(day, 'd MMMM yyyy')}
                         className={`rounded-lg p-1.5 sm:p-2 text-left flex flex-col gap-1 transition-colors border ${
                           isSelected ? 'border-accent-300 dark:border-accent-500/30 bg-accent-50/50 dark:bg-accent-500/10' :
                           isDay ? 'border-accent-200/50 dark:border-accent-500/10 bg-accent-50/20' :

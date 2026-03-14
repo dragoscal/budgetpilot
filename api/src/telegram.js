@@ -225,8 +225,9 @@ export function registerTelegramRoutes(router) {
     return json({ ok: true, message: 'Photo processing not yet available via Telegram' });
   });
 
-  // GET /api/telegram/test — test bot token
+  // GET /api/telegram/test — test bot token (admin-only to prevent SSRF)
   router.post('/api/telegram/test', async (ctx) => {
+    if (ctx.user?.role !== 'admin') return new Response('Forbidden', { status: 403 });
     const { botToken } = ctx.body;
     if (!botToken) return json({ error: 'Bot token required' }, 400);
 
@@ -242,8 +243,9 @@ export function registerTelegramRoutes(router) {
     }
   });
 
-  // POST /api/telegram/set-webhook — set Telegram webhook URL
+  // POST /api/telegram/set-webhook — set Telegram webhook URL (admin-only to prevent SSRF)
   router.post('/api/telegram/set-webhook', async (ctx) => {
+    if (ctx.user?.role !== 'admin') return new Response('Forbidden', { status: 403 });
     const { botToken, webhookUrl } = ctx.body;
     if (!botToken || !webhookUrl) return json({ error: 'Bot token and webhook URL required' }, 400);
 

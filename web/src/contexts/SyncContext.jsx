@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getSetting } from '../lib/storage';
 
 const SyncContext = createContext(null);
@@ -39,8 +39,12 @@ export function SyncProvider({ children }) {
   // No-op — server-first model has no sync queue
   const syncNow = useCallback(async () => ({}), []);
 
+  const value = useMemo(() => ({
+    ...status, syncNow, refreshStatus,
+  }), [status, syncNow, refreshStatus]);
+
   return (
-    <SyncContext.Provider value={{ ...status, syncNow, refreshStatus }}>
+    <SyncContext.Provider value={value}>
       {children}
     </SyncContext.Provider>
   );

@@ -126,7 +126,7 @@ export default function Challenges() {
       finally { if (loadVersion.current === version) setLoading(false); }
     };
     load();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   const loadData = async () => {
     const version = ++loadVersion.current;

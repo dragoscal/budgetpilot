@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { transactions as txApi, budgets as budgetsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
 import { formatCurrency, sumBy, sumAmountsMultiCurrency, groupBy, getCategoryById, percentOf, getDisplayAmount } from '../lib/helpers';
 import { getCachedRates } from '../lib/exchangeRates';
 import { useCategories } from '../hooks/useCategories';
@@ -17,6 +18,7 @@ import HelpButton from '../components/HelpButton';
 
 export default function Analytics() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
   const { subcategories } = useCategories();
   const [month, setMonth] = useState(new Date());
@@ -46,10 +48,10 @@ export default function Analytics() {
         setAllTx(tx);
         setBudgets(budgets);
         setRates(ratesData);
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error(err); toast.error(t('analytics.failedLoad')); }
       finally { if (version === loadVersion.current) setLoading(false); }
     })();
-  }, [effectiveUserId]);
+  }, [effectiveUserId, toast, t]);
 
   const monthTx = useMemo(() => {
     const start = startOfMonth(month);

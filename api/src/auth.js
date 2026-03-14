@@ -73,15 +73,25 @@ export async function hashPassword(password, salt) {
   return 'pbkdf2:' + btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
 }
 
+// Constant-time string comparison to prevent timing attacks on password hashes
+function constantTimeEquals(a, b) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // Verify password against stored hash (supports both legacy SHA-256 and PBKDF2)
 export async function verifyPassword(password, salt, storedHash) {
   if (storedHash.startsWith('pbkdf2:')) {
     const newHash = await hashPassword(password, salt);
-    return newHash === storedHash;
+    return constantTimeEquals(newHash, storedHash);
   }
   // Legacy SHA-256 verification
   const legacyHash = await hashPasswordLegacy(password, salt);
-  return legacyHash === storedHash;
+  return constantTimeEquals(legacyHash, storedHash);
 }
 
 // Check if a hash needs migration to PBKDF2

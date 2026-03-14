@@ -59,10 +59,12 @@ export function registerAdminRoutes(router) {
 
     const salt = generateSalt();
     const passwordHash = await hashPassword(newPassword, salt);
+    const now = new Date().toISOString();
 
+    // Set tokenIssuedAt to invalidate all existing tokens for this user
     await ctx.env.DB.prepare(
-      'UPDATE users SET passwordHash = ?, salt = ?, updatedAt = ? WHERE id = ?'
-    ).bind(passwordHash, salt, new Date().toISOString(), id).run();
+      'UPDATE users SET passwordHash = ?, salt = ?, tokenIssuedAt = ?, updatedAt = ? WHERE id = ?'
+    ).bind(passwordHash, salt, now, now, id).run();
 
     await logActivity(ctx.env.DB, ctx.user.id, 'admin_reset_password', { targetUserId: id });
 
@@ -163,9 +165,13 @@ export function registerAdminRoutes(router) {
     // Now safe to delete the user's families
     await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(id).run();
 
-    // Phase 5: Clean up orphaned FK records from other tables
-    await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts)`).run();
-    await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans)`).run();
+    // Phase 5: Clean up orphaned FK records — scoped to deleted user to prevent cross-user deletion
+    try {
+      await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts) AND userId = ?`).bind(id).run();
+      await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans) AND userId = ?`).bind(id).run();
+    } catch (e) {
+      console.error('Orphan cleanup failed during admin user deletion:', e.message);
+    }
 
     // Phase 6: Delete the user record itself (all FKs referencing users.id are now cleared)
     await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();

@@ -247,6 +247,7 @@ const ro = {
   'dashboard.recordAll': 'Înregistrează toate',
   'dashboard.totalDue': 'Total de plată',
   'dashboard.viewRecurring': 'Gestionează recurente →',
+  'dashboard.failedLoad': 'Eroare la încărcarea dashboard-ului',
 
   // ─── Tranzacții ──────────────────────────────────────
   'transactions.title': 'Tranzacții',
@@ -815,6 +816,7 @@ const ro = {
   'calendar.billPaid': 'Plătit',
   'calendar.billPending': 'În așteptare',
   'calendar.selectDay': 'Selectează o zi pentru detalii',
+  'calendar.failedLoad': 'Eroare la încărcarea calendarului',
 
   // ─── Flux numerar ────────────────────────────────────
   'cashflow.title': 'Flux de numerar',
@@ -854,6 +856,7 @@ const ro = {
   'cashflow.projectedBalance': 'Sold proiectat ({days} zile)',
   'cashflow.balance': 'Sold',
   'cashflow.upcomingBillsIncome': 'Facturi și venituri viitoare',
+  'cashflow.failedLoad': 'Eroare la încărcarea fluxului de numerar',
 
   // ─── Avere netă ──────────────────────────────────────
   'networth.title': 'Avere netă',
@@ -928,6 +931,7 @@ const ro = {
   'analytics.spendingByTag': 'Cheltuieli pe etichete',
   'analytics.subcategories': 'Subcategorii',
   'analytics.clickCategory': 'Click pe o categorie pentru subcategorii',
+  'analytics.failedLoad': 'Eroare la încărcarea analizelor',
 
   // ─── Persoane și datorii ─────────────────────────────
   'people.title': 'Persoane & Datorii',
@@ -1468,6 +1472,7 @@ const ro = {
   'review.recurringDesc': '{count} abonamente/facturi active, în total',
   'review.perMonth': '/lună',
   'review.transactionsThisMonth': '{count} tranzacții luna aceasta',
+  'review.failedLoad': 'Eroare la încărcarea revizuirii lunare',
 
   // ─── Setări ──────────────────────────────────────────
   'settings.title': 'Setări',
@@ -2270,6 +2275,7 @@ const ro = {
   'notifications.typeAchievement': 'Realizare',
   'notifications.typePace': 'Cheltuieli',
   'notifications.typeInfo': 'Info',
+  'notifications.failedLoad': 'Eroare la încărcarea notificărilor',
 
   // ─── PWA ──────────────────────────────────────────────────
   'pwa.shareTarget': 'Țintă partajare',
@@ -2388,6 +2394,10 @@ const ro = {
   'recurring.weeksInRow': '{count} săptămâni consecutive',
   'recurring.quartersInRow': '{count} trimestre consecutive',
   'recurring.yearsInRow': '{count} ani consecutivi',
+  'changelog.v451security': 'Securitate backend consolidată — autentificare cu timp constant, operații atomice, corecții CORS',
+  'changelog.v451performance': 'Creștere de performanță — toate contextele React stabilizate cu useMemo, prognoze îmbunătățite',
+  'changelog.v451errorHandling': 'Gestionare erori îmbunătățită — notificări vizibile la eșecul încărcării datelor',
+  'changelog.v451accessibility': 'Accesibilitate îmbunătățită — etichete aria, navigare cu tastatura, protecție NaN',
   'changelog.v450redesign': 'Redesign vizual complet — paletă editorială caldă cu accente teal în locul temei indigo vechi',
   'changelog.v450typography': 'Tipografie nouă — titluri serif Newsreader și corp Instrument Sans pentru un aspect editorial premium',
   'changelog.v450darkMode': 'Mod întunecat rafinat cu tonuri calde în loc de albastru-negru rece',
