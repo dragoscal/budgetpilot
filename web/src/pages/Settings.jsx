@@ -13,7 +13,7 @@ import { CURRENCIES, AI_PROVIDERS, HIDE_AMOUNTS_OPTIONS } from '../lib/constants
 import { getRates, fetchRates, getManualOverrides, setManualOverride, clearOverrides, getRatesUpdatedAt } from '../lib/exchangeRates';
 import { useNavigate } from 'react-router-dom';
 import { requestNotificationPermission, getNotificationPermission } from '../lib/notifications';
-import { Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X } from 'lucide-react';
+import { Moon, Sun, Key, Database, Download, Upload, Trash2, AlertTriangle, MessageSquare, UserX, Bot, EyeOff, LogOut, CloudUpload, CheckCircle2, RefreshCw, DollarSign, Lock, Bell, Tag, Plus, X, Smartphone, Share, Monitor } from 'lucide-react';
 import { getAllLearnedCategories, removeLearnedCategory, learnCategory } from '../lib/smartFeatures';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel, addCustomCategory, updateCustomCategory, deleteCustomCategory, toggleCategoryVisibility } from '../lib/categoryManager';
@@ -472,6 +472,82 @@ export default function SettingsPage() {
             {notifPermission === 'denied' && (
               <p className="text-xs text-cream-400 mt-1">{t('settings.notificationHelp')}</p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Install App Guide */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><Smartphone size={14} /> {t('settings.installApp')}</h3>
+        <p className="text-sm text-cream-600 dark:text-cream-400 mb-4">
+          {t('settings.installAppDesc')}
+        </p>
+
+        {/* Already installed badge */}
+        {typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/20 mb-4">
+            <CheckCircle2 size={16} className="text-success shrink-0" />
+            <p className="text-sm font-medium text-success">{t('settings.installAlreadyInstalled')}</p>
+          </div>
+        )}
+
+        {/* iOS Instructions */}
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+              <Smartphone size={14} className="text-cream-500" />
+              {t('settings.installIosTitle')}
+            </h4>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 mb-3">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle size={12} className="shrink-0" />
+                {t('settings.installIosSafariOnly')}
+              </p>
+            </div>
+            <ol className="text-xs text-cream-600 dark:text-cream-400 space-y-2 list-decimal list-inside">
+              <li>
+                <span className="font-medium">{t('settings.installIosGuideStep1')}</span>
+                <p className="text-cream-500 ml-5 mt-0.5">{t('settings.installIosGuideStep1Desc')}</p>
+              </li>
+              <li>
+                <span className="font-medium">{t('settings.installIosGuideStep2')}</span>{' '}
+                <Share size={12} className="inline -mt-0.5 text-accent-600" />
+                <p className="text-cream-500 ml-5 mt-0.5">{t('settings.installIosGuideStep2Desc')}</p>
+              </li>
+              <li>
+                <span className="font-medium">{t('settings.installIosGuideStep3')}</span>
+                <p className="text-cream-500 ml-5 mt-0.5">{t('settings.installIosGuideStep3Desc')}</p>
+              </li>
+              <li>
+                <span className="font-medium">{t('settings.installIosGuideStep4')}</span>
+                <p className="text-cream-500 ml-5 mt-0.5">{t('settings.installIosGuideStep4Desc')}</p>
+              </li>
+            </ol>
+          </div>
+
+          {/* Android Instructions */}
+          <div className="border-t border-cream-200 dark:border-dark-border pt-4">
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Smartphone size={14} className="text-cream-500" />
+              {t('settings.installAndroidTitle')}
+            </h4>
+            <ol className="text-xs text-cream-600 dark:text-cream-400 space-y-1.5 list-decimal list-inside">
+              <li>{t('settings.installAndroidStep1')}</li>
+              <li>{t('settings.installAndroidStep2')}</li>
+              <li>{t('settings.installAndroidStep3')}</li>
+            </ol>
+          </div>
+
+          {/* Desktop Instructions */}
+          <div className="border-t border-cream-200 dark:border-dark-border pt-4">
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Monitor size={14} className="text-cream-500" />
+              {t('settings.installDesktopTitle')}
+            </h4>
+            <ol className="text-xs text-cream-600 dark:text-cream-400 space-y-1.5 list-decimal list-inside">
+              <li>{t('settings.installDesktopStep1')}</li>
+              <li>{t('settings.installDesktopStep2')}</li>
+            </ol>
           </div>
         </div>
       </div>
