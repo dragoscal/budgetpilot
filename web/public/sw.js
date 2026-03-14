@@ -1,8 +1,10 @@
 // LUMET Service Worker — Cache-first for app shell, network-first for data
-const CACHE_NAME = 'lumet-v3';
+const CACHE_NAME = 'lumet-v4';
 const STATIC_ASSETS = [
   '/',
   '/favicon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/manifest.json',
 ];
 
