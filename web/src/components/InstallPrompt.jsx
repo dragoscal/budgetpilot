@@ -1,29 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Download, X, Share } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
+import { usePwaInstall, isIOS, isInStandaloneMode } from '../hooks/usePwaInstall';
 
 const DISMISS_KEY = 'bp_installDismissed';
 const DISMISS_COUNT_KEY = 'bp_installDismissCount';
 const MAX_DISMISSALS = 3;
 
-function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function isInStandaloneMode() {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-}
-
 export default function InstallPrompt() {
   const { t } = useTranslation();
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const { canInstallNatively, isInstalled, triggerInstall } = usePwaInstall();
   const [show, setShow] = useState(false);
   const [showIOS, setShowIOS] = useState(false);
 
   useEffect(() => {
-    if (isInStandaloneMode()) return;
+    if (isInstalled || isInStandaloneMode()) return;
 
     const dismissCount = parseInt(localStorage.getItem(DISMISS_COUNT_KEY) || '0', 10);
     if (dismissCount >= MAX_DISMISSALS) return;
@@ -40,25 +31,15 @@ export default function InstallPrompt() {
       return;
     }
 
-    // Chrome/Edge/Android — standard install prompt
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+    // Chrome/Edge/Android — show when prompt is available
+    if (canInstallNatively) {
       setTimeout(() => setShow(true), 3000);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+    }
+  }, [isInstalled, canInstallNatively]);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShow(false);
-      setDeferredPrompt(null);
-    }
+    const accepted = await triggerInstall();
+    if (accepted) setShow(false);
   };
 
   const handleDismiss = () => {
