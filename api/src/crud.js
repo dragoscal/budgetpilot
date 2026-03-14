@@ -347,43 +347,45 @@ export function registerCrudRoutes(router) {
     const limit = Math.min(parseInt(ctx.query.limit) || 10000, 10000);
     const offset = parseInt(ctx.query.offset) || 0;
 
-    const tables = {};
+    // Build all queries upfront, then execute in a single DB.batch() round trip
+    const stmts = [];
+    const tableOrder = [];
     for (const table of ALLOWED_TABLES) {
-      let result;
-
+      tableOrder.push(table);
       if (table === 'families') {
-        // #10: Include families the user joined (via family_members), not just created
-        result = await ctx.env.DB.prepare(
+        stmts.push(ctx.env.DB.prepare(
           `SELECT DISTINCT f.* FROM families f
            LEFT JOIN family_members fm ON f.id = fm.familyId
            WHERE (f.createdBy = ? OR fm.userId = ?) AND f.updatedAt > ?
            ORDER BY f.updatedAt ASC LIMIT ? OFFSET ?`
-        ).bind(userId, userId, since, limit, offset).all();
+        ).bind(userId, userId, since, limit, offset));
       } else if (table === 'family_members') {
-        // #11: Include all members of families the user belongs to
-        result = await ctx.env.DB.prepare(
+        stmts.push(ctx.env.DB.prepare(
           `SELECT fm.* FROM family_members fm
            WHERE fm.familyId IN (SELECT familyId FROM family_members WHERE userId = ?)
            AND fm.updatedAt > ?
            ORDER BY fm.updatedAt ASC LIMIT ? OFFSET ?`
-        ).bind(userId, since, limit, offset).all();
+        ).bind(userId, since, limit, offset));
       } else if (table === 'shared_expenses') {
-        // #4: Include all shared expenses from families the user belongs to
-        result = await ctx.env.DB.prepare(
+        stmts.push(ctx.env.DB.prepare(
           `SELECT se.* FROM shared_expenses se
            WHERE se.familyId IN (SELECT familyId FROM family_members WHERE userId = ?)
            AND se.updatedAt > ?
            ORDER BY se.updatedAt ASC LIMIT ? OFFSET ?`
-        ).bind(userId, since, limit, offset).all();
+        ).bind(userId, since, limit, offset));
       } else {
         const userCol = getUserColumn(table);
         const deletedFilter = table === 'transactions' ? ' AND (deletedAt IS NULL OR deletedAt = "")' : '';
-        result = await ctx.env.DB.prepare(
+        stmts.push(ctx.env.DB.prepare(
           `SELECT * FROM ${table} WHERE ${userCol} = ? AND updatedAt > ?${deletedFilter} ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
-        ).bind(userId, since, limit, offset).all();
+        ).bind(userId, since, limit, offset));
       }
+    }
 
-      tables[table] = (result.results || []).map(r => deserializeRow(table, r));
+    const batchResults = await ctx.env.DB.batch(stmts);
+    const tables = {};
+    for (let i = 0; i < tableOrder.length; i++) {
+      tables[tableOrder[i]] = (batchResults[i].results || []).map(r => deserializeRow(tableOrder[i], r));
     }
 
     return json({ data: tables, syncedAt: new Date().toISOString() });

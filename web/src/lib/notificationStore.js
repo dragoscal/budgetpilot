@@ -29,7 +29,7 @@ export async function addNotification({ type, title, message, actionUrl }) {
 export async function getNotifications(limit = 50) {
   const db = await getDB();
   const all = await db.getAll('notifications');
-  return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  return all.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, limit);
 }
 
 export async function getUnreadCount() {
@@ -70,7 +70,7 @@ export async function clearOldNotifications(daysOld = 30) {
 export async function getAllNotifications() {
   const db = await getDB();
   const all = await db.getAll('notifications');
-  return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return all.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 export async function clearAllNotifications() {

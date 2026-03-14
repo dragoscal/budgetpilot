@@ -3,6 +3,7 @@ import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { formatCurrency, sumBy, getCategoryById, percentOf } from '../../lib/helpers';
+import { getCategoryLabel } from '../../lib/categoryManager';
 import { startOfMonth, endOfMonth, format, isToday, isYesterday } from 'date-fns';
 import EmptyState from '../EmptyState';
 import { Receipt } from 'lucide-react';
@@ -70,8 +71,8 @@ export default function FamilyAllExpenses() {
     return Object.entries(groups).map(([date, txs]) => {
       const d = new Date(date + 'T00:00:00');
       let label = format(d, 'MMM d');
-      if (isToday(d)) label = 'Today';
-      else if (isYesterday(d)) label = 'Yesterday';
+      if (isToday(d)) label = t('common.today');
+      else if (isYesterday(d)) label = t('common.yesterday');
       return { date, label, txs };
     });
   }, [filteredTx]);
@@ -97,7 +98,7 @@ export default function FamilyAllExpenses() {
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="flex items-center gap-1.5">
                     <span>{c.info.icon}</span>
-                    <span className="font-medium">{c.info.name}</span>
+                    <span className="font-medium">{getCategoryLabel(c.info, t)}</span>
                   </span>
                   <span className="text-xs text-cream-500">
                     {formatCurrency(c.amount, currency)} · {c.pct}%
@@ -159,7 +160,7 @@ export default function FamilyAllExpenses() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium truncate">
-                            {tx.merchant || tx.description || cat.name}
+                            {tx.merchant || tx.description || getCategoryLabel(cat, t)}
                           </p>
                           {tx.scope === 'household' && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 font-medium shrink-0">

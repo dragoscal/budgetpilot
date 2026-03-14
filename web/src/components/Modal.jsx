@@ -1,10 +1,12 @@
 import { useEffect, useRef, useId } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export default function Modal({ open, onClose, title, children, wide = false }) {
   const overlayRef = useRef(null);
   const dialogRef = useRef(null);
   const titleId = useId();
+  const { t } = useTranslation();
 
   // Escape key + body scroll lock
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function Modal({ open, onClose, title, children, wide = false }) 
         
         <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 dark:border-dark-border shrink-0">
           <h3 id={titleId} className="font-heading font-semibold text-lg">{title}</h3>
-          <button onClick={onClose} aria-label="Close dialog" className="p-1.5 rounded-xl text-cream-400 hover:bg-cream-100 hover:text-cream-600 dark:hover:bg-dark-border dark:hover:text-cream-300 transition-all">
+          <button onClick={onClose} aria-label={t('common.closeDialog')} className="p-1.5 rounded-xl text-cream-400 hover:bg-cream-100 hover:text-cream-600 dark:hover:bg-dark-border dark:hover:text-cream-300 transition-all">
             <X size={18} />
           </button>
         </div>

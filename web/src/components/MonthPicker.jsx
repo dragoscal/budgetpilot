@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
 export default function MonthPicker({ value, onChange }) {
-  const { language } = useTranslation();
+  const { t, language } = useTranslation();
   const locale = language === 'ro' ? ro : enUS;
 
   return (
@@ -12,6 +12,7 @@ export default function MonthPicker({ value, onChange }) {
       <button
         onClick={() => onChange(subMonths(value, 1))}
         className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 transition-colors"
+        aria-label={t('common.previousMonth')}
       >
         <ChevronLeft size={18} />
       </button>
@@ -21,6 +22,7 @@ export default function MonthPicker({ value, onChange }) {
       <button
         onClick={() => onChange(addMonths(value, 1))}
         className="p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 transition-colors"
+        aria-label={t('common.nextMonth')}
       >
         <ChevronRight size={18} />
       </button>

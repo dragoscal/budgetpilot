@@ -103,7 +103,7 @@ router.use(async (ctx) => {
 
 // ─── Health Check ─────────────────────────────────────────
 router.get('/api/health', async () => {
-  return json({ status: 'ok', service: 'BudgetPilot API', version: '1.0.0' });
+  return json({ status: 'ok', service: 'BudgetPilot API', version: '4.8.0' });
 });
 
 // ─── Auth Routes ──────────────────────────────────────────

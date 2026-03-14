@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { feedbackApi } from '../lib/api';
 import {
   MessageSquare, Bug, Lightbulb, Send, X, Loader2, ChevronRight,
@@ -44,24 +45,8 @@ export default function FeedbackFAB() {
   }, [open]);
 
   // Close on click/touch outside
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    // Delay to avoid catching the FAB click/touch itself
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handler);
-      document.addEventListener('touchstart', handler, { passive: true });
-    }, 50);
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [open]);
+  const closeFeedback = useCallback(() => setOpen(false), []);
+  useClickOutside(modalRef, closeFeedback, open, { delay: 50, touch: true });
 
   // Don't show FAB on the dedicated feedback page (after hooks to preserve hook order)
   if (hidden) return null;

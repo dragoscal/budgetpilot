@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { Zap, X, ArrowRight, Loader2 } from 'lucide-react';
 
 const HIDDEN_PATHS = ['/add', '/login', '/register', '/onboarding'];
@@ -37,24 +38,8 @@ export default function QuickAddFAB() {
   }, [open]);
 
   // Close on click/touch outside
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        setOpen(false);
-        setText('');
-      }
-    };
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handler);
-      document.addEventListener('touchstart', handler, { passive: true });
-    }, 50);
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [open]);
+  const closeModal = useCallback(() => { setOpen(false); setText(''); }, []);
+  useClickOutside(modalRef, closeModal, open, { delay: 50, touch: true });
 
   // Don't show on certain pages (after all hooks to preserve hook order)
   if (hidden) return null;
@@ -76,7 +61,7 @@ export default function QuickAddFAB() {
       {/* FAB Button */}
       <button
         onClick={() => setOpen(true)}
-        className={`fixed z-50 bottom-[5.5rem] right-14 md:bottom-6 md:right-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-success hover:bg-success/90 text-white shadow-lg transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
+        className={`fixed z-50 bottom-[8.5rem] right-3 md:bottom-6 md:right-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-success hover:bg-success/90 text-white shadow-lg transition-all duration-200 flex items-center justify-center group ${open ? 'scale-0 opacity-0' : 'scale-100 opacity-80 hover:opacity-100'}`}
         aria-label={t('quickAdd.fabTooltip')}
         title={t('quickAdd.fabTooltip')}
       >

@@ -71,10 +71,10 @@ export async function register({ name, email, password, defaultCurrency = 'RON' 
         throw new Error(err.error || 'Registration failed');
       }
       const data = await res.json();
-      // Use sessionStorage by default (same as login without "remember me")
-      sessionStorage.setItem(TOKEN_KEY, data.token);
+      // Use localStorage so new users stay logged in across sessions
+      localStorage.setItem(TOKEN_KEY, data.token);
       const session = { userId: data.user.id, token: data.token, createdAt: new Date().toISOString() };
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
       // Derive encryption key from password for future AI key encryption
       try {

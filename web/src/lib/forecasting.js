@@ -8,7 +8,7 @@
  */
 
 import { getAll } from './storage';
-import { calcMonthlyEquivalent, dateToLocalISO } from './helpers';
+import { calcMonthlyEquivalent, dateToLocalISO, parseLocalDate } from './helpers';
 
 /**
  * Forecast cash flow for the next N days
@@ -63,7 +63,7 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
   const dowSpend = [0, 0, 0, 0, 0, 0, 0];
   const dowDates = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
   for (const tx of recentExpenses) {
-    const d = new Date(tx.date);
+    const d = parseLocalDate(tx.date);
     const dow = d.getDay();
     dowSpend[dow] += tx.amount;
     dowDates[dow].add(tx.date);

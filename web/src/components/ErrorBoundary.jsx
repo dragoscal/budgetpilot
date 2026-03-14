@@ -1,7 +1,10 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { LanguageContext } from '../contexts/LanguageContext';
 
 export default class ErrorBoundary extends Component {
+  static contextType = LanguageContext;
+
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, isChunkError: false };
@@ -34,6 +37,7 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       const { isChunkError } = this.state;
+      const t = this.context?.t || ((k) => k);
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-8">
           <div className="text-center max-w-md space-y-4">
@@ -41,25 +45,25 @@ export default class ErrorBoundary extends Component {
               <AlertTriangle size={32} className="text-red-500" />
             </div>
             <h2 className="text-xl font-bold text-cream-900 dark:text-cream-100">
-              {isChunkError ? 'Page failed to load' : 'Something went wrong'}
+              {isChunkError ? t('error.pageFailedLoad') : t('error.somethingWrong')}
             </h2>
             <p className="text-sm text-cream-500">
               {isChunkError
-                ? 'A new version may have been deployed. Refreshing should fix this.'
-                : (this.state.error?.message || 'An unexpected error occurred. Please try again.')}
+                ? t('error.newVersionDeployed')
+                : (this.state.error?.message || t('error.unexpected'))}
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={this.handleRetry}
                 className="btn-primary flex items-center gap-2"
               >
-                <RefreshCw size={16} /> {isChunkError ? 'Refresh Page' : 'Try Again'}
+                <RefreshCw size={16} /> {isChunkError ? t('error.refreshPage') : t('error.tryAgain')}
               </button>
               <button
                 onClick={() => { window.location.href = '/'; }}
                 className="btn-secondary flex items-center gap-2"
               >
-                <Home size={16} /> Go Home
+                <Home size={16} /> {t('error.goHome')}
               </button>
             </div>
           </div>

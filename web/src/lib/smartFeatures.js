@@ -169,10 +169,13 @@ function splitByBillingSlot(txns) {
   }
 
   // Find mode (most common count of transactions per month)
+  if (months.length === 0) return [txns];
   const counts = months.map(m => byMonth[m].length);
   const countFreq = {};
   counts.forEach(c => { countFreq[c] = (countFreq[c] || 0) + 1; });
-  const mode = parseInt(Object.entries(countFreq).sort((a, b) => b[1] - a[1])[0][0]);
+  const sorted = Object.entries(countFreq).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) return [txns];
+  const mode = parseInt(sorted[0][0]);
   const modeCount = countFreq[mode] || 0;
 
   if (mode <= 1 || modeCount < 2) return [txns]; // Need 2+ months with same count to be confident

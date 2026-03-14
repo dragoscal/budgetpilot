@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { HelpCircle, X, ChevronRight, Lightbulb } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 // Tips config: each page has 3 tips
 const PAGE_TIPS = {
@@ -33,14 +34,8 @@ export default function HelpButton({ section, className = '' }) {
   const config = PAGE_TIPS[section] || { tips: 3, guide: section };
 
   // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    setTimeout(() => document.addEventListener('mousedown', handler), 0);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const closePanel = useCallback(() => setOpen(false), []);
+  useClickOutside(ref, closePanel, open, { delay: 10 });
 
   // Close on Escape
   useEffect(() => {

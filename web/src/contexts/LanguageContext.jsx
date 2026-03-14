@@ -3,7 +3,7 @@ import { getSetting } from '../lib/storage';
 import { settings as settingsApi } from '../lib/api';
 import { t as tRaw, setCurrentLanguage, getCurrentLanguage, getAvailableLanguages } from '../lib/i18n';
 
-const LanguageContext = createContext(null);
+export const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
   const [language, setLanguageState] = useState('en'); // default English

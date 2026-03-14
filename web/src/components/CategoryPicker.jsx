@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSubcategoryById, getCategoryById } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { useCategories } from '../hooks/useCategories';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { Search, ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -57,19 +58,12 @@ export default function CategoryPicker({
   const currentSub = subcategoryValue ? getSubcategoryById(subcategoryValue) : null;
 
   // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) &&
-          triggerRef.current && !triggerRef.current.contains(e.target)) {
-        setOpen(false);
-        setSearch('');
-        setExpandedParent(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const closePanel = useCallback(() => {
+    setOpen(false);
+    setSearch('');
+    setExpandedParent(null);
+  }, []);
+  useClickOutside(panelRef, closePanel, open, { ignoreRef: triggerRef });
 
   // Close on Escape
   useEffect(() => {

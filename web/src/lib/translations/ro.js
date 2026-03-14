@@ -78,6 +78,18 @@ const ro = {
   'common.other': 'Altele',
   'common.undo': 'Anulează',
   'common.error': 'Ceva nu a funcționat',
+  'common.previousMonth': 'Luna anterioară',
+  'common.nextMonth': 'Luna următoare',
+  'common.closeDialog': 'Închide dialogul',
+
+  // ─── Limita de erori ───────────────────────────────────
+  'error.pageFailedLoad': 'Pagina nu s-a putut încărca',
+  'error.somethingWrong': 'Ceva nu a funcționat',
+  'error.newVersionDeployed': 'O versiune nouă a fost publicată. Reîmprospătează pagina pentru ultima actualizare.',
+  'error.unexpected': 'A apărut o eroare neașteptată.',
+  'error.refreshPage': 'Reîmprospătează',
+  'error.tryAgain': 'Încearcă din nou',
+  'error.goHome': 'Acasă',
 
   // ─── Navigare ────────────────────────────────────────
   'nav.main': 'Principal',
@@ -2436,6 +2448,11 @@ const ro = {
   'recurring.weeksInRow': '{count} săptămâni consecutive',
   'recurring.quartersInRow': '{count} trimestre consecutive',
   'recurring.yearsInRow': '{count} ani consecutivi',
+  'changelog.v480clickOutside': 'Hook partajat click-outside — 7 implementări independente consolidate pentru comportament mai consistent',
+  'changelog.v480i18n': 'Acoperire completă i18n — ErrorBoundary, FamilyAllExpenses, Modal și MonthPicker sunt acum traduse corect',
+  'changelog.v480a11y': 'Accesibilitate — etichete aria pe butonul de închidere Modal, acțiuni TransactionRow și navigare MonthPicker',
+  'changelog.v480syncBatch': 'Sincronizare de 10× mai rapidă — toate interogările tabelelor se execută într-un singur apel DB',
+  'changelog.v480bugfixes': 'Remedieri: date UTC în prognoză, suprapunere FAB pe mobil, crash sortare notificări, persistență sesiune la înregistrare, stabilitate AuthContext',
   'changelog.v470forecasting': 'Corecție prognoză: elementele anuale nu mai sunt programate lunar, frecvența bi-anuală corectată',
   'changelog.v470security': 'Securitate: ștergere atomică date, CORS mai strict, fără detalii JWT, expirare sesiune admin',
   'changelog.v470performance': 'Performanță: SettingsContext memoizat, multi-valută în Dashboard/Provocări, confirmări ștergere adăugate',

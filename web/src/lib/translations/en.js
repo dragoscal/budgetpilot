@@ -78,6 +78,18 @@ const en = {
   'common.other': 'Other',
   'common.undo': 'Undo',
   'common.error': 'Something went wrong',
+  'common.previousMonth': 'Previous month',
+  'common.nextMonth': 'Next month',
+  'common.closeDialog': 'Close dialog',
+
+  // ─── Error Boundary ────────────────────────────────────
+  'error.pageFailedLoad': 'Page failed to load',
+  'error.somethingWrong': 'Something went wrong',
+  'error.newVersionDeployed': 'A new version has been deployed. Please refresh to get the latest update.',
+  'error.unexpected': 'An unexpected error occurred.',
+  'error.refreshPage': 'Refresh Page',
+  'error.tryAgain': 'Try Again',
+  'error.goHome': 'Go Home',
 
   // ─── Navigation ──────────────────────────────────────
   'nav.main': 'Main',
@@ -2436,6 +2448,11 @@ const en = {
   'recurring.weeksInRow': '{count} weeks in a row',
   'recurring.quartersInRow': '{count} quarters in a row',
   'recurring.yearsInRow': '{count} years in a row',
+  'changelog.v480clickOutside': 'Shared click-outside hook — consolidated 7 independent implementations for cleaner, more consistent behavior',
+  'changelog.v480i18n': 'Full i18n coverage — ErrorBoundary, FamilyAllExpenses, Modal, and MonthPicker now properly translated',
+  'changelog.v480a11y': 'Accessibility improvements — aria-labels on Modal close, TransactionRow actions, and MonthPicker navigation',
+  'changelog.v480syncBatch': 'Sync pull 10× faster — all table queries now execute in a single DB round trip via batch()',
+  'changelog.v480bugfixes': 'Bug fixes: forecasting UTC dates, FAB overlap on mobile, notification sort crash, registration session persistence, AuthContext stability',
   'changelog.v470forecasting': 'Fixed forecasting: annual items no longer scheduled monthly, biannual frequency corrected',
   'changelog.v470security': 'Security hardening: atomic data clear, stricter CORS, no JWT detail leaks, admin auth expiry',
   'changelog.v470performance': 'Performance: SettingsContext memoized, multi-currency in Dashboard/Challenges, delete confirmations added',

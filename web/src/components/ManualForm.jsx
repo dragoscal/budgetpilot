@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { CURRENCIES, TRANSACTION_TYPES } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { generateId, formatDateISO, validateTransaction, parseLocalNumber, getCategoryById } from '../lib/helpers';
 import { getMerchantSuggestions, inferCategorySmart, learnCategory } from '../lib/smartFeatures';
 import { getAll } from '../lib/storage';
@@ -96,16 +97,8 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   }, [merchant, initial.id, categoryAutoSet, type]);
 
   // Close suggestions on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target) &&
-          merchantRef.current && !merchantRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  const closeSuggestions = useCallback(() => setShowSuggestions(false), []);
+  useClickOutside(suggestionsRef, closeSuggestions, true, { ignoreRef: merchantRef });
 
   const selectSuggestion = (s) => {
     setMerchant(s.merchant);

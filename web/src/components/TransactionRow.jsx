@@ -94,17 +94,17 @@ export default function TransactionRow({ transaction, onEdit, onDelete, onSplit,
       </div>
       <div className="flex items-center gap-0.5 sm:gap-1 opacity-30 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         {onSplit && !isSplit && (
-          <button onClick={() => onSplit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')}>
+          <button onClick={() => onSplit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-accent/10 text-cream-500 hover:text-accent" title={t('split.splitWithFamily')} aria-label={t('split.splitWithFamily')}>
             <Split size={13} />
           </button>
         )}
         {onEdit && (
-          <button onClick={() => onEdit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700">
+          <button onClick={() => onEdit(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-dark-border text-cream-500 hover:text-cream-700" aria-label={t('common.edit')} title={t('common.edit')}>
             <Edit3 size={13} />
           </button>
         )}
         {onDelete && (
-          <button onClick={() => onDelete(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger">
+          <button onClick={() => onDelete(transaction)} className="p-1 sm:p-1.5 rounded-lg hover:bg-danger/10 text-cream-500 hover:text-danger" aria-label={t('common.delete')} title={t('common.delete')}>
             <Trash2 size={13} />
           </button>
         )}

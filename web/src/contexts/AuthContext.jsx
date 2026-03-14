@@ -91,12 +91,16 @@ export function AuthProvider({ children }) {
     clearUserData().catch((e) => console.warn('Logout cache clear error:', e));
   }, []);
 
+  // Use ref for user ID so updateProfile callback stays stable
+  const userRef = useRef(null);
+  userRef.current = user;
+
   const updateProfile = useCallback(async (changes) => {
-    if (!user) return;
-    const updated = await auth.updateProfile(user.id, changes);
+    if (!userRef.current) return;
+    const updated = await auth.updateProfile(userRef.current.id, changes);
     setUser(updated);
     return updated;
-  }, [user]);
+  }, []);
 
   // effectiveUserId: real server userId when logged in w/ backend, 'local' otherwise
   const effectiveUserId = user?.id || 'local';

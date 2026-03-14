@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { getNotifications, getUnreadCount, markRead, markAllRead, clearOldNotifications } from '../lib/notificationStore';
 import { Bell, BellDot, CheckCheck, AlertTriangle, TrendingUp, RotateCcw, Info, Trophy, X } from 'lucide-react';
 
@@ -78,16 +79,8 @@ export default function NotificationCenter({ collapsed = false, mobile = false }
   }, [loadNotifications]);
 
   // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  const closePanel = useCallback(() => setOpen(false), []);
+  useClickOutside(panelRef, closePanel, open);
 
   const handleNotificationClick = async (notif) => {
     if (!notif.read) {

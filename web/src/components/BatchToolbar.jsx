@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useCategories } from '../hooks/useCategories';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { Tag, Calendar, Hash, Download, Trash2, X, Plus, Minus } from 'lucide-react';
 
@@ -26,15 +27,12 @@ export default function BatchToolbar({
   const toolbarRef = useRef(null);
 
   // Close popovers when clicking outside the toolbar
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (toolbarRef.current && !toolbarRef.current.contains(e.target)) {
-        closeAll();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+  const closeAllCallback = useCallback(() => {
+    setShowCategoryPicker(false);
+    setShowDatePicker(false);
+    setShowTagInput(false);
   }, []);
+  useClickOutside(toolbarRef, closeAllCallback);
 
   if (selectedCount === 0) return null;
 
