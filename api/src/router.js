@@ -100,17 +100,19 @@ const ALLOWED_ORIGINS = [
 
 function getCorsOrigin(request) {
   const origin = request?.headers?.get('Origin') || '';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
 }
 
 function corsHeaders(request) {
-  return {
-    'Access-Control-Allow-Origin': getCorsOrigin(request),
+  const origin = getCorsOrigin(request);
+  const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
+  if (origin) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
 }
 
 function addCors(response, request) {

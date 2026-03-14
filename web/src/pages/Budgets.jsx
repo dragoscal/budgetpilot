@@ -190,6 +190,7 @@ export default function Budgets() {
   };
 
   const handleDelete = async (id) => {
+    if (!confirm(t('budgets.deleteConfirm'))) return;
     try {
       await budgetsApi.remove(id);
       toast.success(t('budgets.removed'));

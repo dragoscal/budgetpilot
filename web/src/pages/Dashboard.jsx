@@ -279,7 +279,7 @@ export default function Dashboard() {
           await addNotification({
             type: 'recurring_due',
             title: t('dashboard.manualBillsDue'),
-            message: `${manualBillsDue.length} bill(s) need confirmation: ${manualBillsDue.map(r => r.name).join(', ')}`,
+            message: t('dashboard.manualBillsMessage', { count: manualBillsDue.length, names: manualBillsDue.map(r => r.name).join(', ') }),
             actionUrl: '/',
           });
         }
@@ -287,7 +287,7 @@ export default function Dashboard() {
           await addNotification({
             type: 'recurring_due',
             title: t('dashboard.autoBillsTitle'),
-            message: `${autoBillsDue.length} auto-debit bill(s): ${autoBillsDue.map(r => r.name).join(', ')}`,
+            message: t('dashboard.autoBillsMessage', { count: autoBillsDue.length, names: autoBillsDue.map(r => r.name).join(', ') }),
             actionUrl: '/',
           });
         }
@@ -442,11 +442,12 @@ export default function Dashboard() {
 
     // Month-over-month spending comparison (at same point in month) — uses scopedPrevTx to respect scope filter
     if (stats.totalSpent > 0 && scopedPrevTx.length > 0) {
+      const cur = user?.defaultCurrency || 'RON';
       const prevExpenses = scopedPrevTx.filter((tx) => tx.type === 'expense');
       const dayOfMonth = new Date().getDate();
-      const prevAtThisPoint = sumBy(
+      const prevAtThisPoint = sumAmountsMultiCurrency(
         prevExpenses.filter((tx) => new Date(tx.date).getDate() <= dayOfMonth),
-        'amount'
+        cur, rates
       );
       if (prevAtThisPoint > 0) {
         const diff = ((stats.totalSpent - prevAtThisPoint) / prevAtThisPoint) * 100;
@@ -457,7 +458,7 @@ export default function Dashboard() {
     }
 
     return alerts.slice(0, 3);
-  }, [budgetProgress, recurringList, stats, scopedPrevTx, t]);
+  }, [budgetProgress, recurringList, stats, scopedPrevTx, t, user, rates]);
 
   // No-spend days count
   const noSpendDays = useMemo(() => {
@@ -550,11 +551,12 @@ export default function Dashboard() {
   // Month comparison text (uses scoped prev transactions to match stats)
   const monthComparison = useMemo(() => {
     if (scopedPrevTx.length === 0 || stats.totalSpent === 0) return null;
+    const cur = user?.defaultCurrency || 'RON';
     const prevExpenses = scopedPrevTx.filter((t) => t.type === 'expense');
     const dayOfMonth = new Date().getDate();
-    const prevAtThisPoint = sumBy(
+    const prevAtThisPoint = sumAmountsMultiCurrency(
       prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
-      'amount'
+      cur, rates
     );
     if (prevAtThisPoint === 0) return null;
     const diff = ((stats.totalSpent - prevAtThisPoint) / prevAtThisPoint) * 100;
@@ -563,7 +565,7 @@ export default function Dashboard() {
       direction: diff > 0 ? 'more' : 'less',
       isGood: diff <= 0,
     };
-  }, [stats, scopedPrevTx]);
+  }, [stats, scopedPrevTx, user, rates]);
 
   const recentTx = useMemo(() => sortByDate(scopedTx).slice(0, 6), [scopedTx]);
 
@@ -614,7 +616,7 @@ export default function Dashboard() {
           currency: item.currency || cur,
           category: item.category || 'bills',
           merchant: item.name || item.merchant,
-          description: `Auto-created from recurring: ${item.name || item.merchant}`,
+          description: t('dashboard.autoCreatedDesc', { name: item.name || item.merchant }),
           date: `${currentMonth}-${billingDay}`,
           source: 'recurring',
           recurringId: item.id,
@@ -649,7 +651,7 @@ export default function Dashboard() {
         currency: item.currency || cur,
         category: item.category || 'bills',
         merchant: item.name || item.merchant,
-        description: `Confirmed payment: ${item.name || item.merchant}`,
+        description: t('dashboard.confirmedPaymentDesc', { name: item.name || item.merchant }),
         date: `${currentMonth}-${billingDay}`,
         source: 'recurring',
         recurringId: item.id,

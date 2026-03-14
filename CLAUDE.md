@@ -98,18 +98,15 @@ Some tables use `deletedAt` column. Queries should filter `WHERE deletedAt IS NU
 
 ### Card Tiers (index.css `@layer components`)
 - `.card` — Base: subtle shadow, cream border
-- `.card-elevated` — Mid: stronger shadow, white top border highlight
-- `.card-hero` — Top: gold accent line, float shadow (used for hero stats)
 
 ### Typography
-- **Headings**: Fraunces (serif) via `font-heading`
-- **Body**: Outfit (sans) via `font-sans`
-- **Money/Stats**: `.stat-value` — Fraunces, tabular-nums, bold
-- **Page titles**: `.page-title` — 3xl heading with gold underline accent
+- **Headings**: Newsreader (serif) via `font-heading`
+- **Body**: Instrument Sans via `font-sans`
+- **Money/Stats**: `.stat-value` — Instrument Sans, tabular-nums, bold
+- **Page titles**: `.page-title` — 3xl heading with accent underline
 
 ### Colors
 - Primary action: teal (`accent-*` scale)
-- Luxury accent: gold (`gold-*` scale, 50–900)
 - Danger: `danger` token
 - Success: `success` token
 - Neutral: `cream-*` scale
@@ -117,7 +114,6 @@ Some tables use `deletedAt` column. Queries should filter `WHERE deletedAt IS NU
 ### Buttons
 - `.btn-primary` — Teal gradient with inner glow
 - `.btn-secondary` — Outline style
-- Bar gradient: `.bar-gradient-warning` — teal-to-gold for budget 80-99%
 
 ### Shadows
 All card shadows are defined as raw CSS in `@layer components` (not Tailwind utilities). Do NOT add shadow-* tokens to tailwind.config.js unless they're actually referenced as utility classes in JSX.
@@ -186,7 +182,7 @@ Backend (`api/.dev.vars` for local, Workers secrets for production):
 - D1 binding: `DB` (configured in `wrangler.toml`)
 
 ## Current Version
-`3.1.0` — See `web/src/lib/changelog.js`
+`4.6.1` — See `web/src/lib/changelog.js`
 
 ## Testing with Preview Tools
 After every file change:

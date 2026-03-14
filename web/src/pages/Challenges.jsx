@@ -3,7 +3,8 @@ import { challenges as challengeApi, transactions as txApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { generateId, formatCurrency, getCategoryById, formatDateISO } from '../lib/helpers';
+import { generateId, formatCurrency, getCategoryById, formatDateISO, sumAmountsMultiCurrency } from '../lib/helpers';
+import { getRates, convertAmount } from '../lib/exchangeRates';
 import { getCategoryLabel } from '../lib/categoryManager';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
@@ -21,7 +22,7 @@ const getChallengePresets = (t) => [
   { type: 'no_spend', title: t('challenges.presetNoCoffee'), icon: '☕', description: t('challenges.presetNoCoffeeDesc'), durationDays: 30, category: 'dining' },
 ];
 
-function getProgress(challenge, transactions, t) {
+function getProgress(challenge, transactions, t, currency = 'RON', rates = {}) {
   const start = new Date(challenge.startDate);
   const end = new Date(challenge.endDate);
   const now = new Date();
@@ -31,7 +32,7 @@ function getProgress(challenge, transactions, t) {
       (!challenge.category || tx.category === challenge.category);
   });
 
-  const totalSpent = relevant.reduce((s, tx) => s + tx.amount, 0);
+  const totalSpent = sumAmountsMultiCurrency(relevant, currency, rates);
   const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
   const daysPassed = Math.max(0, Math.ceil((Math.min(now, end) - start) / (1000 * 60 * 60 * 24)));
   const daysRemaining = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
@@ -67,7 +68,7 @@ function getProgress(challenge, transactions, t) {
     const income = transactions.filter(itx => {
       const d = new Date(itx.date);
       return d >= start && d <= end && itx.type === 'income';
-    }).reduce((s, itx) => s + itx.amount, 0);
+    }).reduce((s, itx) => s + convertAmount(itx.amount, itx.currency || currency, currency, rates), 0);
     const saved = income - totalSpent;
     percent = income > 0 ? Math.round((saved / income) * 100) : 0;
     if (now > end) {
@@ -92,6 +93,7 @@ export default function Challenges() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
+  const [rates, setRates] = useState({});
   const currency = user?.defaultCurrency || 'RON';
 
   const [form, setForm] = useState({
@@ -110,13 +112,15 @@ export default function Challenges() {
     const load = async () => {
       setLoading(true);
       try {
-        const [ch, tx] = await Promise.all([
+        const [ch, tx, ratesData] = await Promise.all([
           challengeApi.getAll({ userId: effectiveUserId }),
           txApi.getAll({ userId: effectiveUserId }),
+          getRates(),
         ]);
         if (loadVersion.current !== version) return;
         setItems(ch);
         setAllTx(tx);
+        setRates(ratesData || {});
       } catch (err) {
         if (loadVersion.current === version) {
           console.error('Failed to load challenges:', err);
@@ -149,19 +153,19 @@ export default function Challenges() {
   };
 
   const active = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx, t);
+    const p = getProgress(c, allTx, t, currency, rates);
     return p.status === 'active';
-  }), [items, allTx, t]);
+  }), [items, allTx, t, currency, rates]);
 
   const completed = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx, t);
+    const p = getProgress(c, allTx, t, currency, rates);
     return p.status === 'completed';
-  }), [items, allTx, t]);
+  }), [items, allTx, t, currency, rates]);
 
   const failed = useMemo(() => items.filter(c => {
-    const p = getProgress(c, allTx, t);
+    const p = getProgress(c, allTx, t, currency, rates);
     return p.status === 'failed';
-  }), [items, allTx, t]);
+  }), [items, allTx, t, currency, rates]);
 
   const handleCreate = async (preset = null) => {
     const data = preset || form;
@@ -296,7 +300,7 @@ export default function Challenges() {
           <h2 className="section-title flex items-center gap-1.5"><Target size={12} /> {t('challenges.activeChallenges')}</h2>
           <div className="space-y-3">
             {active.map(c => {
-              const p = getProgress(c, allTx, t);
+              const p = getProgress(c, allTx, t, currency, rates);
               const cat = c.category ? getCategoryById(c.category) : null;
               return (
                 <div key={c.id} className="card">
@@ -336,7 +340,7 @@ export default function Challenges() {
           <h2 className="section-title flex items-center gap-1.5"><Check size={12} className="text-success" /> {t('challenges.completedSection')}</h2>
           <div className="space-y-2">
             {completed.map(c => {
-              const p = getProgress(c, allTx, t);
+              const p = getProgress(c, allTx, t, currency, rates);
               return (
                 <div key={c.id} className="card bg-success/5 border-success/20">
                   <div className="flex items-center justify-between">
@@ -362,7 +366,7 @@ export default function Challenges() {
           <h2 className="section-title flex items-center gap-1.5"><Ban size={12} className="text-danger" /> {t('challenges.notCompleted')}</h2>
           <div className="space-y-2">
             {failed.map(c => {
-              const p = getProgress(c, allTx, t);
+              const p = getProgress(c, allTx, t, currency, rates);
               return (
                 <div key={c.id} className="card">
                   <div className="flex items-start justify-between gap-2">

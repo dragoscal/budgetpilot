@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getSetting } from '../lib/storage';
 import { settings as settingsApi } from '../lib/api';
 
@@ -28,20 +28,22 @@ export function SettingsProvider({ children }) {
     return () => window.removeEventListener('settings-synced', handleSync);
   }, [hideAmounts]);
 
-  const updateHideAmounts = (value) => {
+  const updateHideAmounts = useCallback((value) => {
     setHideAmounts(value);
     settingsApi.set('hideAmounts', value);
-  };
+  }, []);
 
-  const shouldHide = (type) => {
+  const shouldHide = useCallback((type) => {
     if (hideAmounts === 'all') return true;
     if (hideAmounts === 'income' && type === 'income') return true;
     return false;
-  };
+  }, [hideAmounts]);
+
+  const value = useMemo(() => ({ hideAmounts, updateHideAmounts, shouldHide }), [hideAmounts, updateHideAmounts, shouldHide]);
 
   // Render immediately with defaults instead of blocking (#20)
   return (
-    <SettingsContext.Provider value={{ hideAmounts, updateHideAmounts, shouldHide }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

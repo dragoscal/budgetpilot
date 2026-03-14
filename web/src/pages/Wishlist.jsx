@@ -91,6 +91,7 @@ export default function Wishlist() {
   };
 
   const handleDelete = async (item) => {
+    if (!confirm(t('wishlist.deleteConfirm'))) return;
     try {
       await wishlistApi.remove(item.id);
       toast.success(t('wishlist.deleted'));

@@ -105,6 +105,7 @@ export default function Goals() {
   };
 
   const handleDelete = async (goal) => {
+    if (!confirm(t('goals.deleteConfirm'))) return;
     try {
       await goalsApi.remove(goal.id);
       toast.success(t('goals.deleted'));

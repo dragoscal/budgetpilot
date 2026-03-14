@@ -61,7 +61,7 @@ export default function StepPreview({ extractedData, categoryMappings, personMap
         paidBy: mappedPerson.userId || effectiveUserId,
         splitType: null,
         beneficiaries: [],
-        tags: JSON.stringify(['import', monthName.toLowerCase()]),
+        tags: ['import', monthName.toLowerCase()],
         userId: effectiveUserId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

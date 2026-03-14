@@ -78,7 +78,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       }
     }, 150);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [merchant]);
+  }, [merchant, effectiveUserId]);
 
   // Auto-detect category when merchant changes (skip for income — income has its own category)
   useEffect(() => {

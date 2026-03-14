@@ -14,6 +14,14 @@ async function adminFetch(path, options = {}) {
 
   const res = await fetch(`${apiUrl}${path}`, { ...options, headers });
 
+  if (res.status === 401) {
+    // Token expired — dispatch auth-expired event to match main apiFetch behavior
+    sessionStorage.removeItem('bp_token');
+    localStorage.removeItem('bp_token');
+    window.dispatchEvent(new Event('auth-expired'));
+    throw new Error('Session expired. Please log in again.');
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(error.error || `API error ${res.status}`);

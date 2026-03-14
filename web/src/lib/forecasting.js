@@ -115,7 +115,7 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
           category: r.category,
         });
       }
-    } else if (frequency === 'yearly') {
+    } else if (frequency === 'annual' || frequency === 'yearly') {
       // Schedule once if billingDay and month match within the forecast window
       const billingMonth = r.billingMonth || (now.getMonth() + 1); // 1-indexed month
       for (let d = 0; d < days; d++) {
@@ -181,7 +181,7 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
           }
         }
       }
-    } else if (frequency === 'semiannual' || frequency === 'biannual') {
+    } else if (frequency === 'semiannual') {
       // Schedule on billingDay every 6 months
       for (let d = 0; d < days; d++) {
         const date = new Date(now);
@@ -189,6 +189,21 @@ export async function forecastCashFlow({ userId = 'local', days = 90, startingBa
         if (date.getDate() === billingDay) {
           const monthDiff = (date.getFullYear() - now.getFullYear()) * 12 + date.getMonth() - now.getMonth();
           if (monthDiff % 6 === 0) {
+            recurringEvents.push({
+              day: d, date: dateToLocalISO(date), amount: r.amount,
+              name: r.name || r.merchant || 'Recurring', isIncome, category: r.category,
+            });
+          }
+        }
+      }
+    } else if (frequency === 'biannual') {
+      // Schedule on billingDay every 24 months (every 2 years)
+      for (let d = 0; d < days; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        if (date.getDate() === billingDay) {
+          const monthDiff = (date.getFullYear() - now.getFullYear()) * 12 + date.getMonth() - now.getMonth();
+          if (monthDiff % 24 === 0) {
             recurringEvents.push({
               day: d, date: dateToLocalISO(date), amount: r.amount,
               name: r.name || r.merchant || 'Recurring', isIncome, category: r.category,

@@ -396,8 +396,24 @@ async function readSSEStream(response, signal) {
   return { content: [{ text: fullText }], _truncated: truncated };
 }
 
-// ─── API CALLER (multi-provider) ─────────────────────────
+// ─── API CALLER (multi-provider) with retry for transient errors ─────
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503]);
+const MAX_RETRIES = 2;
+
 async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temperature } = {}) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await _callAIOnce(messages, systemPrompt, maxTokens, { signal, temperature });
+    } catch (err) {
+      const isRetryable = err._retryable || (err.message && /429|500|502|503|rate limit/i.test(err.message));
+      if (!isRetryable || attempt === MAX_RETRIES || signal?.aborted) throw err;
+      // Exponential backoff: 1s, 3s
+      await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+    }
+  }
+}
+
+async function _callAIOnce(messages, systemPrompt, maxTokens = 4000, { signal, temperature } = {}) {
   const apiUrl = (await getSetting('apiUrl')) || import.meta.env.VITE_API_URL || '';
   const provider = (await getSetting('aiProvider')) || 'anthropic';
   const model = await getSetting('aiModel');
@@ -429,11 +445,13 @@ async function callAI(messages, systemPrompt, maxTokens = 4000, { signal, temper
     });
     if (!res.ok) {
       // Non-streaming error (auth failures, etc.)
-      const err = await res.json().catch(() => ({}));
+      const errBody = await res.json().catch(() => ({}));
       if (res.status === 403) {
-        throw new Error(err.error || 'AI proxy access not granted. Add your own API key in Settings.');
+        throw new Error(errBody.error || 'AI proxy access not granted. Add your own API key in Settings.');
       }
-      throw new Error(err.error || 'AI processing failed via server');
+      const err = new Error(errBody.error || `AI processing failed (${res.status})`);
+      err._retryable = RETRYABLE_STATUSES.has(res.status);
+      throw err;
     }
 
     // Server returns SSE stream with text deltas — readSSEStream collects and parses
@@ -1189,9 +1207,9 @@ export async function generateMonthlySummary(transactions, budgets, goals) {
       role: 'user',
       content: `Generate a brief, friendly monthly financial summary based on this data:
 
-Transactions: ${JSON.stringify(transactions.slice(0, 50))}
-Budgets: ${JSON.stringify(budgets)}
-Goals: ${JSON.stringify(goals)}
+Transactions: ${JSON.stringify(transactions.slice(0, 50).map(tx => ({ date: tx.date, merchant: tx.merchant, amount: tx.amount, category: tx.category, type: tx.type, currency: tx.currency })))}
+Budgets: ${JSON.stringify(budgets.map(b => ({ category: b.category, amount: b.amount, month: b.month })))}
+Goals: ${JSON.stringify(goals.map(g => ({ name: g.name, target: g.target, currentAmount: g.currentAmount, type: g.type })))}
 
 Include: total spent, top categories, budget status, savings progress, tips. Keep it under 200 words.
 Return as JSON: { "summary": "your summary text here" }`,
