@@ -298,6 +298,12 @@ export async function changePassword(userId, currentPassword, newPassword) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Password change failed');
     }
+    // Server returns a new token after password change (old token is invalidated)
+    const result = await res.json().catch(() => ({}));
+    if (result.token) {
+      const storage = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+      storage.setItem(TOKEN_KEY, result.token);
+    }
     return;
   }
 

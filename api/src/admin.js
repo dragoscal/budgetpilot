@@ -130,51 +130,44 @@ export function registerAdminRoutes(router) {
     const user = await ctx.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(id).first();
     if (!user) return json({ error: 'User not found' }, 404);
 
-    // Delete in correct FK order: children before parents
-    // Phase 1: Leaf tables (no other tables reference these)
-    await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(id).run();
-    await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(id).run();
-    await ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(id).run();
-
-    // Phase 2: Tables that are parents of Phase 1 tables
-    await ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(id).run();
-    await ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(id).run();
-    await ctx.env.DB.prepare(`DELETE FROM people WHERE userId = ?`).bind(id).run();
-
-    // Phase 3: All other user-owned tables (no child tables reference them)
-    const simpleTables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'wishlist', 'settings', 'sync_log', 'activity_log', 'feedback', 'challenges', 'receipts'];
-    for (const table of simpleTables) {
-      await ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(id).run();
-    }
-
-    // Phase 4: Family data — handle families this user created (other members may exist)
-    // First get families created by this user
+    // First get families created by this user (needed for family cleanup)
     const userFamilies = await ctx.env.DB.prepare(
       `SELECT id FROM families WHERE createdBy = ?`
     ).bind(id).all();
     const familyIds = (userFamilies.results || []).map(f => f.id);
 
-    // Delete shared_expenses and family_members for user's owned families (includes other users' records)
+    // Build atomic batch: delete in correct FK order
+    const stmts = [
+      // Phase 1: Leaf tables
+      ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(id),
+      ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(id),
+      ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(id),
+      // Phase 2: Parent tables of phase 1
+      ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(id),
+      ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(id),
+      ctx.env.DB.prepare(`DELETE FROM people WHERE userId = ?`).bind(id),
+    ];
+
+    // Phase 3: All other user-owned tables
+    const simpleTables = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'wishlist', 'settings', 'sync_log', 'activity_log', 'feedback', 'challenges', 'receipts'];
+    for (const table of simpleTables) {
+      stmts.push(ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(id));
+    }
+
+    // Phase 4: Family cleanup
     for (const fid of familyIds) {
-      await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fid).run();
-      await ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fid).run();
+      stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fid));
+      stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fid));
     }
-    // Also remove this user's shared_expenses and memberships in OTHER families
-    await ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(id).run();
-    await ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(id).run();
-    // Now safe to delete the user's families
-    await ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(id).run();
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(id));
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(id));
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(id));
 
-    // Phase 5: Clean up orphaned FK records — scoped to deleted user to prevent cross-user deletion
-    try {
-      await ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE debtId NOT IN (SELECT id FROM debts) AND userId = ?`).bind(id).run();
-      await ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE loanId NOT IN (SELECT id FROM loans) AND userId = ?`).bind(id).run();
-    } catch (e) {
-      console.error('Orphan cleanup failed during admin user deletion:', e.message);
-    }
+    // Phase 5: Delete the user record itself
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id));
 
-    // Phase 6: Delete the user record itself (all FKs referencing users.id are now cleared)
-    await ctx.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();
+    // Execute atomically
+    await ctx.env.DB.batch(stmts);
 
     await logActivity(ctx.env.DB, ctx.user.id, 'admin_delete_user', { targetUserId: id });
 

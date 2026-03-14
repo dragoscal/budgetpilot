@@ -78,25 +78,25 @@ export default function CashFlow() {
       months.push({ month: format(m, 'MMM'), income, expenses, net: income - expenses });
     }
     return months;
-  }, [allTx]);
+  }, [allTx, currency, rates]);
 
   // Category breakdown
   const expenseByCategory = useMemo(() => {
     const expenses = currentMonthTx.filter((t) => t.type === 'expense');
     const grouped = groupBy(expenses, 'category');
     return Object.entries(grouped)
-      .map(([catId, txs]) => ({ ...getCategoryById(catId), total: sumBy(txs, 'amount') }))
+      .map(([catId, txs]) => ({ ...getCategoryById(catId), total: sumAmountsMultiCurrency(txs, currency, rates) }))
       .sort((a, b) => b.total - a.total);
-  }, [currentMonthTx]);
+  }, [currentMonthTx, currency, rates]);
 
   // Income sources
   const incomeSources = useMemo(() => {
     const income = currentMonthTx.filter((t) => t.type === 'income');
     const grouped = groupBy(income, (tx) => tx.merchant || tx.description || t('common.other'));
     return Object.entries(grouped)
-      .map(([source, txs]) => ({ source, total: sumBy(txs, 'amount') }))
+      .map(([source, txs]) => ({ source, total: sumAmountsMultiCurrency(txs, currency, rates) }))
       .sort((a, b) => b.total - a.total);
-  }, [currentMonthTx]);
+  }, [currentMonthTx, currency, rates]);
 
   // Forecast
   const recurringIncome = sumAmountsMultiCurrency(recurringItems.filter((r) => r.category === 'income'), currency, rates);

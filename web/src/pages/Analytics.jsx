@@ -160,8 +160,9 @@ export default function Analytics() {
     ? now.getDate()
     : new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const dailyAvg = daysElapsed > 0 ? totalSpent / daysElapsed : 0;
-  const daysLeft = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate() - new Date().getDate();
-  const projected = totalSpent + dailyAvg * Math.max(daysLeft, 0);
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const daysLeft = isCurrentMonth ? daysInMonth - now.getDate() : 0;
+  const projected = isCurrentMonth ? totalSpent + dailyAvg * Math.max(daysLeft, 0) : totalSpent;
   const totalBudget = sumBy(budgetsList, 'amount');
 
   if (loading) return <SkeletonPage />;

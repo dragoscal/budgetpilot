@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { ACCOUNT_TYPES, CURRENCIES } from '../lib/constants';
 import { generateId, formatCurrency, sumBy } from '../lib/helpers';
+import { getRates, convertAmount } from '../lib/exchangeRates';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { Landmark, Plus, Edit3, Trash2 } from 'lucide-react';
@@ -25,6 +26,7 @@ export default function NetWorth() {
   const [newBalance, setNewBalance] = useState('');
 
   const [form, setForm] = useState({ name: '', type: 'checking', balance: '', currency: user?.defaultCurrency || 'RON', icon: '🏦', color: '#1B7A6E' });
+  const [rates, setRates] = useState({});
 
   const currency = user?.defaultCurrency || 'RON';
   const loadVersion = useRef(0);
@@ -35,9 +37,13 @@ export default function NetWorth() {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await accountsApi.getAll({ userId: effectiveUserId });
+        const [data, ratesData] = await Promise.all([
+          accountsApi.getAll({ userId: effectiveUserId }),
+          getRates(),
+        ]);
         if (loadVersion.current !== version) return;
         setAccounts(data);
+        setRates(ratesData || {});
       } catch (err) { if (loadVersion.current === version) toast.error(t('networth.failedLoad')); }
       finally { if (loadVersion.current === version) setLoading(false); }
     };
@@ -57,8 +63,13 @@ export default function NetWorth() {
 
   const assets = accountsList.filter((a) => !LIABILITY_TYPES.includes(a.type));
   const liabilities = accountsList.filter((a) => LIABILITY_TYPES.includes(a.type));
-  const totalAssets = sumBy(assets, 'balance');
-  const totalLiabilities = sumBy(liabilities, 'balance');
+  // Convert each account's balance to the user's default currency before summing
+  const sumInCurrency = (accts) => accts.reduce((sum, a) => {
+    const acctCurrency = a.currency || currency;
+    return sum + convertAmount(a.balance || 0, acctCurrency, currency, rates);
+  }, 0);
+  const totalAssets = sumInCurrency(assets);
+  const totalLiabilities = sumInCurrency(liabilities);
   const netWorth = totalAssets - totalLiabilities;
 
   const handleSave = async () => {
@@ -94,6 +105,7 @@ export default function NetWorth() {
   };
 
   const handleDelete = async (acct) => {
+    if (!confirm(t('networth.deleteConfirm'))) return;
     try {
       await accountsApi.remove(acct.id);
       toast.success(t('networth.deleted'));
