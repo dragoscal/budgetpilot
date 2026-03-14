@@ -235,8 +235,11 @@ export default function Dashboard() {
       setManualBillsDue(manual);
       setAutoBillsDue(auto);
 
-      // Welcome card check
-      try { const seen = await settingsApi.get('hasSeenWelcome'); if (!seen) setShowWelcome(true); } catch (e) {}
+      // Welcome card: show for new users until they dismiss OR complete all steps
+      try {
+        const dismissed = await settingsApi.get('hasSeenWelcome');
+        if (!dismissed) setShowWelcome(true);
+      } catch (e) {}
     } catch (err) {
       if (loadVersion.current === version) {
         console.error('Dashboard load error:', err);
@@ -680,8 +683,16 @@ export default function Dashboard() {
       { key: 'accounts', done: accountsList.length > 1 },
       { key: 'recurring', done: recurringList.length > 0 },
     ];
-    return { steps, done: steps.filter(s => s.done).length, total: steps.length };
+    const done = steps.filter(s => s.done).length;
+    return { steps, done, total: steps.length, allDone: done === steps.length };
   }, [allTransactions, budgetsList, accountsList, recurringList]);
+
+  // Auto-dismiss welcome when all steps completed
+  useEffect(() => {
+    if (showWelcome && welcomeProgress.allDone) {
+      dismissWelcome();
+    }
+  }, [welcomeProgress.allDone, showWelcome]);
 
   if (loading) return <SkeletonPage />;
 

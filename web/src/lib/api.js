@@ -255,8 +255,8 @@ export const familyApi = {
       body: JSON.stringify({ inviteCode, displayName, emoji }),
     });
     // Cache family + member locally
-    if (result.family) await storage.add('families', result.family).catch(() => {});
-    if (result.member) await storage.add('familyMembers', result.member).catch(() => {});
+    if (result.family) await storage.add('families', result.family).catch(e => console.warn('Cache write failed:', e));
+    if (result.member) await storage.add('familyMembers', result.member).catch(e => console.warn('Cache write failed:', e));
     return result;
   },
 

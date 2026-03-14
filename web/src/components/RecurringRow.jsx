@@ -127,7 +127,7 @@ export default function RecurringRow({ item, onEdit, onDelete, onToggle, onCance
       </div>
       <div className="text-right shrink-0">
         <p className={`text-sm font-heading font-bold money ${cancelled ? 'text-cream-400' : ''}`}>
-          {item.isVariable && item.amount ? '~' : ''}{item.amount ? formatCurrency(item.amount, item.currency) : t('recurring.variable')}<span className="text-[10px] text-cream-400 font-normal">{periodLabel}</span>
+          {!!item.isVariable && item.amount ? '~' : ''}{item.amount ? formatCurrency(item.amount, item.currency) : t('recurring.variable')}<span className="text-[10px] text-cream-400 font-normal"> {periodLabel}</span>
         </p>
         {!cancelled && (
           !isMonthly ? (

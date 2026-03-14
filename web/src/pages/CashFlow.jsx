@@ -8,11 +8,12 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle, ArrowUpDown } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { forecastCashFlow } from '../lib/forecasting';
 import HelpButton from '../components/HelpButton';
+import EmptyState from '../components/EmptyState';
 
 export default function CashFlow() {
   const { t } = useTranslation();
@@ -116,6 +117,24 @@ export default function CashFlow() {
   }, [forecast]);
 
   if (loading) return <SkeletonPage />;
+
+  if (allTx.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <h1 className="page-title mb-0">{t('cashflow.title')}</h1>
+          <HelpButton section="cashflow" />
+        </div>
+        <EmptyState
+          icon={ArrowUpDown}
+          title={t('cashflow.emptyTitle')}
+          description={t('cashflow.emptyDesc')}
+          action={t('cashflow.emptyAction')}
+          onAction={() => window.location.href = '/add'}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

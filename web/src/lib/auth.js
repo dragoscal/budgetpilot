@@ -153,7 +153,7 @@ export async function login({ email, password, remember = false }) {
         const encKey = await deriveEncryptionKey(password, email.toLowerCase());
         await storeEncryptionKey(encKey, remember);
         // Pull encrypted AI keys from server (non-blocking)
-        pullEncryptedKeys().catch(() => {});
+        pullEncryptedKeys().catch(e => console.warn('Pull encrypted keys failed:', e));
       } catch (e) {
         console.warn('Encryption key setup failed:', e.message);
       }

@@ -36,8 +36,20 @@ export function SyncProvider({ children }) {
     setStatus((prev) => ({ ...prev, hasBackend: !!(apiUrl || envUrl) }));
   }, []);
 
-  // No-op — server-first model has no sync queue
-  const syncNow = useCallback(async () => ({}), []);
+  // Manual refresh: pull all server data into IndexedDB cache
+  const syncNow = useCallback(async () => {
+    if (!status.hasBackend || !status.isOnline) return { skipped: true };
+    setStatus(prev => ({ ...prev, syncing: true, error: null }));
+    try {
+      const { pullAllDataToCache } = await import('../lib/api.js');
+      await pullAllDataToCache();
+      setStatus(prev => ({ ...prev, syncing: false, lastSync: new Date().toISOString() }));
+      return { success: true };
+    } catch (err) {
+      setStatus(prev => ({ ...prev, syncing: false, error: err.message }));
+      return { error: err.message };
+    }
+  }, [status.hasBackend, status.isOnline]);
 
   const value = useMemo(() => ({
     ...status, syncNow, refreshStatus,

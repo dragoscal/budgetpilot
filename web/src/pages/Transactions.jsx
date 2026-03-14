@@ -168,7 +168,7 @@ export default function Transactions() {
 
     load();
     getCachedRates().then(setRates);
-    getLastImportBatch().then(setLastBatch).catch(() => {});
+    getLastImportBatch().then(setLastBatch).catch(e => console.warn('Failed to get last import batch:', e));
   }, [effectiveUserId]);
 
   const loadTransactions = async () => {

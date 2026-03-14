@@ -22,6 +22,16 @@ function getUserColumn(table) {
 // JSON columns that need to be serialized/deserialized
 const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], settlement_history: ['settlements'] };
 
+// Boolean columns — SQLite returns 0/1, normalize to true/false for frontend
+const BOOLEAN_COLUMNS = {
+  recurring: ['active', 'autoDetected', 'autoDebit', 'isVariable'],
+  family_members: ['isVirtual'],
+  debts: ['settled'],
+  wishlist: ['purchased'],
+  accounts: ['isLiability'],
+  budgets: ['rollover'],
+};
+
 // Valid D1 columns per table — client may send extra fields that don't exist in the schema
 const TABLE_COLUMNS = {
   transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','recurringId','items','splitFrom','importBatch','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
@@ -68,11 +78,16 @@ function serializeRow(table, data) {
 function deserializeRow(table, row) {
   if (!row) return null;
   const jsonCols = JSON_COLUMNS[table] || [];
+  const boolCols = BOOLEAN_COLUMNS[table] || [];
   const out = { ...row };
   for (const col of jsonCols) {
     if (out[col] && typeof out[col] === 'string') {
       try { out[col] = JSON.parse(out[col]); } catch (e) { /* keep as string */ }
     }
+  }
+  // Normalize SQLite 0/1 integers to JS booleans for frontend
+  for (const col of boolCols) {
+    if (col in out) out[col] = !!out[col];
   }
   return out;
 }

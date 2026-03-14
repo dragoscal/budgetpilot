@@ -11,6 +11,8 @@ import MonthPicker from '../components/MonthPicker';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import HelpButton from '../components/HelpButton';
+import EmptyState from '../components/EmptyState';
+import { ClipboardList } from 'lucide-react';
 
 export default function MonthlyReview() {
   const { user, effectiveUserId } = useAuth();
@@ -89,6 +91,27 @@ export default function MonthlyReview() {
   }, [currentTx, currency, rates]);
 
   if (loading) return <SkeletonPage />;
+
+  if (currentTx.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="page-title mb-0">{t('review.title')}</h1>
+            <HelpButton section="review" />
+          </div>
+          <MonthPicker value={month} onChange={setMonth} />
+        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title={t('review.emptyTitle')}
+          description={t('review.emptyDesc')}
+          action={t('review.emptyAction')}
+          onAction={() => window.location.href = '/add'}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -270,7 +270,7 @@ export default function Recurring() {
   const dismissSuggestion = (suggestion) => {
     const next = new Set([...dismissedSuggestions, getSuggestionKey(suggestion)]);
     setDismissedSuggestions(next);
-    setSetting('dismissedRecurringSuggestions', [...next]).catch(() => {});
+    setSetting('dismissedRecurringSuggestions', [...next]).catch(e => console.warn('Failed to save dismissed suggestions:', e));
   };
 
   const handleScanTransactions = async () => {

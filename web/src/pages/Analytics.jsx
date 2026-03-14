@@ -10,11 +10,12 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown } from 'lucide-react';
+import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval, subMonths, getISOWeek, startOfWeek, endOfWeek } from 'date-fns';
 import HelpButton from '../components/HelpButton';
+import EmptyState from '../components/EmptyState';
 
 export default function Analytics() {
   const { t } = useTranslation();
@@ -66,7 +67,7 @@ export default function Analytics() {
   // Generate smart insights
   useEffect(() => {
     if (monthTx.length > 0) {
-      generateInsights(monthTx).then(setInsights).catch(() => {});
+      generateInsights(monthTx).then(setInsights).catch(e => console.warn('Insights generation failed:', e));
     } else {
       setInsights([]);
     }
@@ -199,6 +200,17 @@ export default function Analytics() {
         ))}
       </div>
 
+      {monthTx.length === 0 && (
+        <EmptyState
+          icon={BarChart2}
+          title={t('analytics.emptyTitle')}
+          description={t('analytics.emptyDesc')}
+          action={t('analytics.emptyAction')}
+          onAction={() => window.location.href = '/add'}
+        />
+      )}
+
+      {monthTx.length > 0 && <>
       {/* Smart summary */}
       <div className="card">
         <h3 className="section-title">{t('analytics.smartSummary')}</h3>
@@ -433,6 +445,7 @@ export default function Analytics() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }

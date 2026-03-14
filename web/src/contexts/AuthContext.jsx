@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     const handleAuthExpired = () => {
       setUser(null);
       resetCacheReady();
-      clearUserData().catch(() => {});
+      clearUserData().catch(e => console.warn('Auth-expired cleanup failed:', e));
     };
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);

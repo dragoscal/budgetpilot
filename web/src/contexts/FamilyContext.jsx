@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { families as familiesApi, familyMembers as membersApi, familyApi, transactions as txApi, sharedExpenses as sharedApi } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { generateId } from '../lib/helpers';
@@ -41,6 +41,9 @@ export function FamilyProvider({ children }) {
   const [familyTransactionsLoading, setFamilyTransactionsLoading] = useState(false);
   const [sharedExpensesList, setSharedExpensesList] = useState([]);
 
+  // Guard against stale async responses when switching families rapidly
+  const familyTxRequestId = useRef(0);
+
   const loadFamilies = useCallback(async () => {
     setLoading(true);
     try {
@@ -58,7 +61,7 @@ export function FamilyProvider({ children }) {
         if (!fam.inviteCode && fam.createdBy === effectiveUserId) {
           const code = generateInviteCode();
           fam.inviteCode = code;
-          familiesApi.update(fam.id, { inviteCode: code }).catch(() => {});
+          familiesApi.update(fam.id, { inviteCode: code }).catch(e => console.warn('Failed to save invite code:', e));
         }
       }
 
@@ -97,21 +100,33 @@ export function FamilyProvider({ children }) {
       setSharedExpensesList([]);
       return;
     }
+
+    // Increment request ID to invalidate any in-flight request
+    const requestId = ++familyTxRequestId.current;
+
     setFamilyTransactionsLoading(true);
     try {
       const memberUserIds = new Set(members.map((m) => m.userId));
       // Load all transactions and filter to family members
       const allTx = await txApi.getAll();
+      // Bail if a newer request has been issued (user switched families)
+      if (requestId !== familyTxRequestId.current) return;
       const familyTx = allTx.filter((tx) => memberUserIds.has(tx.userId));
       setFamilyTransactions(familyTx);
 
       // Load shared expenses for this family
       const shared = await sharedApi.getAll({ familyId: activeFamily.id });
+      if (requestId !== familyTxRequestId.current) return;
       setSharedExpensesList(shared);
     } catch (err) {
-      console.error('Failed to load family transactions:', err);
+      // Only log if this is still the active request
+      if (requestId === familyTxRequestId.current) {
+        console.error('Failed to load family transactions:', err);
+      }
     } finally {
-      setFamilyTransactionsLoading(false);
+      if (requestId === familyTxRequestId.current) {
+        setFamilyTransactionsLoading(false);
+      }
     }
   }, [activeFamily, members]);
 

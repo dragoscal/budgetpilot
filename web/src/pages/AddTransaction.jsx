@@ -115,7 +115,7 @@ export default function AddTransaction() {
           _autoSaved: true,
         };
         // Fire-and-forget — can't await in cleanup, but saveDraft is fast (IndexedDB)
-        saveDraft(draft).catch(() => {});
+        saveDraft(draft).catch(e => console.warn('Draft save failed:', e));
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
