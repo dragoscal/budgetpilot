@@ -59,10 +59,11 @@ export default function Budgets() {
       const isFamily = viewMode === 'family' && isFamilyMode;
 
       // Load family feed for the current month when in family view
+      let feedTx = []
       if (isFamily) {
         const feedStart = format(startOfMonth(month), 'yyyy-MM-dd')
         const feedEnd = format(endOfMonth(month), 'yyyy-MM-dd')
-        await loadFamilyFeed(feedStart, feedEnd)
+        feedTx = await loadFamilyFeed(feedStart, feedEnd)
       }
 
       const [budgets, ownTx] = await Promise.all([
@@ -82,12 +83,12 @@ export default function Budgets() {
       };
       const filterExpense = (tx, s, e) => filterByRange(tx, s, e) && tx.type === 'expense';
 
-      // In family mode, merge own transactions + familyFeed (deduplicated)
+      // In family mode, merge own transactions + feed (deduplicated)
       let allTx = ownTx
-      if (isFamily) {
+      if (isFamily && feedTx.length > 0) {
         const myIds = new Set(ownTx.map(tx => tx.id))
         allTx = [...ownTx]
-        for (const tx of familyFeed) {
+        for (const tx of feedTx) {
           if (!myIds.has(tx.id)) allTx.push(tx)
         }
       }
@@ -114,7 +115,7 @@ export default function Budgets() {
     } finally {
       if (loadVersion.current === version) setLoading(false);
     }
-  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members, familyFeed, loadFamilyFeed]);
+  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members, loadFamilyFeed]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

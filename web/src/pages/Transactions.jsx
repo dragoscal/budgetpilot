@@ -7,6 +7,7 @@ import { useFamily } from '../contexts/FamilyContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
 import { sortByDate, formatCurrency, sumAmountsMultiCurrency, getCategoryById } from '../lib/helpers';
+import { format, subDays } from 'date-fns';
 import { getCachedRates } from '../lib/exchangeRates';
 import TransactionRow from '../components/TransactionRow';
 import TransactionEditModal from '../components/TransactionEditModal';
@@ -57,6 +58,10 @@ export default function Transactions() {
   const [amountMax, setAmountMax] = useState('');
   const [sort, setSort] = useState('date-desc');
   const [familyFilter, setFamilyFilter] = useState('all');
+
+  // Reset family filter when active family changes
+  useEffect(() => { setFamilyFilter('all') }, [activeFamily?.id]);
+
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
   const [deleteTx, setDeleteTx] = useState(null);
@@ -71,11 +76,12 @@ export default function Transactions() {
   const [correlating, setCorrelating] = useState(false);
   const [selectAllFiltered, setSelectAllFiltered] = useState(false);
 
-  // Load family feed when date range changes
+  // Load family feed when date range changes (default: last 90 days if no filter)
   useEffect(() => {
-    if (isFamilyMode && activeFamily) {
-      loadFamilyFeed(customDateFrom || undefined, customDateTo || undefined)
-    }
+    if (!isFamilyMode || !activeFamily) return
+    const from = customDateFrom || format(subDays(new Date(), 90), 'yyyy-MM-dd')
+    const to = customDateTo || format(new Date(), 'yyyy-MM-dd')
+    loadFamilyFeed(from, to)
   }, [isFamilyMode, activeFamily, customDateFrom, customDateTo, loadFamilyFeed])
 
   const handleAudit = async () => {
@@ -1068,8 +1074,12 @@ export default function Transactions() {
                       onClick={async (e) => {
                         e.stopPropagation()
                         const newVis = tx.visibility === 'private' ? 'family' : 'private'
-                        await txApi.update(tx.id, { visibility: newVis })
-                        loadTransactions()
+                        try {
+                          await txApi.update(tx.id, { visibility: newVis })
+                          setAllTx(prev => prev.map(t => t.id === tx.id ? { ...t, visibility: newVis } : t))
+                        } catch {
+                          toast.error(t('common.error'))
+                        }
                       }}
                       className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0 ml-1"
                       title={(tx.visibility ?? 'family') === 'private' ? t('family.visibility.private') : t('family.visibility.family')}

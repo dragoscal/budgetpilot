@@ -62,6 +62,9 @@ export default function Dashboard() {
   // Family filter: 'all' | 'mine' | '<userId>'
   const [familyFilter, setFamilyFilter] = useState('all');
 
+  // Reset family filter when active family changes
+  useEffect(() => { setFamilyFilter('all') }, [activeFamily?.id]);
+
   // Load family feed when month changes
   useEffect(() => {
     if (!isFamilyMode) return
@@ -326,12 +329,9 @@ export default function Dashboard() {
     }
   }, [isFamilyMode, familyFilter, transactions, familyFeed])
 
-  const filteredPrevTransactions = useMemo(() => {
-    if (!isFamilyMode) return prevTransactions
-    // For previous month comparison, only use own transactions
-    // (family feed is loaded for current month only)
-    return prevTransactions
-  }, [isFamilyMode, prevTransactions]);
+  // Previous month comparison uses own transactions only
+  // (family feed is loaded for current month only)
+  const filteredPrevTransactions = prevTransactions;
 
   const stats = useMemo(() => {
     const currency = user?.defaultCurrency || 'RON';
