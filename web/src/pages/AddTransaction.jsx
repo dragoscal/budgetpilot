@@ -64,6 +64,9 @@ export default function AddTransaction() {
   // Undo state for deleted items
   const [deletedItem, setDeletedItem] = useState(null); // { txIdx, itemIdx, item, timeout }
 
+  // Auto-skip banner expand state
+  const [showAutoSkipDetails, setShowAutoSkipDetails] = useState(false);
+
   // Cleanup undo timeout on unmount
   useEffect(() => {
     return () => { if (deletedItem?.timeout) clearTimeout(deletedItem.timeout); };
@@ -178,6 +181,7 @@ export default function AddTransaction() {
 
       // Cross-source auto-skip: high-confidence match from a DIFFERENT source
       // e.g., bank statement entry that already exists as recurring payment
+      // User can restore individual items via the expandable banner
       if (topDupe && topDupe.isCrossSource && topDupe.confidence >= 0.95) {
         autoSkippedCount++;
         const src = topDupe.existingSource || 'manual';
@@ -1213,28 +1217,73 @@ export default function AddTransaction() {
                   sourceCounts[src] = (sourceCounts[src] || 0) + 1;
                 });
                 return (
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-info/8 border border-info/20 mb-3">
-                    <CheckCircle2 size={15} className="text-info shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-info">
-                        {t('addTransaction.crossSourceSkippedTitle', { count: autoSkipped.length })}
-                      </p>
-                      <p className="text-[10px] text-cream-500 mt-0.5">
-                        {Object.entries(sourceCounts).map(([src, count]) =>
-                          `${count}x ${t(`addTransaction.crossSourceLabel.${src}`)}`
-                        ).join(', ')}
-                      </p>
+                  <div className="rounded-xl bg-info/8 border border-info/20 mb-3 overflow-hidden">
+                    <div className="flex items-start gap-2.5 p-3">
+                      <CheckCircle2 size={15} className="text-info shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-info">
+                          {t('addTransaction.crossSourceSkippedTitle', { count: autoSkipped.length })}
+                        </p>
+                        <p className="text-[10px] text-cream-500 mt-0.5">
+                          {Object.entries(sourceCounts).map(([src, count]) =>
+                            `${count}x ${t(`addTransaction.crossSourceLabel.${src}`)}`
+                          ).join(', ')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => setShowAutoSkipDetails(prev => !prev)}
+                          className="text-[10px] font-medium text-info hover:underline whitespace-nowrap flex items-center gap-0.5"
+                        >
+                          {showAutoSkipDetails ? t('addTransaction.hideDetails') : t('addTransaction.showDetails')}
+                          {showAutoSkipDetails ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPendingResults(prev => prev.map(tx =>
+                              tx._autoSkipped ? { ...tx, _dismissed: false, _autoSkipped: false } : tx
+                            ));
+                            setShowAutoSkipDetails(false);
+                          }}
+                          className="text-[10px] font-medium text-info hover:underline whitespace-nowrap"
+                        >
+                          {t('addTransaction.restoreAll')}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setPendingResults(prev => prev.map(tx =>
-                          tx._autoSkipped ? { ...tx, _dismissed: false, _autoSkipped: false } : tx
-                        ));
-                      }}
-                      className="text-[10px] font-medium text-info hover:underline whitespace-nowrap shrink-0"
-                    >
-                      {t('addTransaction.undoAutoSkip')}
-                    </button>
+
+                    {/* Expandable per-item list */}
+                    {showAutoSkipDetails && (
+                      <div className="border-t border-info/15 px-3 pb-2 pt-1.5 space-y-1.5">
+                        {autoSkipped.map((tx, i) => {
+                          const cat = getCategoryById(tx.category);
+                          const txIdx = pendingResults.indexOf(tx);
+                          return (
+                            <div key={i} className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/50 dark:bg-dark-card/50">
+                              <span className="text-sm shrink-0">{cat?.icon || '📦'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-medium truncate">{tx.merchant || tx.description || t('addTransaction.unknownMerchant')}</p>
+                                <p className="text-[10px] text-cream-400">
+                                  {formatCurrency(Math.abs(tx.amount), tx.currency)} · {tx.date}
+                                  {' · '}{t(`addTransaction.crossSourceLabel.${tx._autoSkipSource || 'manual'}`)}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setPendingResults(prev => prev.map((item, j) =>
+                                    j === txIdx ? { ...item, _dismissed: false, _autoSkipped: false } : item
+                                  ));
+                                }}
+                                className="text-[10px] font-medium text-info hover:underline whitespace-nowrap shrink-0 flex items-center gap-0.5"
+                              >
+                                <Undo2 size={10} />
+                                {t('addTransaction.restore')}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
