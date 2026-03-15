@@ -115,7 +115,7 @@ export default function Budgets() {
     } finally {
       if (loadVersion.current === version) setLoading(false);
     }
-  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members, loadFamilyFeed]);
+  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, loadFamilyFeed]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

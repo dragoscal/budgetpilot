@@ -1075,13 +1075,13 @@ export default function Transactions() {
                         e.stopPropagation()
                         const newVis = tx.visibility === 'private' ? 'family' : 'private'
                         try {
-                          await txApi.update(tx.id, { visibility: newVis })
+                          await txApi.update({ ...tx, visibility: newVis })
                           setAllTx(prev => prev.map(t => t.id === tx.id ? { ...t, visibility: newVis } : t))
                         } catch {
                           toast.error(t('common.error'))
                         }
                       }}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0 ml-1"
+                      className="p-1 rounded hover:bg-cream-100 dark:hover:bg-dark-border shrink-0 ml-1"
                       title={(tx.visibility ?? 'family') === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
                     >
                       {(tx.visibility ?? 'family') === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
