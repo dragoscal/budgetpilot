@@ -523,7 +523,6 @@ const en = {
   'quickAdd.clear': 'clear',
   'quickAdd.failedParse': 'Failed to parse input',
   'quickAdd.offlineWarning': 'Quick add requires an internet connection for AI parsing.',
-  'quickAdd.paidByLabel': 'Paid by',
   'quickAdd.debtLabel': 'Debt to',
   'quickAdd.fabTooltip': 'Quick add expense',
   'quickAdd.fabTitle': 'Quick Add',
@@ -1342,19 +1341,6 @@ const en = {
   'family.totalShared': 'Total shared',
   'family.expenseCount': '{count} expense',
   'family.expenseCountPlural': '{count} expenses',
-  'family.unsettled': 'Unsettled',
-  'family.transferNeeded': '{count} transfer needed',
-  'family.transfersNeeded': '{count} transfers needed',
-  'family.settlementsNeeded': 'Settlements needed',
-  'family.allSettled': 'All settled up!',
-  'family.noOutstandingDebts': 'No outstanding debts',
-  'family.whoPaidWhat': 'Who paid what',
-  'family.paid': 'paid',
-  'family.noSharedExpenses': 'No shared expenses yet',
-  'family.splitFromTransactions': 'Split a transaction from the Transactions page',
-  'family.paidBy': 'Paid by {name}',
-  'family.noSharedExpensesEmpty': 'No shared expenses',
-  'family.splitToSee': 'Split a transaction to see it here',
   'family.yourDisplayName': 'Your display name',
   'family.yourEmoji': 'Your emoji',
   'family.nameUpdated': 'Name updated',
@@ -1364,8 +1350,6 @@ const en = {
   'family.leaveConfirm': 'Are you sure you want to leave this family?',
   'family.leaveFamily': 'Leave family',
   'family.leftFamily': 'Left family',
-  'family.debtSettled': 'Debt settled!',
-  'family.markSettled': 'Mark as settled',
   'family.personal': 'Personal',
   'family.families': 'Families',
   'family.monthlyIncome': 'Monthly Income (for proportional splits)',
@@ -1378,7 +1362,6 @@ const en = {
   // ─── Family v2 (collaborative household) ───────────────
   'family.homeTab': 'Home',
   'family.spendingTab': 'Spending',
-  'family.settleTab': 'Settle',
   'family.leftToSpend': '{amount} left to spend',
   'family.daysRemaining': '{count} days remaining',
   'family.perDay': '{amount}/day',
@@ -1402,11 +1385,6 @@ const en = {
   'family.spentThisMonth': 'this month',
   'family.simplifiedDebts': 'Simplified debts',
   'family.owes': 'owes',
-  'family.settleUp': 'Settle',
-  'family.totalUnsettled': 'Total unsettled',
-  'family.everyoneSettled': 'Everyone is settled up!',
-  'family.settlementHistory': 'Settlement history',
-  'family.noSettlementHistory': 'No settlement history yet',
   'family.virtualMembers': 'Household members (no account)',
   'family.virtualBadge': 'No account',
   'family.virtualHint': 'Tracks expenses without needing an app account',
@@ -1427,12 +1405,44 @@ const en = {
   'family.memberLinked': 'Member linked successfully!',
   'family.failedLink': 'Failed to link member',
 
+  // Family filter
+  'family.filter.all': 'All',
+  'family.filter.mine': 'Mine',
+
+  // Privacy
+  'family.privacy.title': 'My Privacy Rules',
+  'family.privacy.description': 'Choose which categories are shared with your family by default.',
+  'family.privacy.shared': 'Shared',
+  'family.privacy.private': 'Private',
+
+  // Visibility
+  'family.visibility.family': 'Visible to family',
+  'family.visibility.private': 'Private',
+
+  // Invite
+  'family.invite.title': 'Invite Member',
+  'family.invite.code': 'Invite Code',
+  'family.invite.email': 'Invite by email',
+  'family.invite.pending': 'invited you to join',
+  'family.invite.accept': 'Accept',
+  'family.invite.decline': 'Decline',
+  'family.invite.accepted': 'Invitation accepted!',
+  'family.invite.sent': 'Invite sent!',
+
+  // Budget/Goal scope
+  'budget.scope.personal': 'Personal budget',
+  'budget.scope.family': 'Family budget',
+  'goal.scope.personal': 'Personal goal',
+  'goal.scope.family': 'Family goal',
+
+  // Admin
+  'family.admin.leaveWarning': 'Transfer admin role first',
+
   // ─── Household ─────────────────────────────────────────
   'household.title': 'Household',
   'household.expenses': 'Household Expenses',
   'household.personal': 'Personal',
   'household.household': 'Household',
-  'household.paidBy': 'Paid by',
   'household.splitEqually': 'Split equally',
   'household.illCoverIt': "I'll cover it",
   'household.customSplit': 'Custom split',
@@ -2043,13 +2053,11 @@ const en = {
   'split.alreadySplitBtn': 'Already split',
   'split.mustAddUp': 'Split amounts must add up to the total',
   'split.duplicateWarning': 'This transaction has already been split. Creating another split would cause duplicates.',
-  'split.paidByYou': 'Paid by you',
   'split.whatWasThis': 'What was this for?',
   'split.totalAllocated': 'Total allocated',
   'split.byIncome': 'By Income',
   'split.setIncomeFirst': 'Set monthly income in Family Settings first',
   'split.incomeProportional': 'Income proportional',
-  'split.paidBy': 'Paid by',
   'split.selectPayer': 'Select who paid',
 
   // ─── Sync ────────────────────────────────────────────

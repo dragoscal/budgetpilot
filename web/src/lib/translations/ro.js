@@ -523,7 +523,6 @@ const ro = {
   'quickAdd.clear': 'șterge',
   'quickAdd.failedParse': 'Eroare la procesarea textului',
   'quickAdd.offlineWarning': 'Adăugarea rapidă necesită conexiune la internet pentru procesarea AI.',
-  'quickAdd.paidByLabel': 'Plătit de',
   'quickAdd.debtLabel': 'Datorie către',
   'quickAdd.fabTooltip': 'Adaugă rapid cheltuială',
   'quickAdd.fabTitle': 'Adaugă Rapid',
@@ -1342,19 +1341,6 @@ const ro = {
   'family.totalShared': 'Total comun',
   'family.expenseCount': '{count} cheltuială',
   'family.expenseCountPlural': '{count} cheltuieli',
-  'family.unsettled': 'Neachitate',
-  'family.transferNeeded': '{count} transfer necesar',
-  'family.transfersNeeded': '{count} transferuri necesare',
-  'family.settlementsNeeded': 'Decontări necesare',
-  'family.allSettled': 'Totul e achitat!',
-  'family.noOutstandingDebts': 'Nicio datorie restantă',
-  'family.whoPaidWhat': 'Cine a plătit ce',
-  'family.paid': 'plătit',
-  'family.noSharedExpenses': 'Nicio cheltuială comună încă',
-  'family.splitFromTransactions': 'Împarte o tranzacție din pagina Tranzacții',
-  'family.paidBy': 'Plătit de {name}',
-  'family.noSharedExpensesEmpty': 'Nicio cheltuială comună',
-  'family.splitToSee': 'Împarte o tranzacție pentru a o vedea aici',
   'family.yourDisplayName': 'Numele tău afișat',
   'family.yourEmoji': 'Emoji-ul tău',
   'family.nameUpdated': 'Nume actualizat',
@@ -1364,8 +1350,6 @@ const ro = {
   'family.leaveConfirm': 'Ești sigur că vrei să părăsești această familie?',
   'family.leaveFamily': 'Părăsește familia',
   'family.leftFamily': 'Ai părăsit familia',
-  'family.debtSettled': 'Datorie achitată!',
-  'family.markSettled': 'Marchează ca achitat',
   'family.personal': 'Personal',
   'family.families': 'Familii',
   'family.monthlyIncome': 'Venit lunar (pentru împărțiri proporționale)',
@@ -1378,7 +1362,6 @@ const ro = {
   // ─── Familie v2 (hub colaborativ) ──────────────────────
   'family.homeTab': 'Acasă',
   'family.spendingTab': 'Cheltuieli',
-  'family.settleTab': 'Decontări',
   'family.leftToSpend': '{amount} de cheltuit',
   'family.daysRemaining': '{count} zile rămase',
   'family.perDay': '{amount}/zi',
@@ -1402,11 +1385,6 @@ const ro = {
   'family.spentThisMonth': 'luna asta',
   'family.simplifiedDebts': 'Datorii simplificate',
   'family.owes': 'datorează',
-  'family.settleUp': 'Achită',
-  'family.totalUnsettled': 'Total neachitat',
-  'family.everyoneSettled': 'Toată lumea e achitată!',
-  'family.settlementHistory': 'Istoric decontări',
-  'family.noSettlementHistory': 'Niciun istoric de decontări',
   'family.virtualMembers': 'Membri fără cont',
   'family.virtualBadge': 'Fără cont',
   'family.virtualHint': 'Cheltuielile sunt urmărite fără cont propriu',
@@ -1427,12 +1405,44 @@ const ro = {
   'family.memberLinked': 'Membru legat cu succes!',
   'family.failedLink': 'Nu s-a putut lega membrul',
 
+  // Family filter
+  'family.filter.all': 'Toți',
+  'family.filter.mine': 'Ale mele',
+
+  // Privacy
+  'family.privacy.title': 'Regulile mele de confidențialitate',
+  'family.privacy.description': 'Alege ce categorii sunt partajate cu familia ta.',
+  'family.privacy.shared': 'Partajat',
+  'family.privacy.private': 'Privat',
+
+  // Visibility
+  'family.visibility.family': 'Vizibil pentru familie',
+  'family.visibility.private': 'Privat',
+
+  // Invite
+  'family.invite.title': 'Invită un membru',
+  'family.invite.code': 'Cod de invitație',
+  'family.invite.email': 'Invită prin email',
+  'family.invite.pending': 'te-a invitat să te alături',
+  'family.invite.accept': 'Acceptă',
+  'family.invite.decline': 'Refuză',
+  'family.invite.accepted': 'Invitație acceptată!',
+  'family.invite.sent': 'Invitație trimisă!',
+
+  // Budget/Goal scope
+  'budget.scope.personal': 'Buget personal',
+  'budget.scope.family': 'Buget de familie',
+  'goal.scope.personal': 'Obiectiv personal',
+  'goal.scope.family': 'Obiectiv de familie',
+
+  // Admin
+  'family.admin.leaveWarning': 'Transferă rolul de admin mai întâi',
+
   // ─── Comun / Cheltuieli comune ──────────────────────────
   'household.title': 'Cheltuieli comune',
   'household.expenses': 'Cheltuieli comune',
   'household.personal': 'Personal',
   'household.household': 'Comun',
-  'household.paidBy': 'Plătit de',
   'household.splitEqually': 'Împărțit egal',
   'household.illCoverIt': 'Plătesc eu tot',
   'household.customSplit': 'Împărțire personalizată',
@@ -2043,13 +2053,11 @@ const ro = {
   'split.alreadySplitBtn': 'Deja împărțită',
   'split.mustAddUp': 'Sumele împărțite trebuie să fie egale cu totalul',
   'split.duplicateWarning': 'Această tranzacție a fost deja împărțită. O nouă împărțire ar crea duplicate.',
-  'split.paidByYou': 'Plătit de tine',
   'split.whatWasThis': 'Pentru ce a fost?',
   'split.totalAllocated': 'Total alocat',
   'split.byIncome': 'Proporțional',
   'split.setIncomeFirst': 'Setează venitul lunar din Setări Familie mai întâi',
   'split.incomeProportional': 'Proporțional cu venitul',
-  'split.paidBy': 'Plătit de',
   'split.selectPayer': 'Selectează cine a plătit',
 
   // ─── Sincronizare ────────────────────────────────────
