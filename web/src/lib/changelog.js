@@ -1,10 +1,20 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '5.0.4';
+export const APP_VERSION = '5.1.0';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '5.1.0',
+    date: '2026-03-15',
+    items: [
+      { icon: 'Users', textKey: 'changelog.v510familyRedesign', type: 'feature' },
+      { icon: 'Eye', textKey: 'changelog.v510visibilityToggle', type: 'feature' },
+      { icon: 'Shield', textKey: 'changelog.v510privacyRules', type: 'feature' },
+      { icon: 'Mail', textKey: 'changelog.v510emailInvites', type: 'improvement' },
+    ],
+  },
   {
     version: '5.0.4',
     date: '2026-03-15',

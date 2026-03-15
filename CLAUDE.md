@@ -182,7 +182,7 @@ Backend (`api/.dev.vars` for local, Workers secrets for production):
 - D1 binding: `DB` (configured in `wrangler.toml`)
 
 ## Current Version
-`4.6.1` — See `web/src/lib/changelog.js`
+`5.1.0` — See `web/src/lib/changelog.js`
 
 ## Testing with Preview Tools
 After every file change:
