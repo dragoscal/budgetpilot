@@ -10,7 +10,7 @@ import HelpButton from '../components/HelpButton'
 import FamilyMembers from '../components/family/FamilyMembers'
 import FamilySettings from '../components/family/FamilySettings'
 import {
-  Eye, EyeOff, Mail, Users, Shield, Settings, Plus, UserPlus,
+  Eye, EyeOff, Mail, Users, Shield, Plus, UserPlus,
 } from 'lucide-react'
 
 // ─── Inline forms (only used here) ──────────────────────────
@@ -225,18 +225,31 @@ export default function Family() {
       {pendingInvites.length > 0 && (
         <div className="space-y-2">
           {pendingInvites.map(invite => (
-            <div key={invite.id} className="card p-4 flex items-center justify-between border-l-4 border-teal-500">
+            <div key={invite.id} className="card p-4 flex items-center justify-between border-l-4 border-accent">
               <div>
                 <span className="font-medium">{invite.familyEmoji} {invite.familyName}</span>
-                <span className="text-sm text-gray-500 ml-2">
+                <span className="text-sm text-cream-500 ml-2">
                   {invite.inviterName} {t('family.invite.pending')}
                 </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => acceptInvite(invite.id)} className="btn-primary text-sm px-3 py-1">
+                <button onClick={async () => {
+                  try {
+                    await acceptInvite(invite.id)
+                    toast.success(t('family.invite.accepted') || 'Accepted!')
+                  } catch (err) {
+                    toast.error(err.message || t('common.error'))
+                  }
+                }} className="btn-primary text-sm px-3 py-1">
                   {t('family.invite.accept')}
                 </button>
-                <button onClick={() => declineInvite(invite.id)} className="btn-secondary text-sm px-3 py-1">
+                <button onClick={async () => {
+                  try {
+                    await declineInvite(invite.id)
+                  } catch (err) {
+                    toast.error(err.message || t('common.error'))
+                  }
+                }} className="btn-secondary text-sm px-3 py-1">
                   {t('family.invite.decline')}
                 </button>
               </div>
@@ -291,8 +304,8 @@ export default function Family() {
                   }}
                   className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors ${
                     privacyRules[cat.id] === 'private'
-                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                      : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                      ? 'bg-cream-100 dark:bg-dark-border text-cream-600 dark:text-cream-300'
+                      : 'bg-accent-50 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300'
                   }`}
                 >
                   {privacyRules[cat.id] === 'private' ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -320,15 +333,19 @@ export default function Family() {
         <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title={t('family.invite.title')}>
           {/* Invite code display */}
           <div className="mb-4">
-            <label className="text-sm text-gray-500 mb-1 block">{t('family.invite.code')}</label>
+            <label className="text-sm text-cream-500 mb-1 block">{t('family.invite.code')}</label>
             <div className="flex items-center gap-2">
-              <code className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded font-mono text-lg tracking-widest flex-1 text-center">
+              <code className="bg-cream-100 dark:bg-dark-border px-3 py-2 rounded font-mono text-lg tracking-widest flex-1 text-center">
                 {activeFamily?.inviteCode}
               </code>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(activeFamily?.inviteCode || '')
-                  toast.success(t('common.copied') || 'Copied!')
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(activeFamily?.inviteCode || '')
+                    toast.success(t('common.copied') || 'Copied!')
+                  } catch {
+                    toast.error(t('common.error'))
+                  }
                 }}
                 className="btn-secondary text-sm px-3 py-1.5"
               >
@@ -348,7 +365,7 @@ export default function Family() {
               toast.error(err.message)
             }
           }}>
-            <label className="text-sm text-gray-500 mb-1 block">{t('family.invite.email')}</label>
+            <label className="text-sm text-cream-500 mb-1 block">{t('family.invite.email')}</label>
             <div className="flex gap-2">
               <input
                 type="email"

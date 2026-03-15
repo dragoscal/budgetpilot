@@ -61,8 +61,12 @@ export default function FamilyMembers() {
   const { activeFamily, members, isAdmin, updateMember } = useFamily()
 
   const handleRoleChange = async (memberId, newRole) => {
-    await updateMember(memberId, { role: newRole })
-    toast.success(t('family.roleUpdated'))
+    try {
+      await updateMember(memberId, { role: newRole })
+      toast.success(t('family.roleUpdated'))
+    } catch (err) {
+      toast.error(err.message || t('common.error'))
+    }
   }
 
   return (
