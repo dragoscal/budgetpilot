@@ -71,6 +71,13 @@ export default function Transactions() {
   const [correlating, setCorrelating] = useState(false);
   const [selectAllFiltered, setSelectAllFiltered] = useState(false);
 
+  // Load family feed when date range changes
+  useEffect(() => {
+    if (isFamilyMode && activeFamily) {
+      loadFamilyFeed(customDateFrom || undefined, customDateTo || undefined)
+    }
+  }, [isFamilyMode, activeFamily, customDateFrom, customDateTo, loadFamilyFeed])
+
   const handleAudit = async () => {
     setAuditing(true);
     try {
