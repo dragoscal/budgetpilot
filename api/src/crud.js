@@ -140,8 +140,8 @@ export function registerCrudRoutes(router) {
     ).bind(familyId, ctx.user.id).first();
     if (!membership) return json({ error: 'Not a member' }, 403);
 
-    const feedLimit = Math.min(parseInt(limit), 5000);
-    const feedOffset = parseInt(offset);
+    const feedLimit = Math.min(parseInt(limit, 10) || 500, 5000);
+    const feedOffset = parseInt(offset, 10) || 0;
 
     const result = await ctx.env.DB.prepare(`
       SELECT t.* FROM transactions t
