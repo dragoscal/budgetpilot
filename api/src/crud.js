@@ -120,9 +120,9 @@ export function registerCrudRoutes(router) {
     ).bind(familyId, ctx.user.id).first();
     if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
 
-    // Return ALL members of this family (real + virtual)
+    // Return ALL members of this family
     const result = await ctx.env.DB.prepare(
-      'SELECT * FROM family_members WHERE familyId = ? ORDER BY isVirtual ASC, joinedAt ASC'
+      'SELECT * FROM family_members WHERE familyId = ? ORDER BY joinedAt ASC'
     ).bind(familyId).all();
 
     return json({ data: result.results || [] });
@@ -381,7 +381,7 @@ export function registerCrudRoutes(router) {
             continue;
           }
           // Server generates invite code for families — strip client-sent codes
-          if (table === 'families' && action === 'create' && !row.inviteCode) {
+          if (table === 'families' && action === 'create') {
             row.inviteCode = await generateUniqueInviteCode(ctx.env.DB);
           }
 
@@ -646,7 +646,6 @@ export function registerCrudRoutes(router) {
     delete raw.id;
     delete raw.userId;
     delete raw.createdBy;
-    delete raw.paidByUserId;
     delete raw.createdAt;
     // Strip unknown client-only fields
     const data = filterColumns(table, raw);

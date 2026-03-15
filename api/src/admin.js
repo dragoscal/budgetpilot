@@ -142,7 +142,6 @@ export function registerAdminRoutes(router) {
       // Phase 1: Leaf tables
       ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(id),
       ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(id),
-      ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(id),
       // Phase 2: Parent tables of phase 1
       ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(id),
       ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(id),
@@ -157,10 +156,10 @@ export function registerAdminRoutes(router) {
 
     // Phase 4: Family cleanup
     for (const fid of familyIds) {
-      stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fid));
+      stmts.push(ctx.env.DB.prepare(`DELETE FROM family_invites WHERE familyId = ?`).bind(fid));
       stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fid));
     }
-    stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(id));
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM family_invites WHERE invitedBy = ?`).bind(id));
     stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(id));
     stmts.push(ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(id));
 

@@ -288,7 +288,6 @@ router.delete('/api/auth/account', async (ctx) => {
     // Phase 1: Leaf tables
     ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(userId),
     ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(userId),
-    ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(userId),
     // Phase 2: Parent tables
     ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(userId),
     ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(userId),
@@ -298,10 +297,10 @@ router.delete('/api/auth/account', async (ctx) => {
       .map(table => ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId)),
     // Phase 4: Family data
     ...familyIds.flatMap(fid => [
-      ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(fid),
+      ctx.env.DB.prepare(`DELETE FROM family_invites WHERE familyId = ?`).bind(fid),
       ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(fid),
     ]),
-    ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId),
+    ctx.env.DB.prepare(`DELETE FROM family_invites WHERE invitedBy = ?`).bind(userId),
     ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId),
     ctx.env.DB.prepare(`DELETE FROM families WHERE createdBy = ?`).bind(userId),
     // Phase 5: Orphan cleanup (scoped to user)
@@ -327,7 +326,6 @@ router.delete('/api/data/clear', async (ctx) => {
   // Delete in FK-safe order: children before parents
   stmts.push(ctx.env.DB.prepare(`DELETE FROM debt_payments WHERE userId = ?`).bind(userId));
   stmts.push(ctx.env.DB.prepare(`DELETE FROM loan_payments WHERE userId = ?`).bind(userId));
-  stmts.push(ctx.env.DB.prepare(`DELETE FROM settlement_history WHERE userId = ?`).bind(userId));
   stmts.push(ctx.env.DB.prepare(`DELETE FROM debts WHERE userId = ?`).bind(userId));
   stmts.push(ctx.env.DB.prepare(`DELETE FROM loans WHERE userId = ?`).bind(userId));
   stmts.push(ctx.env.DB.prepare(`DELETE FROM people WHERE userId = ?`).bind(userId));
@@ -335,13 +333,13 @@ router.delete('/api/data/clear', async (ctx) => {
   for (const table of simpleTables) {
     stmts.push(ctx.env.DB.prepare(`DELETE FROM ${table} WHERE userId = ?`).bind(userId));
   }
-  // Clean family data: shared_expenses/family_members before families
+  // Clean family data: family_invites/family_members before families
   for (const famId of familyIds) {
-    stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE familyId = ?`).bind(famId));
+    stmts.push(ctx.env.DB.prepare(`DELETE FROM family_invites WHERE familyId = ?`).bind(famId));
     stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE familyId = ?`).bind(famId));
     stmts.push(ctx.env.DB.prepare(`DELETE FROM families WHERE id = ?`).bind(famId));
   }
-  stmts.push(ctx.env.DB.prepare(`DELETE FROM shared_expenses WHERE paidByUserId = ?`).bind(userId));
+  stmts.push(ctx.env.DB.prepare(`DELETE FROM family_invites WHERE invitedBy = ?`).bind(userId));
   stmts.push(ctx.env.DB.prepare(`DELETE FROM family_members WHERE userId = ?`).bind(userId));
 
   // Execute all deletes atomically
