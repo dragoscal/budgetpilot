@@ -161,6 +161,128 @@ export function registerCrudRoutes(router) {
     });
   });
 
+  // POST /api/families/:familyId/invite — invite by email (in-app notification)
+  router.post('/api/families/:familyId/invite', async (ctx) => {
+    const { familyId } = ctx.params;
+    const { email } = ctx.body;
+    if (!email?.trim()) return json({ error: 'Email is required' }, 400);
+
+    // Verify caller is admin
+    const membership = await ctx.env.DB.prepare(
+      'SELECT role FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!membership || membership.role !== 'admin')
+      return json({ error: 'Admin only' }, 403);
+
+    // Check if already a member
+    const existingUser = await ctx.env.DB.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).bind(email.toLowerCase().trim()).first();
+    if (existingUser) {
+      const alreadyMember = await ctx.env.DB.prepare(
+        'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+      ).bind(familyId, existingUser.id).first();
+      if (alreadyMember) return json({ error: 'Already a member' }, 409);
+    }
+
+    // Check for existing pending invite
+    const existingInvite = await ctx.env.DB.prepare(
+      'SELECT id FROM family_invites WHERE familyId = ? AND email = ? AND status = ?'
+    ).bind(familyId, email.toLowerCase().trim(), 'pending').first();
+    if (existingInvite) return json({ error: 'Already invited' }, 409);
+
+    const now = new Date().toISOString();
+    const invite = {
+      id: crypto.randomUUID(),
+      familyId,
+      email: email.toLowerCase().trim(),
+      invitedBy: ctx.user.id,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now
+    };
+    await ctx.env.DB.prepare(
+      'INSERT INTO family_invites (id, familyId, email, invitedBy, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(invite.id, invite.familyId, invite.email, invite.invitedBy, invite.status, invite.createdAt, invite.updatedAt).run();
+
+    return json({ data: invite }, 201);
+  });
+
+  // GET /api/families/invites/pending — check for pending invites for current user
+  router.get('/api/families/invites/pending', async (ctx) => {
+    const result = await ctx.env.DB.prepare(`
+      SELECT fi.*, f.name as familyName, f.emoji as familyEmoji, u.name as inviterName
+      FROM family_invites fi
+      JOIN families f ON fi.familyId = f.id
+      JOIN users u ON fi.invitedBy = u.id
+      WHERE fi.email = ? AND fi.status = 'pending'
+    `).bind(ctx.user.email).all();
+    return json({ data: result.results || [] });
+  });
+
+  // POST /api/families/invites/:inviteId/accept — accept an invite
+  router.post('/api/families/invites/:inviteId/accept', async (ctx) => {
+    const invite = await ctx.env.DB.prepare(
+      'SELECT * FROM family_invites WHERE id = ? AND status = ?'
+    ).bind(ctx.params.inviteId, 'pending').first();
+    if (!invite) return json({ error: 'Invite not found' }, 404);
+
+    if (invite.email.toLowerCase() !== ctx.user.email.toLowerCase())
+      return json({ error: 'Invite not for you' }, 403);
+
+    // Check if already a member (could have joined via invite code)
+    const existing = await ctx.env.DB.prepare(
+      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(invite.familyId, ctx.user.id).first();
+    if (existing) {
+      await ctx.env.DB.prepare(
+        'UPDATE family_invites SET status = ?, updatedAt = ? WHERE id = ?'
+      ).bind('accepted', new Date().toISOString(), invite.id).run();
+      return json({ data: existing });
+    }
+
+    const now = new Date().toISOString();
+    const member = {
+      id: crypto.randomUUID(),
+      familyId: invite.familyId,
+      userId: ctx.user.id,
+      role: 'member',
+      isVirtual: 0,
+      displayName: ctx.user.name || 'Member',
+      joinedAt: now,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await ctx.env.DB.batch([
+      ctx.env.DB.prepare(
+        'INSERT INTO family_members (id, familyId, userId, role, isVirtual, displayName, joinedAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(member.id, member.familyId, member.userId, member.role, member.isVirtual, member.displayName, member.joinedAt, member.createdAt, member.updatedAt),
+      ctx.env.DB.prepare(
+        'UPDATE family_invites SET status = ?, updatedAt = ? WHERE id = ?'
+      ).bind('accepted', now, invite.id)
+    ]);
+
+    return json({ data: member }, 201);
+  });
+
+  // POST /api/families/invites/:inviteId/decline — decline an invite
+  router.post('/api/families/invites/:inviteId/decline', async (ctx) => {
+    const invite = await ctx.env.DB.prepare(
+      'SELECT * FROM family_invites WHERE id = ? AND status = ?'
+    ).bind(ctx.params.inviteId, 'pending').first();
+    if (!invite) return json({ error: 'Invite not found' }, 404);
+
+    if (invite.email.toLowerCase() !== ctx.user.email.toLowerCase())
+      return json({ error: 'Invite not for you' }, 403);
+
+    await ctx.env.DB.prepare(
+      'UPDATE family_invites SET status = ?, updatedAt = ? WHERE id = ?'
+    ).bind('declined', new Date().toISOString(), invite.id).run();
+
+    return json({ success: true });
+  });
+
   // POST /api/families/:familyId/members — add a virtual member to a family
   router.post('/api/families/:familyId/members', async (ctx) => {
     const { familyId } = ctx.params;
