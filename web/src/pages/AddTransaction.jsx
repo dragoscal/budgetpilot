@@ -223,13 +223,6 @@ export default function AddTransaction() {
       const saved = [];
       for (let i = 0; i < toSave.length; i++) {
         const { _duplicate, _dismissed, _autoSkipped, _autoSkipSource, ...clean } = toSave[i];
-        // Add paidBy info to description if present
-        if (clean.paidBy) {
-          clean.description = clean.description
-            ? `${clean.description} (${t('quickAdd.paidByLabel')} ${clean.paidBy})`
-            : `${t('quickAdd.paidByLabel')} ${clean.paidBy}`;
-          clean.tags = [...(clean.tags || []), clean.paidBy.toLowerCase()];
-        }
         // For debt entries, mark with a tag and adjust description
         if (clean.isDebt && clean.debtTo) {
           clean.description = clean.description
