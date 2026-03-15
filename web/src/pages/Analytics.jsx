@@ -10,7 +10,7 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown, BarChart2, BarChart3, FileText } from 'lucide-react';
+import { Lightbulb, Hash, TrendingUp, TrendingDown, BarChart2, BarChart3, FileText } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval, subMonths, getISOWeek, startOfWeek, endOfWeek } from 'date-fns';
@@ -30,7 +30,6 @@ export default function Analytics() {
   const [insights, setInsights] = useState([]);
   const [rates, setRates] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [scopeFilter, setScopeFilter] = useState('all');
   const [spendingView, setSpendingView] = useState('day');
   const loadVersion = useRef(0);
   const currency = user?.defaultCurrency || 'RON';
@@ -59,11 +58,8 @@ export default function Analytics() {
     const start = startOfMonth(month);
     const end = endOfMonth(month);
     let result = allTx.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
-    if (scopeFilter !== 'all') {
-      result = result.filter((t) => (t.scope || 'personal') === scopeFilter);
-    }
     return result;
-  }, [allTx, month, scopeFilter]);
+  }, [allTx, month]);
 
   // Generate smart insights
   useEffect(() => {
@@ -120,7 +116,6 @@ export default function Analytics() {
     const prevStart = startOfMonth(subMonths(month, 1));
     const prevEnd = endOfMonth(subMonths(month, 1));
     let prevTx = allTx.filter((t) => { const d = new Date(t.date); return d >= prevStart && d <= prevEnd && t.type === 'expense'; });
-    if (scopeFilter !== 'all') prevTx = prevTx.filter((t) => (t.scope || 'personal') === scopeFilter);
 
     const prevByCategory = groupBy(prevTx, 'category');
     const currByCategory = groupBy(expenses, 'category');
@@ -139,7 +134,7 @@ export default function Analytics() {
     const rising = trends.filter(t => t.change > 5).sort((a, b) => b.change - a.change).slice(0, 3);
     const falling = trends.filter(t => t.change < -5).sort((a, b) => a.change - b.change).slice(0, 3);
     return { rising, falling };
-  }, [expenses, allTx, month, scopeFilter, currency, rates, t]);
+  }, [expenses, allTx, month, currency, rates, t]);
 
   // Top merchants (multi-currency aware)
   const topMerchants = useMemo(() => {
@@ -183,28 +178,6 @@ export default function Analytics() {
           <HelpButton section="analytics" />
         </div>
         <MonthPicker value={month} onChange={setMonth} />
-      </div>
-
-      {/* Scope filter pills */}
-      <div className="flex gap-1.5">
-        {[
-          { id: 'all', label: t('household.scopeAll') },
-          { id: 'personal', label: t('household.scopePersonal'), icon: User },
-          { id: 'household', label: t('household.scopeHousehold'), icon: Home },
-        ].map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setScopeFilter(s.id)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all flex items-center gap-1 ${
-              scopeFilter === s.id
-                ? 'bg-accent-50 border-accent-300 text-accent-700 shadow-sm dark:bg-accent-500/10 dark:border-accent-500/30 dark:text-accent-300'
-                : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
-            }`}
-          >
-            {s.icon && <s.icon size={12} />}
-            {s.label}
-          </button>
-        ))}
       </div>
 
       {monthTx.length === 0 && (
