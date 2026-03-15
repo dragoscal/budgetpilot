@@ -91,6 +91,21 @@ function deserializeRow(table, row) {
   return out;
 }
 
+async function generateUniqueInviteCode(db, maxRetries = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    let code = '';
+    for (let i = 0; i < 8; i++) code += chars[bytes[i] % chars.length];
+    const existing = await db.prepare(
+      'SELECT id FROM families WHERE inviteCode = ?'
+    ).bind(code).first();
+    if (!existing) return code;
+  }
+  throw new Error('Failed to generate unique invite code');
+}
+
 export function registerCrudRoutes(router) {
   // ─── SPECIFIC routes FIRST (before generic :table routes) ───
 
@@ -324,6 +339,16 @@ export function registerCrudRoutes(router) {
           // Strip client-only fields that don't exist in D1 schema
           const row = filterColumns(table, raw);
 
+          // Validate visibility for transactions in sync push
+          if (table === 'transactions' && row.visibility && !['family', 'private'].includes(row.visibility)) {
+            results.push({ id: data?.id, status: 'error', message: 'Invalid visibility value' });
+            continue;
+          }
+          // Server generates invite code for families — strip client-sent codes
+          if (table === 'families' && action === 'create' && !row.inviteCode) {
+            row.inviteCode = await generateUniqueInviteCode(ctx.env.DB);
+          }
+
           const columns = Object.keys(row);
           const placeholders = columns.map(() => '?').join(', ');
           const updates = columns.filter(c => c !== 'id').map(c => `${c} = excluded.${c}`).join(', ');
@@ -542,6 +567,16 @@ export function registerCrudRoutes(router) {
     // Strip unknown client-only fields
     const data = filterColumns(table, raw);
 
+    // Server-side invite code generation for families
+    if (table === 'families') {
+      data.inviteCode = await generateUniqueInviteCode(ctx.env.DB);
+    }
+
+    // Validate visibility enum for transactions
+    if (table === 'transactions' && data.visibility && !['family', 'private'].includes(data.visibility)) {
+      return json({ error: 'visibility must be "family" or "private"' }, 400);
+    }
+
     const columns = Object.keys(data);
     const placeholders = columns.map(() => '?').join(', ');
     const values = columns.map((c) => data[c]);
@@ -576,6 +611,11 @@ export function registerCrudRoutes(router) {
     delete raw.createdAt;
     // Strip unknown client-only fields
     const data = filterColumns(table, raw);
+
+    // Validate visibility enum for transactions
+    if (table === 'transactions' && data.visibility && !['family', 'private'].includes(data.visibility)) {
+      return json({ error: 'visibility must be "family" or "private"' }, 400);
+    }
 
     const sets = Object.keys(data).map((k) => `${k} = ?`).join(', ');
     const values = [...Object.values(data), id, ctx.user.id];
