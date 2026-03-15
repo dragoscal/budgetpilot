@@ -252,8 +252,8 @@ export default function SettingsPage() {
       const KNOWN_STORES = [
         'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
         'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
-        'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
-        'notifications', 'settlementHistory',
+        'families', 'familyMembers', 'familyInvites', 'challenges', 'receipts',
+        'notifications',
       ];
       const hasKnownData = KNOWN_STORES.some((s) => Array.isArray(data[s]) && data[s].length > 0);
       if (!hasKnownData) {
