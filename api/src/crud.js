@@ -3,24 +3,24 @@ import { json } from './router.js';
 import { generateId } from './auth.js';
 import { logActivity } from './index.js';
 
-const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments', 'families', 'family_members', 'shared_expenses', 'challenges', 'receipts', 'settlement_history'];
+const ALLOWED_TABLES = ['transactions', 'budgets', 'goals', 'accounts', 'recurring', 'people', 'debts', 'debt_payments', 'wishlist', 'loans', 'loan_payments', 'families', 'family_members', 'family_invites', 'challenges', 'receipts'];
 
 // Map client-side store names to D1 table names (for sync compatibility)
-const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments', familyMembers: 'family_members', sharedExpenses: 'shared_expenses', settlementHistory: 'settlement_history' };
+const TABLE_ALIASES = { debtPayments: 'debt_payments', loanPayments: 'loan_payments', familyMembers: 'family_members', familyInvites: 'family_invites' };
 
 function resolveTable(name) {
   return TABLE_ALIASES[name] || name;
 }
 
 // Map tables to their user-ownership column (defaults to 'userId')
-const USER_COLUMN = { families: 'createdBy', shared_expenses: 'paidByUserId' };
+const USER_COLUMN = { families: 'createdBy', family_invites: 'invitedBy' };
 
 function getUserColumn(table) {
   return USER_COLUMN[table] || 'userId';
 }
 
 // JSON columns that need to be serialized/deserialized
-const JSON_COLUMNS = { transactions: ['tags', 'items', 'beneficiaries'], settlement_history: ['settlements'] };
+const JSON_COLUMNS = { transactions: ['tags', 'items'] };
 
 // Boolean columns — SQLite returns 0/1, normalize to true/false for frontend
 const BOOLEAN_COLUMNS = {
@@ -34,9 +34,9 @@ const BOOLEAN_COLUMNS = {
 
 // Valid D1 columns per table — client may send extra fields that don't exist in the schema
 const TABLE_COLUMNS = {
-  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','recurringId','items','splitFrom','importBatch','originalText','scope','paidBy','splitType','beneficiaries','createdAt','updatedAt','deletedAt']),
+  transactions: new Set(['id','userId','type','merchant','amount','currency','category','subcategory','date','description','tags','source','recurringId','items','splitFrom','importBatch','originalText','visibility','createdAt','updatedAt','deletedAt']),
   budgets: new Set(['id','userId','category','amount','currency','month','rollover','familyId','createdAt','updatedAt']),
-  goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','createdAt','updatedAt']),
+  goals: new Set(['id','userId','name','type','targetAmount','currentAmount','currency','targetDate','interestRate','color','familyId','createdAt','updatedAt']),
   accounts: new Set(['id','userId','name','type','balance','currency','color','isLiability','createdAt','updatedAt']),
   recurring: new Set(['id','userId','name','merchant','amount','currency','category','frequency','billingDay','billingMonth','endDate','active','autoDetected','autoDebit','isVariable','recurringType','status','pausedAt','cancelledAt','createdAt','updatedAt']),
   people: new Set(['id','userId','name','emoji','phone','notes','createdAt','updatedAt']),
@@ -47,10 +47,9 @@ const TABLE_COLUMNS = {
   loan_payments: new Set(['id','userId','loanId','amount','principalPortion','interestPortion','date','note','createdAt','updatedAt']),
   families: new Set(['id','name','createdBy','emoji','inviteCode','defaultCurrency','createdAt','updatedAt']),
   family_members: new Set(['id','familyId','userId','role','isVirtual','displayName','emoji','monthlyIncome','joinedAt','createdAt','updatedAt']),
-  shared_expenses: new Set(['id','familyId','paidByUserId','amount','currency','description','category','date','splitMethod','settled','createdAt','updatedAt']),
+  family_invites: new Set(['id','familyId','email','invitedBy','status','createdAt','updatedAt']),
   challenges: new Set(['id','userId','name','title','type','targetAmount','target','category','startDate','endDate','durationDays','status','progress','createdAt','updatedAt']),
   receipts: new Set(['id','userId','merchant','total','currency','category','transactionId','processedAt','createdAt','updatedAt']),
-  settlement_history: new Set(['id','userId','settlements','totalSettled','currency','createdAt','updatedAt']),
 };
 
 // Strip unknown columns so D1 doesn't throw "table X has no column named Y"
