@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'lumet';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 let dbPromise = null;
 
@@ -143,6 +143,20 @@ export function getDB() {
             { name: 'familyId' }, { name: 'settledAt' },
           ]);
         }
+
+        // v11: Family redesign — drop old stores, add familyInvites
+        if (oldVersion < 11) {
+          if (db.objectStoreNames.contains('sharedExpenses')) {
+            db.deleteObjectStore('sharedExpenses');
+          }
+          if (db.objectStoreNames.contains('settlementHistory')) {
+            db.deleteObjectStore('settlementHistory');
+          }
+          ensureStore(db, 'familyInvites', { keyPath: 'id' }, [
+            { name: 'email', keyPath: 'email' },
+            { name: 'familyId', keyPath: 'familyId' },
+          ]);
+        }
       },
       blocked(currentVersion, blockedVersion) {
         // Old connections are blocking the upgrade — force reload
@@ -228,8 +242,8 @@ export async function exportAll() {
   const stores = [
     'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
-    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
-    'notifications', 'settlementHistory',
+    'families', 'familyMembers', 'familyInvites', 'challenges', 'receipts',
+    'notifications',
   ];
   const data = {};
   for (const store of stores) {
@@ -247,8 +261,8 @@ export async function importAll(data, { merge = false } = {}) {
   const stores = [
     'transactions', 'budgets', 'goals', 'accounts', 'recurring', 'settings',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
-    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts',
-    'notifications', 'settlementHistory',
+    'families', 'familyMembers', 'familyInvites', 'challenges', 'receipts',
+    'notifications',
   ];
   const stats = { imported: 0, skipped: 0, overwritten: 0 };
 
@@ -293,8 +307,8 @@ export async function clearAllData() {
   const stores = [
     'transactions', 'budgets', 'goals', 'accounts', 'recurring',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
-    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts', 'receiptDrafts',
-    'notifications', 'settlementHistory', 'settings',
+    'families', 'familyMembers', 'familyInvites', 'challenges', 'receipts', 'receiptDrafts',
+    'notifications', 'settings',
   ];
   for (const store of stores) {
     if (db.objectStoreNames.contains(store)) {
@@ -312,8 +326,8 @@ export async function clearUserData() {
   const stores = [
     'transactions', 'budgets', 'goals', 'accounts', 'recurring',
     'people', 'debts', 'debtPayments', 'wishlist', 'loans', 'loanPayments',
-    'families', 'familyMembers', 'sharedExpenses', 'challenges', 'receipts', 'receiptDrafts',
-    'notifications', 'settlementHistory',
+    'families', 'familyMembers', 'familyInvites', 'challenges', 'receipts', 'receiptDrafts',
+    'notifications',
   ];
   for (const store of stores) {
     if (db.objectStoreNames.contains(store)) {
@@ -479,23 +493,6 @@ export async function getDebtsByPersonId(personId) {
 export async function getFamilyMembersByFamilyId(familyId) {
   const db = await getDB();
   return db.getAllFromIndex('familyMembers', 'familyId', familyId);
-}
-
-/**
- * Get shared expenses by familyId using the familyId index.
- */
-export async function getSharedExpensesByFamilyId(familyId) {
-  const db = await getDB();
-  return db.getAllFromIndex('sharedExpenses', 'familyId', familyId);
-}
-
-/**
- * Get shared expenses by date range using the date index.
- */
-export async function getSharedExpensesByDateRange(startDate, endDate) {
-  const db = await getDB();
-  const range = IDBKeyRange.bound(startDate, endDate, false, false);
-  return db.getAllFromIndex('sharedExpenses', 'date', range);
 }
 
 /**
