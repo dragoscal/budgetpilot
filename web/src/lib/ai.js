@@ -640,6 +640,7 @@ async function _callAIOnce(messages, systemPrompt, maxTokens = 4000, { signal, t
 
 // ─── RECEIPT PROCESSING ───────────────────────────────────
 export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { userId = 'local' } = {}) {
+  const today = formatDateISO(new Date());
   const result = await callAI([
     {
       role: 'user',
@@ -650,7 +651,7 @@ export async function processReceipt(imageBase64, mediaType = 'image/jpeg', { us
         },
         {
           type: 'text',
-          text: 'Parse this receipt completely. Extract every item with its price and category. If items belong to different categories, split into separate transactions. Flag any items you\'re unsure about with needsReview: true. Return the full JSON structure.',
+          text: `Parse this receipt completely. Today's date is ${today}. Extract every item with its price and category. If items belong to different categories, split into separate transactions. Flag any items you're unsure about with needsReview: true. Return the full JSON structure.`,
         },
       ],
     },
@@ -890,7 +891,7 @@ export async function processBankStatement(pdfBase64, { userId = 'local', signal
         },
         {
           type: 'text',
-          text: 'Parse this bank statement PDF completely. Extract EVERY transaction with date, merchant, amount, category. Return the full JSON structure with all transactions found.',
+          text: `Parse this bank statement PDF completely. Today's date is ${formatDateISO(new Date())}. Extract EVERY transaction with date, merchant, amount, category. Return the full JSON structure with all transactions found.`,
         },
       ],
     },
@@ -921,7 +922,9 @@ function normalizeBankStatementResult(result, userId = 'local') {
     })
     .map((t) => {
       const amount = Math.abs(Number(t.amount));
-      const date = (t.date && isValidDate(t.date)) ? t.date : today;
+      let date = (t.date && isValidDate(t.date)) ? t.date : today;
+      // Clamp future dates to today
+      if (date > today) date = today;
       const confidence = typeof t.confidence === 'number' ? Math.min(1, Math.max(0, t.confidence)) : 0.7;
 
       // Flag if date was invalid
@@ -1083,7 +1086,7 @@ export async function processDocument(base64Data, mediaType = 'image/jpeg', { us
         contentBlock,
         {
           type: 'text',
-          text: 'Analyze this financial document completely. Identify the document type, extract the issuer, amounts, dates, and any line items. Create transaction(s) from it. Return the full JSON structure.',
+          text: `Analyze this financial document completely. Today's date is ${formatDateISO(new Date())}. Identify the document type, extract the issuer, amounts, dates, and any line items. Create transaction(s) from it. Return the full JSON structure.`,
         },
       ],
     },
@@ -1125,7 +1128,9 @@ function normalizeDocumentResult(result, userId = 'local') {
       }));
 
       const amount = Math.abs(Number(t.amount));
-      const date = (t.date && isValidDate(t.date)) ? t.date : (docInfo.date && isValidDate(docInfo.date) ? docInfo.date : today);
+      let date = (t.date && isValidDate(t.date)) ? t.date : (docInfo.date && isValidDate(docInfo.date) ? docInfo.date : today);
+      // Clamp future dates to today
+      if (date > today) date = today;
       const confidence = typeof t.confidence === 'number' ? Math.min(1, Math.max(0, t.confidence)) : 0.8;
 
       return {
@@ -1232,6 +1237,19 @@ Return as JSON: { "summary": "your summary text here" }`,
 function normalizeReceiptResult(result, userId = 'local') {
   const receipt = result.receipt || {};
   const rawTxns = result.transactions || [result];
+  const today = formatDateISO(new Date());
+  const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+  // Clamp future dates to today (AI sometimes flags current-year dates as future)
+  const clampDate = (d) => {
+    if (!d || !isValidDate(d)) return today;
+    return d > today ? today : d;
+  };
+
+  // Filter out AI-generated "future date" warnings (we handle this ourselves now)
+  const warnings = (result.warnings || []).filter(
+    (w) => typeof w !== 'string' || !w.toLowerCase().includes('future')
+  );
 
   const transactions = rawTxns.map((t) => {
     const items = (t.items || []).map((item) => ({
@@ -1286,7 +1304,7 @@ function normalizeReceiptResult(result, userId = 'local') {
       currency: (t.currency || receipt.currency || 'RON').toUpperCase(),
       category: t.category || inferCategory(t.merchant || receipt.store),
       subcategory: t.subcategory || null,
-      date: t.date || receipt.date || formatDateISO(new Date()),
+      date: clampDate(t.date || receipt.date),
       type: t.type || 'expense',
       description: t.description || `${items.length} items from ${t.merchant || receipt.store || 'receipt'}`,
       source: 'receipt',
@@ -1304,7 +1322,7 @@ function normalizeReceiptResult(result, userId = 'local') {
   return {
     transactions,
     receipt,
-    warnings: result.warnings || [],
+    warnings,
     summary: result.summary || '',
     hasItemsToReview: transactions.some(t => t.needsReview),
   };
@@ -1312,29 +1330,35 @@ function normalizeReceiptResult(result, userId = 'local') {
 
 function normalizeNLPResult(result, userId = 'local', originalText = '') {
   const txns = result.transactions || [result];
-  return txns.map((t) => ({
-    id: generateId(),
-    merchant: t.merchant || 'Unknown',
-    amount: Math.abs(Number(t.amount)) || 0,
-    currency: (t.currency || 'RON').toUpperCase(),
-    category: t.category || inferCategory(t.merchant),
-    subcategory: t.subcategory || null,
-    date: t.date || formatDateISO(new Date()),
-    type: t.type || 'expense',
-    description: t.description || '',
-    originalText: originalText || '',
-    source: 'nlp',
-    confidence: t.confidence || 0.8,
-    items: [],
-    notes: '',
-    tags: [],
-    // Family member / debt tracking from NLP
-    paidBy: t.paidBy || null,
-    isDebt: !!t.isDebt,
-    debtTo: t.debtTo || null,
-    userId,
-    createdAt: new Date().toISOString(),
-  }));
+  const today = formatDateISO(new Date());
+  return txns.map((t) => {
+    let date = t.date || today;
+    // Clamp future dates to today
+    if (date > today) date = today;
+    return {
+      id: generateId(),
+      merchant: t.merchant || 'Unknown',
+      amount: Math.abs(Number(t.amount)) || 0,
+      currency: (t.currency || 'RON').toUpperCase(),
+      category: t.category || inferCategory(t.merchant),
+      subcategory: t.subcategory || null,
+      date,
+      type: t.type || 'expense',
+      description: t.description || '',
+      originalText: originalText || '',
+      source: 'nlp',
+      confidence: t.confidence || 0.8,
+      items: [],
+      notes: '',
+      tags: [],
+      // Family member / debt tracking from NLP
+      paidBy: t.paidBy || null,
+      isDebt: !!t.isDebt,
+      debtTo: t.debtTo || null,
+      userId,
+      createdAt: new Date().toISOString(),
+    };
+  });
 }
 
 function inferCategory(merchant) {

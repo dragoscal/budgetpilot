@@ -2460,6 +2460,7 @@ const ro = {
   'changelog.v490emptyStates': 'Stări goale utile adăugate la Analize, Flux Numerar și Revizuire Lunară',
   'changelog.v490syncNow': 'Butonul de sincronizare manuală acum reîmprospătează toate datele de pe server',
   'changelog.v490errorHandling': 'Vizibilitate îmbunătățită a erorilor — gestionarea silențioasă acum logează avertismente',
+  'changelog.v502receiptDate': 'Datele bonurilor nu mai apar ca „viitoare" — AI-ul cunoaște acum data de azi și datele viitoare sunt corectate',
   'changelog.v501aiProxyFirst': 'Funcțiile AI folosesc acum proxy-ul serverului prioritar — adminul controlează accesul tuturor utilizatorilor',
   'changelog.v500pageTabs': 'Paginile înrudite sunt acum conectate cu tab-uri — Obiective, Wishlist și Provocări au tab-uri comune',
   'changelog.v500sidebarCleanup': 'Bara laterală simplificată de la 28 la 19 elemente — navigare mai curată și focalizată',
