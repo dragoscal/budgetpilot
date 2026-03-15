@@ -432,41 +432,50 @@ async function _callAIOnce(messages, systemPrompt, maxTokens = 4000, { signal, t
   const apiKey = await getSetting(providerConfig.keyName);
 
   try {
-  // If no client-side key, try server proxy (for Anthropic only)
-  if (!apiKey && apiUrl && provider === 'anthropic') {
-    const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${apiUrl}/api/ai/process`, {
-      method: 'POST',
-      headers,
-      signal: fetchSignal,
-      body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel, ...(temperature != null ? { temperature } : {}) }),
-    });
-    if (!res.ok) {
-      // Non-streaming error (auth failures, etc.)
-      const errBody = await res.json().catch(() => ({}));
+  // Server proxy FIRST for Anthropic — ensures admin controls access via aiProxyAllowed.
+  // Falls back to user's own key only if proxy denies access (403).
+  if (apiUrl && provider === 'anthropic') {
+    let proxyDenied = false;
+    try {
+      const token = sessionStorage.getItem('bp_token') || localStorage.getItem('bp_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${apiUrl}/api/ai/process`, {
+        method: 'POST',
+        headers,
+        signal: fetchSignal,
+        body: JSON.stringify({ messages, system: systemPrompt, maxTokens, model: selectedModel, ...(temperature != null ? { temperature } : {}) }),
+      });
       if (res.status === 403) {
-        throw new Error(errBody.error || 'AI proxy access not granted. Add your own API key in Settings.');
+        // User not authorized for proxy — fall through to own key
+        proxyDenied = true;
+      } else if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const err = new Error(errBody.error || `AI processing failed (${res.status})`);
+        err._retryable = RETRYABLE_STATUSES.has(res.status);
+        throw err;
+      } else {
+        // Proxy success — stream or JSON response
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/event-stream')) {
+          return await readSSEStream(res, fetchSignal);
+        }
+        const proxyResult = await res.json();
+        const proxyText = proxyResult.content?.[0]?.text || (typeof proxyResult === 'string' ? proxyResult : JSON.stringify(proxyResult));
+        const proxyJson = extractJSON(proxyText);
+        if (proxyJson) { const parsed = JSON.parse(proxyJson); parsed._truncated = false; return parsed; }
+        proxyResult._truncated = false;
+        return proxyResult;
       }
-      const err = new Error(errBody.error || `AI processing failed (${res.status})`);
-      err._retryable = RETRYABLE_STATUSES.has(res.status);
-      throw err;
+    } catch (proxyErr) {
+      if (proxyErr.name === 'AbortError') throw proxyErr;
+      if (!proxyDenied) throw proxyErr;
     }
 
-    // Server returns SSE stream with text deltas — readSSEStream collects and parses
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('text/event-stream')) {
-      return await readSSEStream(res, fetchSignal);
+    // Proxy denied (403) — fall back to user's own key if they have one
+    if (proxyDenied && !apiKey) {
+      throw new Error('AI proxy access not granted. Ask the admin or add your own API key in Settings.');
     }
-
-    // Fallback: non-streaming JSON response (auth errors etc.)
-    const proxyResult = await res.json();
-    const proxyText = proxyResult.content?.[0]?.text || (typeof proxyResult === 'string' ? proxyResult : JSON.stringify(proxyResult));
-    const proxyJson = extractJSON(proxyText);
-    if (proxyJson) { const parsed = JSON.parse(proxyJson); parsed._truncated = false; return parsed; }
-    proxyResult._truncated = false;
-    return proxyResult;
   }
 
   if (!apiKey) {

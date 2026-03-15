@@ -1,10 +1,17 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '5.0.0';
+export const APP_VERSION = '5.0.1';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '5.0.1',
+    date: '2026-03-15',
+    items: [
+      { icon: 'Bot', textKey: 'changelog.v501aiProxyFirst', type: 'fix' },
+    ],
+  },
   {
     version: '5.0.0',
     date: '2026-03-15',

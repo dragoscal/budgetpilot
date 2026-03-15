@@ -2460,6 +2460,7 @@ const en = {
   'changelog.v490emptyStates': 'Added helpful empty states to Analytics, Cash Flow, and Monthly Review pages',
   'changelog.v490syncNow': 'Manual sync button now actually refreshes all data from server',
   'changelog.v490errorHandling': 'Improved error visibility — silent catch handlers now log warnings for debugging',
+  'changelog.v501aiProxyFirst': 'AI features now always use server proxy first — admin controls access for all users',
   'changelog.v500pageTabs': 'Related pages now connected with tab navigation — Goals, Wishlist & Challenges share tabs',
   'changelog.v500sidebarCleanup': 'Sidebar streamlined from 28 to 19 items — cleaner, more focused navigation',
   'changelog.v500settingsSupport': 'Guide & Feedback moved to Settings for a decluttered sidebar',
