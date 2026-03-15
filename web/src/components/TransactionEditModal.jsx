@@ -7,7 +7,8 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '../lib/helpers';
 import { learnCategory } from '../lib/smartFeatures';
-import { User, Home } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { useFamily } from '../contexts/FamilyContext';
 import CategoryPicker from './CategoryPicker';
 import TagInput from './TagInput';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +18,7 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
   const { toast } = useToast();
   const { categories } = useCategories();
   const { effectiveUserId } = useAuth();
+  const familyCtx = useFamily();
   const [form, setForm] = useState({});
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
         date: transaction.date || todayLocal(),
         description: transaction.description || '',
         tags: transaction.tags || [],
-        scope: transaction.scope || 'personal',
+        visibility: transaction.visibility || null,
       });
     }
   }, [transaction]);
@@ -135,30 +137,26 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
             </p>
           </div>
         )}
-        {/* Scope toggle */}
-        <div>
-          <label className="label">{t('household.title')}</label>
-          <div className="flex rounded-xl border border-cream-300 dark:border-dark-border overflow-hidden">
-            {[
-              { id: 'personal', label: t('household.personal'), icon: User },
-              { id: 'household', label: t('household.household'), icon: Home },
-            ].map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setForm(f => ({ ...f, scope: s.id }))}
-                className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-                  (form.scope || 'personal') === s.id
-                    ? 'bg-cream-900 text-white dark:bg-cream-100 dark:text-cream-900'
-                    : 'text-cream-600 hover:bg-cream-100 dark:hover:bg-dark-border'
-                }`}
-              >
-                <s.icon size={14} />
-                {s.label}
-              </button>
-            ))}
+        {/* Visibility toggle (family mode only) */}
+        {familyCtx?.isFamilyMode && (
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => setForm(f => ({
+                ...f,
+                visibility: f.visibility === 'private' ? 'family' : 'private'
+              }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+                form.visibility === 'private'
+                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                  : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+              }`}
+            >
+              {form.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+              {form.visibility === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
+            </button>
           </div>
-        </div>
+        )}
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="btn-secondary flex-1">{t('common.cancel')}</button>
           <button onClick={handleSave} className="btn-primary flex-1">{t('common.save')}</button>
