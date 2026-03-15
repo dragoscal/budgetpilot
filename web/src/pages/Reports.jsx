@@ -331,7 +331,6 @@ export default function Reports() {
                     <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.categoryHeader')}</th>
                     <th className="text-left px-4 py-2 text-xs text-cream-500">{t('reports.tagsHeader')}</th>
                     <th className="text-right px-4 py-2 text-xs text-cream-500">{t('reports.amountHeader')}</th>
-                    <th className="text-left px-4 py-2 text-xs text-cream-500">{t('household.title')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -342,7 +341,6 @@ export default function Reports() {
                       <td className="px-4 py-2">{tx.category}</td>
                       <td className="px-4 py-2">{(tx.tags || []).map((tag) => `#${tag}`).join(' ')}</td>
                       <td className="px-4 py-2 text-right money">{formatCurrency(tx.amount, tx.currency)}</td>
-                      <td className="px-4 py-2 text-xs">{tx.scope === 'household' ? t('household.household') : t('household.personal')}</td>
                     </tr>
                   ))}
                 </tbody>
