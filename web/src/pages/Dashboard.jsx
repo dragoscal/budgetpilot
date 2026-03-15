@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 import { useHideAmounts } from '../contexts/SettingsContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { transactions as txApi, budgets as budgetsApi, goals as goalsApi, recurring as recurringApi, accounts as accountsApi } from '../lib/api';
@@ -23,7 +24,7 @@ import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAx
 import SyncIndicator from '../components/SyncIndicator';
 import SpendingPsychology from '../components/SpendingPsychology';
 import HelpButton from '../components/HelpButton';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home, BookOpen, Check, FileSpreadsheet, ClipboardList } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, BookOpen, Check, FileSpreadsheet, ClipboardList } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
@@ -31,6 +32,7 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from '
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, effectiveUserId } = useAuth();
+  const { isFamilyMode, activeFamily, members, familyFeed, feedLoading, loadFamilyFeed } = useFamily();
   // eslint-disable-next-line no-unused-vars -- context available for future use
   const hideAmountsCtx = useHideAmounts();
   const { t } = useTranslation();
@@ -57,12 +59,16 @@ export default function Dashboard() {
   // All transactions (not just current month) for predictions
   const [allTransactions, setAllTransactions] = useState([]);
 
-  // Scope filter: 'all' | 'personal' | 'household'
-  const [scopeFilter, setScopeFilter] = useState(() => localStorage.getItem('lumet_dashboard_scope') || 'all');
-  const handleScopeChange = useCallback((newScope) => {
-    setScopeFilter(newScope);
-    localStorage.setItem('lumet_dashboard_scope', newScope);
-  }, []);
+  // Family filter: 'all' | 'mine' | '<userId>'
+  const [familyFilter, setFamilyFilter] = useState('all');
+
+  // Load family feed when month changes
+  useEffect(() => {
+    if (!isFamilyMode) return
+    const start = format(startOfMonth(month), 'yyyy-MM-dd')
+    const end = format(endOfMonth(month), 'yyyy-MM-dd')
+    loadFamilyFeed(start, end)
+  }, [isFamilyMode, month, loadFamilyFeed]);
 
   // ─── Widget customization ──────────────────────────────
   const WIDGET_DEFAULTS = [
@@ -303,28 +309,35 @@ export default function Dashboard() {
     runNotificationChecks();
   }, [loading, transactions.length, budgetsList.length, manualBillsDue.length, autoBillsDue.length]);
 
-  // Apply scope filter to transactions
-  const scopedTx = useMemo(() => {
-    if (scopeFilter === 'all') return transactions;
-    return transactions.filter((tx) => {
-      const txScope = tx.scope || 'personal';
-      return txScope === scopeFilter;
-    });
-  }, [transactions, scopeFilter]);
+  // Apply family filter to transactions
+  const filteredTransactions = useMemo(() => {
+    if (!isFamilyMode) return transactions
+    switch (familyFilter) {
+      case 'all': {
+        const myIds = new Set(transactions.map(tx => tx.id))
+        const merged = [...transactions]
+        for (const tx of familyFeed) {
+          if (!myIds.has(tx.id)) merged.push(tx)
+        }
+        return merged.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      }
+      case 'mine': return transactions
+      default: return familyFeed.filter(tx => tx.userId === familyFilter)
+    }
+  }, [isFamilyMode, familyFilter, transactions, familyFeed])
 
-  const scopedPrevTx = useMemo(() => {
-    if (scopeFilter === 'all') return prevTransactions;
-    return prevTransactions.filter((tx) => {
-      const txScope = tx.scope || 'personal';
-      return txScope === scopeFilter;
-    });
-  }, [prevTransactions, scopeFilter]);
+  const filteredPrevTransactions = useMemo(() => {
+    if (!isFamilyMode) return prevTransactions
+    // For previous month comparison, only use own transactions
+    // (family feed is loaded for current month only)
+    return prevTransactions
+  }, [isFamilyMode, prevTransactions]);
 
   const stats = useMemo(() => {
     const currency = user?.defaultCurrency || 'RON';
-    const expenses = scopedTx.filter((t) => t.type === 'expense');
-    const income = scopedTx.filter((t) => t.type === 'income');
-    const prevExpenses = scopedPrevTx.filter((t) => t.type === 'expense');
+    const expenses = filteredTransactions.filter((t) => t.type === 'expense');
+    const income = filteredTransactions.filter((t) => t.type === 'income');
+    const prevExpenses = filteredPrevTransactions.filter((t) => t.type === 'expense');
 
     const totalSpent = sumAmountsMultiCurrency(expenses, currency, rates);
     const totalIncome = sumAmountsMultiCurrency(income, currency, rates);
@@ -353,7 +366,7 @@ export default function Dashboard() {
       prevTotalSpent,
       spentTrend: trendIndicator(totalSpent, prevTotalSpent),
     };
-  }, [scopedTx, scopedPrevTx, budgetsList, accountsList, recurringList, rates, user]);
+  }, [filteredTransactions, filteredPrevTransactions, budgetsList, accountsList, recurringList, rates, user]);
 
   // Spending velocity: compare current pace to last month
   const velocity = useMemo(() => {
@@ -381,7 +394,7 @@ export default function Dashboard() {
     const start = startOfMonth(month);
     const end = endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
-    const expenses = scopedTx.filter((t) => t.type === 'expense');
+    const expenses = filteredTransactions.filter((t) => t.type === 'expense');
 
     let cumulative = 0;
     return days.map((day) => {
@@ -391,12 +404,12 @@ export default function Dashboard() {
       cumulative += daySpend;
       return { date: format(day, 'dd'), daily: daySpend, cumulative };
     });
-  }, [scopedTx, month, rates, user]);
+  }, [filteredTransactions, month, rates, user]);
 
   // Category pie chart data (translated names + multi-currency conversion)
   const categoryData = useMemo(() => {
     const cur = user?.defaultCurrency || 'RON';
-    const expenses = scopedTx.filter((t) => t.type === 'expense');
+    const expenses = filteredTransactions.filter((t) => t.type === 'expense');
     const grouped = groupBy(expenses, 'category');
     return Object.entries(grouped)
       .map(([catId, txs]) => {
@@ -405,20 +418,20 @@ export default function Dashboard() {
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [scopedTx, rates, user, t]);
+  }, [filteredTransactions, rates, user, t]);
 
   // Budget progress — sorted by most critical (with multi-currency conversion)
   const budgetProgress = useMemo(() => {
     const cur = user?.defaultCurrency || 'RON';
     return budgetsList
       .map((b) => {
-        const catExpenses = scopedTx.filter((t) => t.type === 'expense' && t.category === b.category);
+        const catExpenses = filteredTransactions.filter((t) => t.type === 'expense' && t.category === b.category);
         const spent = catExpenses.length > 0 ? Math.round(sumAmountsMultiCurrency(catExpenses, cur, rates) * 100) / 100 : 0;
         return { ...b, spent, pct: percentOf(spent, b.amount) };
       })
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 5);
-  }, [budgetsList, scopedTx, rates, user]);
+  }, [budgetsList, filteredTransactions, rates, user]);
 
   // Smart alerts
   const smartAlerts = useMemo(() => {
@@ -444,10 +457,10 @@ export default function Dashboard() {
       }
     });
 
-    // Month-over-month spending comparison (at same point in month) — uses scopedPrevTx to respect scope filter
-    if (stats.totalSpent > 0 && scopedPrevTx.length > 0) {
+    // Month-over-month spending comparison (at same point in month)
+    if (stats.totalSpent > 0 && filteredPrevTransactions.length > 0) {
       const cur = user?.defaultCurrency || 'RON';
-      const prevExpenses = scopedPrevTx.filter((tx) => tx.type === 'expense');
+      const prevExpenses = filteredPrevTransactions.filter((tx) => tx.type === 'expense');
       const dayOfMonth = new Date().getDate();
       const prevAtThisPoint = sumAmountsMultiCurrency(
         prevExpenses.filter((tx) => new Date(tx.date).getDate() <= dayOfMonth),
@@ -462,18 +475,18 @@ export default function Dashboard() {
     }
 
     return alerts.slice(0, 3);
-  }, [budgetProgress, recurringList, stats, scopedPrevTx, t, user, rates]);
+  }, [budgetProgress, recurringList, stats, filteredPrevTransactions, t, user, rates]);
 
   // No-spend days count
   const noSpendDays = useMemo(() => {
-    const expenses = scopedTx.filter((t) => t.type === 'expense');
+    const expenses = filteredTransactions.filter((t) => t.type === 'expense');
     const spendDates = new Set(expenses.map((t) => t.date));
     const start = startOfMonth(month);
     const today = new Date();
     const end = today < endOfMonth(month) ? today : endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
     return days.filter((d) => !spendDates.has(format(d, 'yyyy-MM-dd'))).length;
-  }, [scopedTx, month]);
+  }, [filteredTransactions, month]);
 
   // Financial Health Score (0-100) with factor breakdown
   const { healthScore, healthFactors } = useMemo(() => {
@@ -552,11 +565,11 @@ export default function Dashboard() {
     return { key: 'dashboard.healthPoor', color: 'text-danger', bg: 'bg-danger/10', ring: 'ring-danger/30', strokeColor: '#DC2626' };
   }, [healthScore]);
 
-  // Month comparison text (uses scoped prev transactions to match stats)
+  // Month comparison text
   const monthComparison = useMemo(() => {
-    if (scopedPrevTx.length === 0 || stats.totalSpent === 0) return null;
+    if (filteredPrevTransactions.length === 0 || stats.totalSpent === 0) return null;
     const cur = user?.defaultCurrency || 'RON';
-    const prevExpenses = scopedPrevTx.filter((t) => t.type === 'expense');
+    const prevExpenses = filteredPrevTransactions.filter((t) => t.type === 'expense');
     const dayOfMonth = new Date().getDate();
     const prevAtThisPoint = sumAmountsMultiCurrency(
       prevExpenses.filter((t) => new Date(t.date).getDate() <= dayOfMonth),
@@ -569,19 +582,19 @@ export default function Dashboard() {
       direction: diff > 0 ? 'more' : 'less',
       isGood: diff <= 0,
     };
-  }, [stats, scopedPrevTx, user, rates]);
+  }, [stats, filteredPrevTransactions, user, rates]);
 
-  const recentTx = useMemo(() => sortByDate(scopedTx).slice(0, 6), [scopedTx]);
+  const recentTx = useMemo(() => sortByDate(filteredTransactions).slice(0, 6), [filteredTransactions]);
 
   // ─── Spending Predictions ──────────────────────────────
   const predictions = useMemo(() => {
     if (allTransactions.length === 0) return null;
     const monthlyPred = predictMonthlySpending(allTransactions, 3);
     if (monthlyPred.monthsUsed < 2) return null;
-    const endOfMonth = predictEndOfMonthBalance(scopedTx, stats.totalIncome - stats.totalSpent);
+    const endOfMonth = predictEndOfMonthBalance(filteredTransactions, stats.totalIncome - stats.totalSpent);
     const anomalies = getSpendingAnomalies(allTransactions);
     return { monthly: monthlyPred, endOfMonth, anomalies };
-  }, [allTransactions, scopedTx, stats]);
+  }, [allTransactions, filteredTransactions, stats]);
 
   // ─── Bill Suggestions ─────────────────────────────────
   const billSuggestions = useMemo(() => {
@@ -832,27 +845,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Scope filter pills */}
-      <div className="flex gap-1.5">
-        {[
-          { id: 'all', label: t('household.scopeAll') },
-          { id: 'personal', label: t('household.scopePersonal'), icon: User },
-          { id: 'household', label: t('household.scopeHousehold'), icon: Home },
-        ].map((s) => (
-          <button
-            key={s.id}
-            onClick={() => handleScopeChange(s.id)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
-              scopeFilter === s.id
-                ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300 shadow-sm'
-                : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
-            }`}
-          >
-            {s.icon && <s.icon size={12} />}
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* Family filter chips */}
+      {isFamilyMode && (
+        <div className="flex gap-1.5">
+          {[
+            { id: 'all', label: t('family.filter.all') },
+            { id: 'mine', label: t('family.filter.mine') },
+          ].concat(
+            members.filter(m => m.userId !== effectiveUserId).map(m => ({
+              id: m.userId,
+              label: `${m.emoji || '\ud83d\udc64'} ${m.displayName}`
+            }))
+          ).map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFamilyFilter(f.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                familyFilter === f.id
+                  ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300 shadow-sm'
+                  : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Smart Alerts */}
       {smartAlerts.length > 0 && (
