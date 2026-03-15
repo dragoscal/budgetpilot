@@ -9,8 +9,9 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import CategoryPicker from '../components/CategoryPicker';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
+import PageTabs from '../components/PageTabs';
 import { SkeletonPage } from '../components/LoadingSkeleton';
-import { Trophy, Plus, Flame, Target, Ban, Check, X, RotateCcw } from 'lucide-react';
+import { Trophy, Plus, Flame, Target, Ban, Check, X, RotateCcw, Star } from 'lucide-react';
 import HelpButton from '../components/HelpButton';
 
 const getChallengePresets = (t) => [
@@ -221,6 +222,12 @@ export default function Challenges() {
     setShowForm(true);
   };
 
+  const goalTabs = useMemo(() => [
+    { to: '/goals', labelKey: 'nav.goals', icon: Target },
+    { to: '/wishlist', labelKey: 'nav.wishlist', icon: Star },
+    { to: '/challenges', labelKey: 'nav.challenges', icon: Trophy },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   const streakDays = (() => {
@@ -246,6 +253,7 @@ export default function Challenges() {
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={goalTabs} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('challenges.title')}</h1>

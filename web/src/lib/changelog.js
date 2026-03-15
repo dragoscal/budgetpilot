@@ -1,10 +1,20 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '4.9.0';
+export const APP_VERSION = '5.0.0';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '5.0.0',
+    date: '2026-03-15',
+    items: [
+      { icon: 'LayoutGrid', textKey: 'changelog.v500pageTabs', type: 'feature' },
+      { icon: 'Sidebar', textKey: 'changelog.v500sidebarCleanup', type: 'improvement' },
+      { icon: 'Settings', textKey: 'changelog.v500settingsSupport', type: 'improvement' },
+      { icon: 'Zap', textKey: 'changelog.v500dashboardActions', type: 'improvement' },
+    ],
+  },
   {
     version: '4.9.0',
     date: '2026-03-15',

@@ -12,12 +12,13 @@ import TransactionEditModal from '../components/TransactionEditModal';
 import SearchFilter from '../components/SearchFilter';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
+import PageTabs from '../components/PageTabs';
 import { SkeletonRow } from '../components/LoadingSkeleton';
 import { SORT_OPTIONS } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { checkDuplicate, auditTransactions, learnCategory } from '../lib/smartFeatures';
-import { Receipt, Download, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link } from 'lucide-react';
+import { Receipt, Download, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link, Camera, FileSpreadsheet } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
 import BatchToolbar from '../components/BatchToolbar';
 import { correlateTransactions } from '../lib/transactionCorrelation';
@@ -544,8 +545,14 @@ export default function Transactions() {
     toast.success(t('transactions.csvExported'));
   };
 
+  const txTabs = useMemo(() => [
+    { to: '/transactions', labelKey: 'nav.transactions', icon: Receipt },
+    { to: '/receipts', labelKey: 'nav.receipts', icon: Camera },
+  ], []);
+
   return (
     <div className="space-y-4">
+      <PageTabs tabs={txTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('transactions.title')}</h1>
@@ -557,6 +564,9 @@ export default function Transactions() {
               <Undo2 size={14} /> {t('transactions.undoImport', { count: lastBatch.count })}
             </button>
           )}
+          <button onClick={() => navigate('/import-budget')} className="btn-ghost text-xs flex items-center gap-1">
+            <FileSpreadsheet size={14} /> {t('nav.importBudget')}
+          </button>
           <button onClick={handleAudit} disabled={auditing || loading} className="btn-ghost text-xs flex items-center gap-1">
             {auditing ? <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <Search size={14} />}
             {t('transactions.audit')}

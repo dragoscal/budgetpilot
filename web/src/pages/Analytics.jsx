@@ -10,12 +10,13 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { generateInsights } from '../lib/smartFeatures';
 import MonthPicker from '../components/MonthPicker';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
+import { Lightbulb, Hash, User, Home, TrendingUp, TrendingDown, BarChart2, BarChart3, FileText } from 'lucide-react';
 import { getTagStats } from '../lib/tagHelpers';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, format, eachDayOfInterval, subMonths, getISOWeek, startOfWeek, endOfWeek } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 import EmptyState from '../components/EmptyState';
+import PageTabs from '../components/PageTabs';
 
 export default function Analytics() {
   const { t } = useTranslation();
@@ -166,10 +167,16 @@ export default function Analytics() {
   const projected = isCurrentMonth ? totalSpent + dailyAvg * Math.max(daysLeft, 0) : totalSpent;
   const totalBudget = sumBy(budgetsList, 'amount');
 
+  const insightTabs = useMemo(() => [
+    { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+    { to: '/review', labelKey: 'nav.review', icon: FileText },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={insightTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('analytics.title')}</h1>

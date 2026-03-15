@@ -7,6 +7,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency, formatDate, getCategoryById } from '../lib/helpers';
 import { getCategoryLabel } from '../lib/categoryManager';
 import EmptyState from '../components/EmptyState';
+import PageTabs from '../components/PageTabs';
 import Modal from '../components/Modal';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { Camera, Search, X, Receipt, ExternalLink, Calendar, Tag } from 'lucide-react';
@@ -79,10 +80,16 @@ export default function ReceiptGallery() {
     return transactions.find(t => t.id === receipt.transactionId);
   };
 
+  const txTabs = useMemo(() => [
+    { to: '/transactions', labelKey: 'nav.transactions', icon: Receipt },
+    { to: '/receipts', labelKey: 'nav.receipts', icon: Camera },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={txTabs} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('receipts.gallery')}</h1>

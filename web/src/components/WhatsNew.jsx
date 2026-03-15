@@ -12,9 +12,10 @@ import {
   Search, AlertTriangle, Tag, Eye, Bot, Settings, BarChart2, Layers, Palette,
   Layout, Type, Heart, GitCompareArrows, Bug, FileSearch, FileText, Cpu,
   Repeat, ArrowLeftRight, Loader, LogOut, Camera, Download, Database,
+  LayoutGrid, PanelLeft,
 } from 'lucide-react';
 
-const ICONS = { Sparkles, Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark, Bell, XCircle, Coins, Globe, CreditCard, Smartphone, Target, Pencil, MessageSquare, CalendarDays, LayoutList, RefreshCw, Hash, Search, AlertTriangle, Tag, Eye, Bot, Settings, BarChart2, Layers, Palette, Layout, Type, Heart, GitCompareArrows, Bug, FileSearch, FileText, Cpu, Repeat, ArrowLeftRight, Loader, LogOut, Camera, Download, Database };
+const ICONS = { Sparkles, Calendar, Users, Flame, BarChart3, Handshake, UserPlus, FileSpreadsheet, Zap, Shield, Link, History, Copy, Trash2, Undo2, CheckSquare, RotateCcw, Landmark, Bell, XCircle, Coins, Globe, CreditCard, Smartphone, Target, Pencil, MessageSquare, CalendarDays, LayoutList, RefreshCw, Hash, Search, AlertTriangle, Tag, Eye, Bot, Settings, BarChart2, Layers, Palette, Layout, Type, Heart, GitCompareArrows, Bug, FileSearch, FileText, Cpu, Repeat, ArrowLeftRight, Loader, LogOut, Camera, Download, Database, LayoutGrid, Sidebar: PanelLeft };
 
 const TYPE_STYLES = {
   feature:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',

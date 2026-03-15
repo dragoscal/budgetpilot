@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { goals as goalsApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,8 @@ import { generateId, formatCurrency } from '../lib/helpers';
 import GoalCard from '../components/GoalCard';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { Target, Plus } from 'lucide-react';
+import PageTabs from '../components/PageTabs';
+import { Target, Plus, Star, Trophy } from 'lucide-react';
 
 export default function Goals() {
   const { user, effectiveUserId } = useAuth();
@@ -128,8 +129,15 @@ export default function Goals() {
   const saveUpGoals = goalsList.filter((g) => g.type === 'save_up');
   const payDownGoals = goalsList.filter((g) => g.type === 'pay_down');
 
+  const goalTabs = useMemo(() => [
+    { to: '/goals', labelKey: 'nav.goals', icon: Target },
+    { to: '/wishlist', labelKey: 'nav.wishlist', icon: Star },
+    { to: '/challenges', labelKey: 'nav.challenges', icon: Trophy },
+  ], []);
+
   return (
     <div className="space-y-6">
+      <PageTabs tabs={goalTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('goals.savingsGoals')}</h1>

@@ -1364,6 +1364,39 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* Support */}
+      <div className="card">
+        <h3 className="section-title flex items-center gap-2"><MessageSquare size={14} /> {t('settings.support')}</h3>
+        <div className="space-y-2">
+          <button
+            onClick={() => navigate('/guide')}
+            className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-cream-50 dark:hover:bg-dark-border/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-cream-500">📖</span>
+              <div>
+                <p className="text-sm font-medium">{t('nav.guide')}</p>
+                <p className="text-xs text-cream-500">{t('settings.guideDesc')}</p>
+              </div>
+            </div>
+            <ChevronRight size={14} className="text-cream-400" />
+          </button>
+          <button
+            onClick={() => navigate('/feedback')}
+            className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-cream-50 dark:hover:bg-dark-border/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-cream-500">💬</span>
+              <div>
+                <p className="text-sm font-medium">{t('nav.feedback')}</p>
+                <p className="text-xs text-cream-500">{t('settings.feedbackDesc')}</p>
+              </div>
+            </div>
+            <ChevronRight size={14} className="text-cream-400" />
+          </button>
+        </div>
+      </div>
+
       {/* Danger Zone — Delete Account */}
       <div className="card border border-danger/20">
         <h3 className="section-title flex items-center gap-2 text-danger"><UserX size={14} /> {t('settings.dangerZone')}</h3>

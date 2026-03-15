@@ -59,7 +59,6 @@ export default function Sidebar() {
       items: [
         { to: '/calendar', icon: Calendar, label: t('nav.calendar') },
         { to: '/cashflow', icon: TrendingUp, label: t('nav.cashflow') },
-        { to: '/networth', icon: Landmark, label: t('nav.networth') },
         { to: '/analytics', icon: BarChart3, label: t('nav.analytics') },
         { to: '/reports', icon: ClipboardList, label: t('nav.reports') },
       ],
@@ -69,11 +68,6 @@ export default function Sidebar() {
       items: [
         { to: '/family', icon: Home, label: t('nav.household') },
         { to: '/people', icon: Users, label: t('nav.people') },
-        { to: '/wishlist', icon: Star, label: t('nav.wishlist') },
-        { to: '/challenges', icon: Trophy, label: t('nav.challenges') },
-        { to: '/receipts', icon: Camera, label: t('nav.receipts') },
-        { to: '/import-budget', icon: FileSpreadsheet, label: t('nav.importBudget') },
-        { to: '/review', icon: FileText, label: t('nav.review') },
       ],
     },
   ], [t]);
@@ -195,16 +189,6 @@ export default function Sidebar() {
             </NavLink>
           )}
 
-          <NavLink to="/feedback" className={navLinkClass} title={collapsed ? t('nav.feedback') : undefined}>
-            <MessageSquare size={18} strokeWidth={1.5} className="shrink-0" />
-            {!collapsed && <span>{t('nav.feedback')}</span>}
-          </NavLink>
-
-          <NavLink to="/guide" className={navLinkClass} title={collapsed ? t('nav.guide') : undefined}>
-            <HelpCircle size={18} strokeWidth={1.5} className="shrink-0" />
-            {!collapsed && <span>{t('nav.guide')}</span>}
-          </NavLink>
-
           {!isInstalled && (
             <button
               onClick={handleInstallClick}
@@ -298,30 +282,6 @@ export default function Sidebar() {
                 <div className="space-y-px">
                   <NotificationCenter mobile />
 
-                  <NavLink
-                    to="/feedback"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
-                      location.pathname === '/feedback'
-                        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
-                        : 'text-cream-600 dark:text-cream-400'
-                    }`}
-                  >
-                    <MessageSquare size={18} className="shrink-0" />
-                    <span>{t('nav.feedback')}</span>
-                  </NavLink>
-                  <NavLink
-                    to="/guide"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
-                      location.pathname === '/guide'
-                        ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
-                        : 'text-cream-600 dark:text-cream-400'
-                    }`}
-                  >
-                    <HelpCircle size={18} className="shrink-0" />
-                    <span>{t('nav.guide')}</span>
-                  </NavLink>
                   {!isInstalled && (
                     <button
                       onClick={handleInstallClick}

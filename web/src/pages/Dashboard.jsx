@@ -22,7 +22,7 @@ import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAx
 import SyncIndicator from '../components/SyncIndicator';
 import SpendingPsychology from '../components/SpendingPsychology';
 import HelpButton from '../components/HelpButton';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home, BookOpen, Check } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, CalendarDays, ArrowRight, PlusCircle, Landmark, Eye, EyeOff, Camera, Zap, RotateCcw, AlertTriangle, Bell, Flame, X, Heart, Settings, ChevronUp, ChevronDown, Lightbulb, Target, GripVertical, User, Home, BookOpen, Check, FileSpreadsheet, ClipboardList } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
@@ -1035,11 +1035,11 @@ export default function Dashboard() {
         <Link to="/add?tab=receipt" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cream-100 dark:bg-cream-800 text-cream-700 dark:text-cream-300 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
           <Camera size={16} /> {t('dashboard.scanReceipt')}
         </Link>
-        <Link to="/recurring" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cream-100 dark:bg-cream-800 text-cream-700 dark:text-cream-300 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
-          <RotateCcw size={16} /> {t('dashboard.recurring')}
+        <Link to="/import-budget" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cream-100 dark:bg-cream-800 text-cream-700 dark:text-cream-300 text-sm font-medium whitespace-nowrap hover:bg-cream-200 dark:hover:bg-cream-700 transition-colors shrink-0">
+          <FileSpreadsheet size={16} /> {t('dashboard.import')}
         </Link>
-        <Link to="/analytics" className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-accent-200 dark:border-accent-500/20 text-accent-600 dark:text-accent-400 text-sm font-medium whitespace-nowrap hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors shrink-0">
-          <TrendingUp size={16} /> {t('dashboard.analytics')}
+        <Link to="/reports" className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-accent-200 dark:border-accent-500/20 text-accent-600 dark:text-accent-400 text-sm font-medium whitespace-nowrap hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors shrink-0">
+          <ClipboardList size={16} /> {t('dashboard.reports')}
         </Link>
       </div>
 

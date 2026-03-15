@@ -12,7 +12,8 @@ import { SkeletonPage } from '../components/LoadingSkeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import HelpButton from '../components/HelpButton';
 import EmptyState from '../components/EmptyState';
-import { ClipboardList } from 'lucide-react';
+import PageTabs from '../components/PageTabs';
+import { ClipboardList, BarChart3, FileText } from 'lucide-react';
 
 export default function MonthlyReview() {
   const { user, effectiveUserId } = useAuth();
@@ -90,11 +91,17 @@ export default function MonthlyReview() {
       .slice(0, 5);
   }, [currentTx, currency, rates]);
 
+  const insightTabs = useMemo(() => [
+    { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+    { to: '/review', labelKey: 'nav.review', icon: FileText },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   if (currentTx.length === 0) {
     return (
       <div className="space-y-6">
+        <PageTabs tabs={insightTabs} />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="page-title mb-0">{t('review.title')}</h1>
@@ -115,6 +122,7 @@ export default function MonthlyReview() {
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={insightTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('review.title')}</h1>

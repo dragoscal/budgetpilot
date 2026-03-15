@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { wishlistApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,8 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { generateId, formatCurrency, todayLocal } from '../lib/helpers';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { Star, Plus, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
+import PageTabs from '../components/PageTabs';
+import { Star, Plus, ShoppingCart, Trash2, ExternalLink, Target, Trophy } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import HelpButton from '../components/HelpButton';
 
@@ -104,10 +105,17 @@ export default function Wishlist() {
   const wantedItems = items.filter((i) => i.status === 'wanted').sort((a, b) => b.priority - a.priority);
   const purchasedItems = items.filter((i) => i.status === 'purchased');
 
+  const goalTabs = useMemo(() => [
+    { to: '/goals', labelKey: 'nav.goals', icon: Target },
+    { to: '/wishlist', labelKey: 'nav.wishlist', icon: Star },
+    { to: '/challenges', labelKey: 'nav.challenges', icon: Trophy },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={goalTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('wishlist.title')}</h1>

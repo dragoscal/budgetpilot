@@ -8,12 +8,13 @@ import { getCategoryLabel } from '../lib/categoryManager';
 import { getCachedRates } from '../lib/exchangeRates';
 import StatCard from '../components/StatCard';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle, ArrowUpDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Zap, AlertTriangle, ArrowUpDown, Landmark } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { forecastCashFlow } from '../lib/forecasting';
 import HelpButton from '../components/HelpButton';
 import EmptyState from '../components/EmptyState';
+import PageTabs from '../components/PageTabs';
 
 export default function CashFlow() {
   const { t } = useTranslation();
@@ -116,11 +117,17 @@ export default function CashFlow() {
       }));
   }, [forecast]);
 
+  const moneyTabs = useMemo(() => [
+    { to: '/cashflow', labelKey: 'nav.cashflow', icon: TrendingUp },
+    { to: '/networth', labelKey: 'nav.networth', icon: Landmark },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   if (allTx.length === 0) {
     return (
       <div className="space-y-6">
+        <PageTabs tabs={moneyTabs} />
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('cashflow.title')}</h1>
           <HelpButton section="cashflow" />
@@ -138,6 +145,7 @@ export default function CashFlow() {
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={moneyTabs} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('cashflow.title')}</h1>

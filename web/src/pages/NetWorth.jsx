@@ -8,7 +8,8 @@ import { generateId, formatCurrency, sumBy } from '../lib/helpers';
 import { getRates, convertAmount } from '../lib/exchangeRates';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
-import { Landmark, Plus, Edit3, Trash2 } from 'lucide-react';
+import PageTabs from '../components/PageTabs';
+import { Landmark, Plus, Edit3, Trash2, TrendingUp } from 'lucide-react';
 import { SkeletonPage } from '../components/LoadingSkeleton';
 import HelpButton from '../components/HelpButton';
 
@@ -147,10 +148,16 @@ export default function NetWorth() {
     </div>
   );
 
+  const moneyTabs = useMemo(() => [
+    { to: '/cashflow', labelKey: 'nav.cashflow', icon: TrendingUp },
+    { to: '/networth', labelKey: 'nav.networth', icon: Landmark },
+  ], []);
+
   if (loading) return <SkeletonPage />;
 
   return (
     <div className="space-y-6">
+      <PageTabs tabs={moneyTabs} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="page-title mb-0">{t('networth.title')}</h1>
