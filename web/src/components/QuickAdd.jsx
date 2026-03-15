@@ -3,6 +3,7 @@ import { ArrowRight, Loader2, Calendar } from 'lucide-react';
 import { processNaturalLanguage } from '../lib/ai';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useFamily } from '../contexts/FamilyContext';
 import { todayLocal } from '../lib/helpers';
 
 const EXAMPLES = [
@@ -17,6 +18,7 @@ const EXAMPLES = [
 export default function QuickAdd({ onResult, onError, initialValue = '' }) {
   const { effectiveUserId } = useAuth();
   const { t } = useTranslation();
+  const familyCtx = useFamily();
   const [text, setText] = useState(initialValue);
   const [loading, setLoading] = useState(false);
   const [customDate, setCustomDate] = useState('');
@@ -35,7 +37,12 @@ export default function QuickAdd({ onResult, onError, initialValue = '' }) {
     try {
       const results = await processNaturalLanguage(value.trim(), { userId: effectiveUserId });
       const dateOverride = customDate || todayLocal();
-      onResult?.(results.map((r) => ({ ...r, date: dateOverride, source: 'nlp', visibility: null })));
+      onResult?.(results.map((r) => ({
+        ...r,
+        date: dateOverride,
+        source: 'nlp',
+        visibility: familyCtx?.isFamilyMode ? familyCtx.resolveVisibility(r.category) : null,
+      })));
       setText('');
       setCustomDate('');
     } catch (err) {

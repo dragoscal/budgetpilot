@@ -19,6 +19,8 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
   const { categories } = useCategories();
   const { effectiveUserId } = useAuth();
   const familyCtx = useFamily();
+  const isFamilyMode = familyCtx?.isFamilyMode
+  const resolveVisibility = familyCtx?.resolveVisibility
   const [form, setForm] = useState({});
 
   useEffect(() => {
@@ -37,6 +39,13 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
       });
     }
   }, [transaction]);
+
+  // Auto-resolve visibility when category changes in family mode
+  useEffect(() => {
+    if (isFamilyMode && form.category) {
+      setForm(f => ({ ...f, visibility: resolveVisibility(f.category) }))
+    }
+  }, [form.category, isFamilyMode, resolveVisibility])
 
   const handleSave = () => {
     if (!form.amount) return;
@@ -138,22 +147,22 @@ export default function TransactionEditModal({ transaction, open, onClose, onSav
           </div>
         )}
         {/* Visibility toggle (family mode only) */}
-        {familyCtx?.isFamilyMode && (
+        {isFamilyMode && (
           <div className="flex items-center gap-2 text-sm">
             <button
               type="button"
               onClick={() => setForm(f => ({
                 ...f,
-                visibility: f.visibility === 'private' ? 'family' : 'private'
+                visibility: (f.visibility ?? 'family') === 'private' ? 'family' : 'private'
               }))}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
-                form.visibility === 'private'
+                (form.visibility ?? 'family') === 'private'
                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
               }`}
             >
-              {form.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
-              {form.visibility === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
+              {(form.visibility ?? 'family') === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+              {(form.visibility ?? 'family') === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
             </button>
           </div>
         )}

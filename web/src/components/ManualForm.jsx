@@ -37,12 +37,13 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
   const [visibility, setVisibility] = useState(initial.visibility || null);
 
   // Auto-set visibility when category changes (only in family mode)
+  const isFamilyMode = familyCtx?.isFamilyMode
+  const resolveVisibility = familyCtx?.resolveVisibility
   useEffect(() => {
-    if (familyCtx?.isFamilyMode && category) {
-      const resolved = familyCtx.resolveVisibility(category)
-      setVisibility(resolved)
+    if (isFamilyMode && category) {
+      setVisibility(resolveVisibility(category))
     }
-  }, [category, familyCtx?.isFamilyMode, familyCtx?.resolveVisibility])
+  }, [category, isFamilyMode, resolveVisibility])
 
   // Load accounts from IndexedDB
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       description: description.trim(),
       tags: tags.filter(Boolean),
       accountId: accountId || null,
-      visibility: familyCtx?.isFamilyMode ? visibility : null,
+      visibility: isFamilyMode ? (visibility ?? 'family') : null,
       source: initial.source || 'manual',
       userId: effectiveUserId,
       createdAt: initial.createdAt || new Date().toISOString(),
@@ -158,6 +159,7 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       setAccountId('');
       setSubcategory(null);
       setCategoryAutoSet(false);
+      setVisibility(null);
     }
   };
 
@@ -182,19 +184,19 @@ export default function ManualForm({ onSubmit, initial = {}, submitLabel }) {
       </div>
 
       {/* Visibility toggle (family mode only) */}
-      {familyCtx?.isFamilyMode && (
+      {isFamilyMode && (
         <div className="flex items-center gap-2 text-sm">
           <button
             type="button"
-            onClick={() => setVisibility(v => v === 'private' ? 'family' : 'private')}
+            onClick={() => setVisibility(v => (v ?? 'family') === 'private' ? 'family' : 'private')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
-              visibility === 'private'
+              (visibility ?? 'family') === 'private'
                 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                 : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
             }`}
           >
-            {visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
-            {visibility === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
+            {(visibility ?? 'family') === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+            {(visibility ?? 'family') === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
           </button>
         </div>
       )}
