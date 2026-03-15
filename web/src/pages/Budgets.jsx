@@ -23,7 +23,7 @@ export default function Budgets() {
   const { user, effectiveUserId } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { isFamilyMode, activeFamily, members } = useFamily();
+  const { isFamilyMode, activeFamily, members, familyFeed, loadFamilyFeed } = useFamily();
   const { categories } = useCategories();
   const [viewMode, setViewMode] = useState('personal'); // 'personal' | 'family'
   const [month, setMonth] = useState(new Date());
@@ -58,9 +58,16 @@ export default function Budgets() {
     try {
       const isFamily = viewMode === 'family' && isFamilyMode;
 
-      const [budgets, allTx] = await Promise.all([
+      // Load family feed for the current month when in family view
+      if (isFamily) {
+        const feedStart = format(startOfMonth(month), 'yyyy-MM-dd')
+        const feedEnd = format(endOfMonth(month), 'yyyy-MM-dd')
+        await loadFamilyFeed(feedStart, feedEnd)
+      }
+
+      const [budgets, ownTx] = await Promise.all([
         budgetsApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
-        txApi.getAll(isFamily ? {} : { userId: effectiveUserId }),
+        txApi.getAll({ userId: effectiveUserId }),
       ]);
       if (loadVersion.current !== version) return;
 
@@ -69,20 +76,25 @@ export default function Budgets() {
       const prevStart = startOfMonth(subMonths(month, 1));
       const prevEnd = endOfMonth(subMonths(month, 1));
 
-      // In family mode, aggregate all family members' expenses
-      const familyUserIds = isFamily ? new Set(members.map((m) => m.userId)) : null;
       const filterByRange = (tx, s, e) => {
         const d = new Date(tx.date);
-        const inRange = d >= s && d <= e;
-        if (!inRange) return false;
-        if (isFamily && familyUserIds) return familyUserIds.has(tx.userId);
-        return tx.userId === effectiveUserId;
+        return d >= s && d <= e;
       };
       const filterExpense = (tx, s, e) => filterByRange(tx, s, e) && tx.type === 'expense';
 
+      // In family mode, merge own transactions + familyFeed (deduplicated)
+      let allTx = ownTx
+      if (isFamily) {
+        const myIds = new Set(ownTx.map(tx => tx.id))
+        allTx = [...ownTx]
+        for (const tx of familyFeed) {
+          if (!myIds.has(tx.id)) allTx.push(tx)
+        }
+      }
+
       const monthTx = allTx.filter((tx) => filterExpense(tx, start, end));
       const allMonthTx = allTx.filter((tx) => filterByRange(tx, start, end));
-      const prevTx = allTx.filter((tx) => filterExpense(tx, prevStart, prevEnd));
+      const prevTx = ownTx.filter((tx) => filterExpense(tx, prevStart, prevEnd));
 
       // Store all budgets for cross-month features (copy last month)
       allBudgetsRef.current = budgets;
@@ -102,7 +114,7 @@ export default function Budgets() {
     } finally {
       if (loadVersion.current === version) setLoading(false);
     }
-  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members]);
+  }, [month, viewMode, effectiveUserId, isFamilyMode, activeFamily, members, familyFeed, loadFamilyFeed]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
