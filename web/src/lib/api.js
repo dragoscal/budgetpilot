@@ -6,8 +6,7 @@ const TABLE_MAP = {
   debtPayments: 'debt_payments',
   loanPayments: 'loan_payments',
   familyMembers: 'family_members',
-  sharedExpenses: 'shared_expenses',
-  settlementHistory: 'settlement_history',
+  familyInvites: 'family_invites',
 };
 
 // Reverse: API table names → IndexedDB store names
@@ -15,8 +14,7 @@ const REVERSE_TABLE_MAP = {
   debt_payments: 'debtPayments',
   loan_payments: 'loanPayments',
   family_members: 'familyMembers',
-  shared_expenses: 'sharedExpenses',
-  settlement_history: 'settlementHistory',
+  family_invites: 'familyInvites',
 };
 
 function toApiTable(storeName) {
@@ -205,48 +203,22 @@ export const loans = createCrud('loans');
 export const loanPayments = createCrud('loanPayments');
 export const families = createCrud('families');
 export const familyMembers = createCrud('familyMembers');
-export const sharedExpenses = createCrud('sharedExpenses');
+export const familyInvites = createCrud('familyInvites');
 export const challenges = createCrud('challenges');
-export const settlementHistory = createCrud('settlementHistory');
 
 // ─── FAMILY-SPECIFIC API (scoped endpoints) ─────────────
 export const familyApi = {
-  /** Get ALL members of a family (real + virtual), bypassing userId filter */
+  /** Get ALL members of a family, bypassing userId filter */
   async getAllMembers(familyId) {
     const apiUrl = await getApiUrl();
     if (!isApiMode(apiUrl) || !getAuthToken()) {
-      // Local-only fallback: return cached family members for this family
       const all = await storage.getAll('familyMembers');
       return all.filter((m) => m.familyId === familyId);
     }
     return apiFetch(apiUrl, `/api/families/${familyId}/members`);
   },
 
-  /** Add a virtual member to a family (no account required) */
-  async addVirtualMember(familyId, displayName, emoji) {
-    const apiUrl = await getApiUrl();
-    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to add members.');
-    const member = await apiFetch(apiUrl, `/api/families/${familyId}/members`, {
-      method: 'POST',
-      body: JSON.stringify({ displayName, emoji }),
-    });
-    // Cache locally
-    await storage.add('familyMembers', member);
-    return member;
-  },
-
-  /** Remove a virtual member from a family */
-  async removeVirtualMember(familyId, memberId) {
-    const apiUrl = await getApiUrl();
-    if (!isApiMode(apiUrl)) throw new Error('Backend connection required to remove members.');
-    await apiFetch(apiUrl, `/api/families/${familyId}/members/${memberId}`, {
-      method: 'DELETE',
-    });
-    // Remove from cache
-    await storage.remove('familyMembers', memberId);
-  },
-
-  /** Join a family by invite code (server-side lookup across ALL families) */
+  /** Join a family by invite code */
   async joinByCode(inviteCode, displayName, emoji) {
     const apiUrl = await getApiUrl();
     if (!isApiMode(apiUrl)) throw new Error('Backend connection required to join a family.');
@@ -254,23 +226,63 @@ export const familyApi = {
       method: 'POST',
       body: JSON.stringify({ inviteCode, displayName, emoji }),
     });
-    // Cache family + member locally
     if (result.family) await storage.add('families', result.family).catch(e => console.warn('Cache write failed:', e));
     if (result.member) await storage.add('familyMembers', result.member).catch(e => console.warn('Cache write failed:', e));
     return result;
   },
 
-  /** Link a virtual member to a real account (merges them) */
-  async linkVirtualToReal(familyId, virtualMemberId, realMemberId) {
+  /** Get family feed (visible transactions from all members) */
+  async getFeed(familyId, startDate, endDate) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) return [];
+    const result = await apiFetch(apiUrl, `/api/families/${familyId}/feed?startDate=${startDate}&endDate=${endDate}`);
+    return Array.isArray(result) ? result : [];
+  },
+
+  /** Invite someone by email */
+  async inviteByEmail(familyId, email) {
     const apiUrl = await getApiUrl();
     if (!isApiMode(apiUrl)) throw new Error('Backend connection required.');
-    const result = await apiFetch(apiUrl, `/api/families/${familyId}/members/${virtualMemberId}/link`, {
-      method: 'PUT',
-      body: JSON.stringify({ realMemberId }),
+    return apiFetch(apiUrl, `/api/families/${familyId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
-    // Remove virtual member from local cache (it was deleted server-side)
-    await storage.remove('familyMembers', virtualMemberId);
-    return result;
+  },
+
+  /** Get pending invites for current user */
+  async getPendingInvites() {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) return [];
+    const result = await apiFetch(apiUrl, '/api/families/invites/pending');
+    return Array.isArray(result) ? result : [];
+  },
+
+  /** Accept an invite */
+  async acceptInvite(inviteId) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required.');
+    return apiFetch(apiUrl, `/api/families/invites/${inviteId}/accept`, {
+      method: 'POST',
+    });
+  },
+
+  /** Decline an invite */
+  async declineInvite(inviteId) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required.');
+    return apiFetch(apiUrl, `/api/families/invites/${inviteId}/decline`, {
+      method: 'POST',
+    });
+  },
+
+  /** Update family settings (admin only) */
+  async updateSettings(familyId, changes) {
+    const apiUrl = await getApiUrl();
+    if (!isApiMode(apiUrl)) throw new Error('Backend connection required.');
+    return apiFetch(apiUrl, `/api/families/${familyId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(changes),
+    });
   },
 };
 
