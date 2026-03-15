@@ -1,10 +1,17 @@
 import { getSetting, setSetting } from './storage';
 
-export const APP_VERSION = '5.0.2';
+export const APP_VERSION = '5.0.3';
 
 // Changelog entries — newest first.
 // To add a new release: push an entry at the top and bump APP_VERSION.
 export const CHANGELOG = [
+  {
+    version: '5.0.3',
+    date: '2026-03-15',
+    items: [
+      { icon: 'Copy', textKey: 'changelog.v503crossSourceDupes', type: 'feature' },
+    ],
+  },
   {
     version: '5.0.2',
     date: '2026-03-15',

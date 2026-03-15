@@ -695,21 +695,25 @@ export async function checkDuplicate(newTx, userId) {
     return Math.abs(d - txDate) <= windowMs;
   });
 
+  const incomingSource = newTx.source || 'manual';
+
   const dupes = [];
   for (const existing of nearby) {
     const sameDate = existing.date === newTx.date;
     const sameAmount = Math.abs(existing.amount - newTx.amount) < 0.01;
     const sameMerchant = existing.merchant?.toLowerCase().trim() === newTx.merchant?.toLowerCase().trim();
+    const existingSource = existing.source || 'manual';
+    const isCrossSource = existingSource !== incomingSource;
 
     // Exact duplicate: same date + amount + merchant
     if (sameDate && sameAmount && sameMerchant) {
-      dupes.push({ transaction: existing, confidence: 0.95, reason: 'Same merchant, amount, and date' });
+      dupes.push({ transaction: existing, confidence: 0.95, reason: 'Same merchant, amount, and date', existingSource, isCrossSource });
       continue;
     }
 
     // Likely duplicate: same date + amount
     if (sameDate && sameAmount) {
-      dupes.push({ transaction: existing, confidence: 0.7, reason: 'Same amount and date' });
+      dupes.push({ transaction: existing, confidence: 0.7, reason: 'Same amount and date', existingSource, isCrossSource });
       continue;
     }
 
@@ -717,7 +721,7 @@ export async function checkDuplicate(newTx, userId) {
     if (sameMerchant && sameAmount) {
       const dayDiff = Math.abs(new Date(existing.date) - new Date(newTx.date)) / (1000 * 60 * 60 * 24);
       if (dayDiff <= 1) {
-        dupes.push({ transaction: existing, confidence: 0.6, reason: 'Same merchant and amount within 1 day' });
+        dupes.push({ transaction: existing, confidence: 0.6, reason: 'Same merchant and amount within 1 day', existingSource, isCrossSource });
       }
     }
   }
@@ -783,11 +787,14 @@ export async function batchCheckDuplicates(newTransactions, userId) {
     const amtKey = Math.round(newTx.amount * 100);
     const daKey = `${newTx.date}|${amtKey}`;
     const merchantNorm = newTx.merchant?.toLowerCase().trim() || '';
+    const incomingSource = newTx.source || 'manual';
 
     let isDuplicate = false;
     let isTransferPair = false;
     let confidence = 0;
     let reason = '';
+    let matchedSource = null;
+    let matchedIsCrossSource = false;
 
     // 1. Exact match: same date + amount + merchant → 0.95 confidence
     const dateAmountMatches = byDateAmount[daKey] || [];
@@ -797,6 +804,8 @@ export async function batchCheckDuplicates(newTransactions, userId) {
         isDuplicate = true;
         confidence = 0.95;
         reason = 'Same merchant, amount, and date';
+        matchedSource = ex.source || 'manual';
+        matchedIsCrossSource = matchedSource !== incomingSource;
         break;
       }
     }
@@ -805,11 +814,13 @@ export async function batchCheckDuplicates(newTransactions, userId) {
     // Only flag if both entries lack a merchant (generic/unidentified transactions)
     // Different merchants on the same day for the same amount = different transactions, NOT duplicates
     if (!isDuplicate && dateAmountMatches.length > 0) {
-      const hasMatchWithNoMerchant = dateAmountMatches.some(ex => !ex.merchant?.trim());
-      if (!merchantNorm && hasMatchWithNoMerchant) {
+      const noMerchantMatch = dateAmountMatches.find(ex => !ex.merchant?.trim());
+      if (!merchantNorm && noMerchantMatch) {
         isDuplicate = true;
         confidence = 0.7;
         reason = 'Same amount and date (no merchant)';
+        matchedSource = noMerchantMatch.source || 'manual';
+        matchedIsCrossSource = matchedSource !== incomingSource;
       }
       // Otherwise: different merchants = not a duplicate
     }
@@ -824,6 +835,8 @@ export async function batchCheckDuplicates(newTransactions, userId) {
           isDuplicate = true;
           confidence = 0.85;
           reason = 'Same merchant and amount within 1 day';
+          matchedSource = ex.source || 'manual';
+          matchedIsCrossSource = matchedSource !== incomingSource;
           break;
         }
       }
@@ -840,12 +853,14 @@ export async function batchCheckDuplicates(newTransactions, userId) {
         if (ex.type === 'transfer' || ex.category === 'transfer') {
           isTransferPair = true;
           reason = 'Transfer pair already exists';
+          matchedSource = ex.source || 'manual';
+          matchedIsCrossSource = matchedSource !== incomingSource;
           break;
         }
       }
     }
 
-    results.push({ transaction: newTx, isDuplicate, isTransferPair, confidence, reason });
+    results.push({ transaction: newTx, isDuplicate, isTransferPair, confidence, reason, existingSource: matchedSource, isCrossSource: matchedIsCrossSource });
   }
 
   return results;

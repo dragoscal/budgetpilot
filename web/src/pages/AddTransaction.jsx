@@ -167,17 +167,43 @@ export default function AddTransaction() {
       setReceiptMeta(null);
     }
 
-    // Check duplicates for each transaction
+    // Check duplicates for each transaction (source-aware)
     const enriched = [];
+    let autoSkippedCount = 0;
+    const autoSkippedSources = {};
+
     for (const tx of txns) {
       const dupes = await checkDuplicate(tx, effectiveUserId);
-      enriched.push({
-        ...tx,
-        _duplicate: dupes.length > 0 && dupes[0].confidence >= 0.6 ? dupes[0] : null,
-        _dismissed: false,
-      });
+      const topDupe = dupes.length > 0 && dupes[0].confidence >= 0.6 ? dupes[0] : null;
+
+      // Cross-source auto-skip: high-confidence match from a DIFFERENT source
+      // e.g., bank statement entry that already exists as recurring payment
+      if (topDupe && topDupe.isCrossSource && topDupe.confidence >= 0.95) {
+        autoSkippedCount++;
+        const src = topDupe.existingSource || 'manual';
+        autoSkippedSources[src] = (autoSkippedSources[src] || 0) + 1;
+        enriched.push({
+          ...tx,
+          _duplicate: topDupe,
+          _dismissed: true,
+          _autoSkipped: true,
+          _autoSkipSource: src,
+        });
+      } else {
+        enriched.push({
+          ...tx,
+          _duplicate: topDupe,
+          _dismissed: false,
+        });
+      }
     }
+
     setPendingResults(enriched);
+
+    // Toast for auto-skipped cross-source duplicates
+    if (autoSkippedCount > 0) {
+      toast.info(t('addTransaction.crossSourceAutoSkipped', { count: autoSkippedCount }));
+    }
   };
 
   const handleSaveResults = async () => {
@@ -192,7 +218,7 @@ export default function AddTransaction() {
     try {
       const saved = [];
       for (let i = 0; i < toSave.length; i++) {
-        const { _duplicate, _dismissed, ...clean } = toSave[i];
+        const { _duplicate, _dismissed, _autoSkipped, _autoSkipSource, ...clean } = toSave[i];
         // Add paidBy info to description if present
         if (clean.paidBy) {
           clean.description = clean.description
@@ -789,7 +815,10 @@ export default function AddTransaction() {
           <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/8 border border-warning/20">
             <AlertTriangle size={12} className="text-warning shrink-0" />
             <span className="text-[11px] text-warning flex-1">
-              {t('addTransaction.possibleDuplicate')}: {tx._duplicate.reason}
+              {tx._duplicate.isCrossSource
+                ? t('addTransaction.duplicateFromSource', { source: t(`addTransaction.crossSourceLabel.${tx._duplicate.existingSource}`) })
+                : `${t('addTransaction.possibleDuplicate')}: ${tx._duplicate.reason}`
+              }
             </span>
             <button onClick={() => updatePending(idx, { _dismissed: true })} className="text-[10px] font-medium text-danger hover:underline">
               {t('addTransaction.skip')}
@@ -1169,6 +1198,42 @@ export default function AddTransaction() {
                       {skipTransfers
                         ? (t('addTransaction.transfersSkipped') || 'Skipped')
                         : (t('addTransaction.skipTransfers') || 'Skip transfers')}
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* Cross-source auto-skip banner */}
+              {(() => {
+                const autoSkipped = pendingResults.filter(tx => tx._autoSkipped);
+                if (autoSkipped.length === 0) return null;
+                const sourceCounts = {};
+                autoSkipped.forEach(tx => {
+                  const src = tx._autoSkipSource || 'manual';
+                  sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+                });
+                return (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-info/8 border border-info/20 mb-3">
+                    <CheckCircle2 size={15} className="text-info shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-info">
+                        {t('addTransaction.crossSourceSkippedTitle', { count: autoSkipped.length })}
+                      </p>
+                      <p className="text-[10px] text-cream-500 mt-0.5">
+                        {Object.entries(sourceCounts).map(([src, count]) =>
+                          `${count}x ${t(`addTransaction.crossSourceLabel.${src}`)}`
+                        ).join(', ')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setPendingResults(prev => prev.map(tx =>
+                          tx._autoSkipped ? { ...tx, _dismissed: false, _autoSkipped: false } : tx
+                        ));
+                      }}
+                      className="text-[10px] font-medium text-info hover:underline whitespace-nowrap shrink-0"
+                    >
+                      {t('addTransaction.undoAutoSkip')}
                     </button>
                   </div>
                 );
