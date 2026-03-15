@@ -128,6 +128,39 @@ export function registerCrudRoutes(router) {
     return json({ data: result.results || [] });
   });
 
+  // GET /api/families/:familyId/feed — family members' visible transactions
+  router.get('/api/families/:familyId/feed', async (ctx) => {
+    const { familyId } = ctx.params;
+    const { startDate, endDate, limit = '500', offset = '0' } = ctx.query;
+    if (!startDate || !endDate) return json({ error: 'startDate and endDate required' }, 400);
+
+    // Verify caller is a family member
+    const membership = await ctx.env.DB.prepare(
+      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
+    ).bind(familyId, ctx.user.id).first();
+    if (!membership) return json({ error: 'Not a member' }, 403);
+
+    const feedLimit = Math.min(parseInt(limit), 5000);
+    const feedOffset = parseInt(offset);
+
+    const result = await ctx.env.DB.prepare(`
+      SELECT t.* FROM transactions t
+      JOIN family_members fm
+        ON t.userId = fm.userId AND fm.familyId = ?
+      WHERE t.visibility = 'family'
+        AND t.createdAt >= fm.joinedAt
+        AND (t.deletedAt IS NULL OR t.deletedAt = '')
+        AND t.date >= ? AND t.date <= ?
+      ORDER BY t.date DESC
+      LIMIT ? OFFSET ?
+    `).bind(familyId, startDate, endDate, feedLimit, feedOffset).all();
+
+    return json({
+      data: (result.results || []).map(r => deserializeRow('transactions', r)),
+      meta: { limit: feedLimit, offset: feedOffset }
+    });
+  });
+
   // POST /api/families/:familyId/members — add a virtual member to a family
   router.post('/api/families/:familyId/members', async (ctx) => {
     const { familyId } = ctx.params;
