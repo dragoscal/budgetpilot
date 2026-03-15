@@ -600,12 +600,20 @@ export default function Transactions() {
                 if (!results || results.length === 0) return;
                 try {
                   let savedCount = 0;
+                  let skippedCount = 0;
                   for (const tx of results) {
+                    // Cross-source dedup: skip if high-confidence match from different source
+                    const dupes = await checkDuplicate(tx, effectiveUserId);
+                    if (dupes.length > 0 && dupes[0].confidence >= 0.95 && dupes[0].isCrossSource) {
+                      skippedCount++;
+                      continue;
+                    }
                     await txApi.create(tx);
                     if (tx.merchant) learnCategory(tx.merchant, tx.category, tx.subcategory || null);
                     savedCount++;
                   }
-                  toast.success(t('addTransaction.transactionsAdded').replace('{count}', savedCount));
+                  if (savedCount > 0) toast.success(t('addTransaction.transactionsAdded').replace('{count}', savedCount));
+                  if (skippedCount > 0) toast.info(t('addTransaction.crossSourceAutoSkipped', { count: skippedCount }));
                   setShowQuickAdd(false);
                   await loadTransactions();
                 } catch (err) {

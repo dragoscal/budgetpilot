@@ -10,6 +10,7 @@ import { settings as settingsApi } from '../lib/api';
 import { getCachedRates } from '../lib/exchangeRates';
 import { predictMonthlySpending, predictEndOfMonthBalance, getSpendingAnomalies } from '../lib/predictions';
 import { getBillSuggestions, dismissSuggestion } from '../lib/billSuggestions';
+import { checkDuplicate } from '../lib/smartFeatures';
 import { checkAndNotifyBudgetAlerts, checkAndNotifyRecurringDue } from '../lib/notifications';
 import { addNotification } from '../lib/notificationStore';
 import StatCard from '../components/StatCard';
@@ -647,7 +648,7 @@ export default function Dashboard() {
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const billingDay = String(Math.min(item.billingDay || 1, daysInMonth)).padStart(2, '0');
       const finalAmount = Number(billAmounts[item.id]) || item.amount || 0;
-      await txApi.create({
+      const newTx = {
         id: generateId(),
         type: 'expense',
         amount: finalAmount,
@@ -660,7 +661,16 @@ export default function Dashboard() {
         recurringId: item.id,
         userId: effectiveUserId,
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      // Duplicate guard: prevent double-confirming the same bill
+      const dupes = await checkDuplicate(newTx, effectiveUserId);
+      if (dupes.length > 0 && dupes[0].confidence >= 0.85) {
+        toast.warning(t('addTransaction.duplicateFromSource', { source: t(`addTransaction.crossSourceLabel.${dupes[0].existingSource || 'recurring'}`) }));
+        return;
+      }
+
+      await txApi.create(newTx);
       setManualBillsDue((prev) => prev.filter((b) => b.id !== item.id));
       toast.success(`${t('dashboard.confirmPaid')}: ${item.name}`);
       loadData();
