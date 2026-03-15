@@ -283,147 +283,28 @@ export function registerCrudRoutes(router) {
     return json({ success: true });
   });
 
-  // POST /api/families/:familyId/members — add a virtual member to a family
-  router.post('/api/families/:familyId/members', async (ctx) => {
+  // PUT /api/families/:familyId/settings — admin can update family name/emoji
+  router.put('/api/families/:familyId/settings', async (ctx) => {
     const { familyId } = ctx.params;
-
-    // Verify requesting user is admin of this family
-    const myMembership = await ctx.env.DB.prepare(
-      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
+    const membership = await ctx.env.DB.prepare(
+      'SELECT role FROM family_members WHERE familyId = ? AND userId = ?'
     ).bind(familyId, ctx.user.id).first();
-    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
-    if (myMembership.role !== 'admin') return json({ error: 'Only admins can add members' }, 403);
+    if (!membership || membership.role !== 'admin')
+      return json({ error: 'Admin only' }, 403);
 
-    const { displayName, emoji } = ctx.body;
-    if (!displayName?.trim()) return json({ error: 'Display name is required' }, 400);
+    const { name, emoji } = ctx.body;
+    const updates = {};
+    if (name) updates.name = name;
+    if (emoji) updates.emoji = emoji;
+    if (Object.keys(updates).length === 0) return json({ error: 'Nothing to update' }, 400);
+    updates.updatedAt = new Date().toISOString();
 
-    const now = new Date().toISOString();
-    const id = generateId();
-
-    const member = {
-      id,
-      familyId,
-      userId: ctx.user.id, // Virtual member owned by creator for API filtering
-      role: 'member',
-      isVirtual: 1,
-      displayName: displayName.trim(),
-      emoji: emoji || '👤',
-      joinedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const columns = Object.keys(member);
-    const placeholders = columns.map(() => '?').join(', ');
+    const sets = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     await ctx.env.DB.prepare(
-      `INSERT INTO family_members (${columns.join(', ')}) VALUES (${placeholders})`
-    ).bind(...columns.map((c) => member[c])).run();
-
-    return json({ data: member }, 201);
-  });
-
-  // DELETE /api/families/:familyId/members/:memberId — remove a virtual member
-  router.delete('/api/families/:familyId/members/:memberId', async (ctx) => {
-    const { familyId, memberId } = ctx.params;
-
-    // Verify requesting user is admin
-    const myMembership = await ctx.env.DB.prepare(
-      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
-    ).bind(familyId, ctx.user.id).first();
-    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
-    if (myMembership.role !== 'admin') return json({ error: 'Only admins can remove members' }, 403);
-
-    // Only allow removing virtual members through this endpoint
-    const target = await ctx.env.DB.prepare(
-      'SELECT id, isVirtual FROM family_members WHERE id = ? AND familyId = ?'
-    ).bind(memberId, familyId).first();
-    if (!target) return json({ error: 'Member not found' }, 404);
-    if (!target.isVirtual) return json({ error: 'Cannot remove real members through this endpoint' }, 400);
-
-    await ctx.env.DB.prepare('DELETE FROM family_members WHERE id = ?').bind(memberId).run();
+      `UPDATE families SET ${sets} WHERE id = ?`
+    ).bind(...Object.values(updates), familyId).run();
 
     return json({ success: true });
-  });
-
-  // PUT /api/families/:familyId/members/:memberId/link — link virtual member to real account
-  router.put('/api/families/:familyId/members/:memberId/link', async (ctx) => {
-    const { familyId, memberId } = ctx.params;
-
-    // Verify requesting user is admin
-    const myMembership = await ctx.env.DB.prepare(
-      'SELECT id, role FROM family_members WHERE familyId = ? AND userId = ?'
-    ).bind(familyId, ctx.user.id).first();
-    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
-    if (myMembership.role !== 'admin') return json({ error: 'Only admins can link members' }, 403);
-
-    // Get the virtual member
-    const target = await ctx.env.DB.prepare(
-      'SELECT * FROM family_members WHERE id = ? AND familyId = ?'
-    ).bind(memberId, familyId).first();
-    if (!target) return json({ error: 'Member not found' }, 404);
-    if (!target.isVirtual) return json({ error: 'Member is already a real account' }, 400);
-
-    // Find the real member to link to
-    const { realMemberId } = ctx.body;
-    if (!realMemberId) return json({ error: 'realMemberId is required' }, 400);
-
-    const realMember = await ctx.env.DB.prepare(
-      'SELECT * FROM family_members WHERE id = ? AND familyId = ?'
-    ).bind(realMemberId, familyId).first();
-    if (!realMember) return json({ error: 'Target member not found' }, 404);
-    if (realMember.isVirtual) return json({ error: 'Cannot link to another virtual member' }, 400);
-
-    // Transfer: copy displayName/emoji from virtual to real if real doesn't have them
-    const now = new Date().toISOString();
-    const updates = { updatedAt: now };
-    if (!realMember.displayName && target.displayName) {
-      updates.displayName = target.displayName;
-    }
-    if ((!realMember.emoji || realMember.emoji === '👤') && target.emoji) {
-      updates.emoji = target.emoji;
-    }
-
-    if (Object.keys(updates).length > 1) {
-      const sets = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
-      await ctx.env.DB.prepare(
-        `UPDATE family_members SET ${sets} WHERE id = ?`
-      ).bind(...Object.values(updates), realMemberId).run();
-    }
-
-    // Delete the virtual member (it's been replaced by the real one)
-    await ctx.env.DB.prepare('DELETE FROM family_members WHERE id = ?').bind(memberId).run();
-
-    return json({ success: true, linkedTo: realMemberId });
-  });
-
-  // GET /api/families/:familyId/transactions — get ALL family members' transactions (#15)
-  router.get('/api/families/:familyId/transactions', async (ctx) => {
-    const { familyId } = ctx.params;
-
-    // Verify requesting user is a member of this family
-    const myMembership = await ctx.env.DB.prepare(
-      'SELECT id FROM family_members WHERE familyId = ? AND userId = ?'
-    ).bind(familyId, ctx.user.id).first();
-    if (!myMembership) return json({ error: 'Not a member of this family' }, 403);
-
-    // Get all member userIds for this family
-    const membersResult = await ctx.env.DB.prepare(
-      'SELECT userId FROM family_members WHERE familyId = ?'
-    ).bind(familyId).all();
-    const memberIds = (membersResult.results || []).map(m => m.userId);
-    if (memberIds.length === 0) return json({ data: [] });
-
-    const placeholders = memberIds.map(() => '?').join(',');
-    const startDate = ctx.query.startDate || '1970-01-01';
-    const endDate = ctx.query.endDate || '2099-12-31';
-
-    const result = await ctx.env.DB.prepare(
-      `SELECT * FROM transactions WHERE userId IN (${placeholders})
-       AND date >= ? AND date <= ? AND (deletedAt IS NULL OR deletedAt = '')
-       ORDER BY date DESC LIMIT 5000`
-    ).bind(...memberIds, startDate, endDate).all();
-
-    return json({ data: (result.results || []).map(r => deserializeRow('transactions', r)) });
   });
 
   // POST /api/families/join — join a family by invite code (searches ALL families, not just user's)
@@ -560,12 +441,15 @@ export function registerCrudRoutes(router) {
            AND fm.updatedAt > ?
            ORDER BY fm.updatedAt ASC LIMIT ? OFFSET ?`
         ).bind(userId, since, limit, offset));
-      } else if (table === 'shared_expenses') {
+      } else if (table === 'goals') {
+        // Goals: return user's own + family-scoped goals from their families
         stmts.push(ctx.env.DB.prepare(
-          `SELECT se.* FROM shared_expenses se
-           WHERE se.familyId IN (SELECT familyId FROM family_members WHERE userId = ?)
-           AND se.updatedAt > ?
-           ORDER BY se.updatedAt ASC LIMIT ? OFFSET ?`
+          `SELECT * FROM goals WHERE (userId = ? OR (familyId IN (SELECT familyId FROM family_members WHERE userId = ?))) AND updatedAt > ? ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
+        ).bind(userId, userId, since, limit, offset));
+      } else if (table === 'family_invites') {
+        // Family invites: pull pending invites for user's email
+        stmts.push(ctx.env.DB.prepare(
+          `SELECT * FROM family_invites WHERE email = (SELECT email FROM users WHERE id = ?) AND updatedAt > ? ORDER BY updatedAt ASC LIMIT ? OFFSET ?`
         ).bind(userId, since, limit, offset));
       } else {
         const userCol = getUserColumn(table);
@@ -791,6 +675,22 @@ export function registerCrudRoutes(router) {
     if (!ALLOWED_TABLES.includes(table)) return json({ error: 'Invalid table' }, 400);
 
     const userCol = getUserColumn(table);
+
+    // Admin leave protection: prevent last admin from leaving family
+    if (table === 'family_members') {
+      const member = await ctx.env.DB.prepare(
+        'SELECT role, familyId FROM family_members WHERE id = ? AND userId = ?'
+      ).bind(id, ctx.user.id).first();
+      if (member && member.role === 'admin') {
+        const adminCount = await ctx.env.DB.prepare(
+          'SELECT COUNT(*) as cnt FROM family_members WHERE familyId = ? AND role = ?'
+        ).bind(member.familyId, 'admin').first();
+        if (adminCount.cnt <= 1) {
+          return json({ error: 'Transfer admin role before leaving. You are the only admin.' }, 400);
+        }
+      }
+    }
+
     if (table === 'transactions') {
       // Soft delete
       await ctx.env.DB.prepare(
