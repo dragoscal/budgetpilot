@@ -1,43 +1,40 @@
-import { useState, useEffect } from 'react';
-import { useFamily } from '../contexts/FamilyContext';
-import { useToast } from '../contexts/ToastContext';
-import { useTranslation } from '../contexts/LanguageContext';
-import Modal from '../components/Modal';
-import HelpButton from '../components/HelpButton';
+import { useState, useEffect } from 'react'
+import { useFamily } from '../contexts/FamilyContext'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
+import { useTranslation } from '../contexts/LanguageContext'
+import { useCategories } from '../hooks/useCategories'
+import { getCategoryLabel } from '../lib/categoryManager'
+import Modal from '../components/Modal'
+import HelpButton from '../components/HelpButton'
+import FamilyMembers from '../components/family/FamilyMembers'
+import FamilySettings from '../components/family/FamilySettings'
 import {
-  Users, Plus, UserPlus, Home, Receipt,
-  Handshake, Settings, UserCheck,
-} from 'lucide-react';
-
-// Tab components
-import FamilyOverview from '../components/family/FamilyOverview';
-import FamilyAllExpenses from '../components/family/FamilyAllExpenses';
-import FamilySettlements from '../components/family/FamilySettlements';
-import FamilyMembers from '../components/family/FamilyMembers';
-import FamilySettings from '../components/family/FamilySettings';
+  Eye, EyeOff, Mail, Users, Shield, Settings, Plus, UserPlus,
+} from 'lucide-react'
 
 // ─── Inline forms (only used here) ──────────────────────────
 function CreateFamilyForm({ onCreated }) {
-  const { createFamily, FAMILY_EMOJIS } = useFamily();
-  const { toast } = useToast();
-  const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState(FAMILY_EMOJIS[0]);
-  const [loading, setLoading] = useState(false);
+  const { createFamily, FAMILY_EMOJIS } = useFamily()
+  const { toast } = useToast()
+  const { t } = useTranslation()
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState(FAMILY_EMOJIS[0])
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setLoading(true);
+    e.preventDefault()
+    if (!name.trim()) return
+    setLoading(true)
     try {
-      const family = await createFamily(name.trim(), emoji);
-      onCreated?.(family);
+      const family = await createFamily(name.trim(), emoji)
+      onCreated?.(family)
     } catch (err) {
-      toast.error(err.message || t('family.failedCreate'));
+      toast.error(err.message || t('family.failedCreate'))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,30 +62,30 @@ function CreateFamilyForm({ onCreated }) {
         {loading ? t('family.creating') : t('family.createFamily')}
       </button>
     </form>
-  );
+  )
 }
 
 function JoinFamilyForm({ onJoined }) {
-  const { joinFamily } = useFamily();
-  const { toast } = useToast();
-  const { t } = useTranslation();
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { joinFamily } = useFamily()
+  const { toast } = useToast()
+  const { t } = useTranslation()
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    setLoading(true);
+    e.preventDefault()
+    if (!code.trim()) return
+    setLoading(true)
     try {
-      const family = await joinFamily(code.trim());
-      toast.success(t('family.joined', { name: family.name }));
-      onJoined?.(family);
+      const family = await joinFamily(code.trim())
+      toast.success(t('family.joined', { name: family.name }))
+      onJoined?.(family)
     } catch (err) {
-      toast.error(err.message || t('family.failedJoin'));
+      toast.error(err.message || t('family.failedJoin'))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -108,44 +105,33 @@ function JoinFamilyForm({ onJoined }) {
         {loading ? t('family.joining') : t('family.joinFamily')}
       </button>
     </form>
-  );
+  )
 }
-
-// ─── Tab definitions ─────────────────────────────────────────
-const TABS = [
-  { id: 'home', icon: Home, labelKey: 'family.homeTab' },
-  { id: 'spending', icon: Receipt, labelKey: 'family.spendingTab' },
-  { id: 'settle', icon: Handshake, labelKey: 'family.settleTab' },
-  { id: 'members', icon: UserCheck, labelKey: 'family.membersTab' },
-  { id: 'settings', icon: Settings, labelKey: 'family.settingsTab' },
-];
-
-const TAB_COMPONENTS = {
-  home: FamilyOverview,
-  spending: FamilyAllExpenses,
-  settle: FamilySettlements,
-  members: FamilyMembers,
-  settings: FamilySettings,
-};
 
 // ─── Main Family page ────────────────────────────────────────
 export default function Family() {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
+  const { toast } = useToast()
+  const { effectiveUserId } = useAuth()
   const {
     myFamilies, activeFamily, members, loading,
-    switchFamily,
-  } = useFamily();
+    switchFamily, isFamilyMode, isAdmin,
+    pendingInvites, acceptInvite, declineInvite, inviteByEmail,
+    privacyRules, updatePrivacyRules,
+  } = useFamily()
+  const { categories } = useCategories()
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
-  const [tab, setTab] = useState('home');
+  const [showCreate, setShowCreate] = useState(false)
+  const [showJoin, setShowJoin] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
 
   // Auto-select first family when visiting this page with none active
   useEffect(() => {
     if (!loading && !activeFamily && myFamilies.length > 0) {
-      switchFamily(myFamilies[0].id);
+      switchFamily(myFamilies[0].id)
     }
-  }, [loading, activeFamily, myFamilies, switchFamily]);
+  }, [loading, activeFamily, myFamilies, switchFamily])
 
   if (loading) {
     return (
@@ -153,7 +139,7 @@ export default function Family() {
         <h1 className="page-title">{t('family.title')}</h1>
         <div className="card animate-pulse"><div className="h-24 bg-cream-200 dark:bg-dark-border rounded-lg" /></div>
       </div>
-    );
+    )
   }
 
   // No family yet — show create/join
@@ -185,10 +171,8 @@ export default function Family() {
           <JoinFamilyForm onJoined={() => setShowJoin(false)} />
         </Modal>
       </div>
-    );
+    )
   }
-
-  const ActiveTab = TAB_COMPONENTS[tab];
 
   return (
     <div className="space-y-6">
@@ -237,26 +221,91 @@ export default function Family() {
         </div>
       )}
 
-      {/* Tab navigation */}
-      <div className="flex border-b border-cream-200 dark:border-dark-border overflow-x-auto scrollbar-hide">
-        {TABS.map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors -mb-[1px] whitespace-nowrap shrink-0 ${
-              tab === tb.id
-                ? 'border-accent text-accent-700 dark:text-accent-300'
-                : 'border-transparent text-cream-500 hover:text-cream-700'
-            }`}
-          >
-            <tb.icon size={14} />
-            {t(tb.labelKey)}
-          </button>
-        ))}
+      {/* Pending invites banner */}
+      {pendingInvites.length > 0 && (
+        <div className="space-y-2">
+          {pendingInvites.map(invite => (
+            <div key={invite.id} className="card p-4 flex items-center justify-between border-l-4 border-teal-500">
+              <div>
+                <span className="font-medium">{invite.familyEmoji} {invite.familyName}</span>
+                <span className="text-sm text-gray-500 ml-2">
+                  {invite.inviterName} {t('family.invite.pending')}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => acceptInvite(invite.id)} className="btn-primary text-sm px-3 py-1">
+                  {t('family.invite.accept')}
+                </button>
+                <button onClick={() => declineInvite(invite.id)} className="btn-secondary text-sm px-3 py-1">
+                  {t('family.invite.decline')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Members section with invite button */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-heading text-lg flex items-center gap-2">
+            <Users size={18} />
+            {t('family.membersTab')}
+          </h3>
+          {isAdmin && (
+            <button onClick={() => setShowInviteModal(true)} className="btn-secondary text-sm flex items-center gap-1">
+              <Mail size={14} />
+              {t('family.invite.title')}
+            </button>
+          )}
+        </div>
+        <FamilyMembers />
       </div>
 
-      {/* Active tab content */}
-      <ActiveTab />
+      {/* Privacy rules section */}
+      {isFamilyMode && (
+        <div className="card p-4">
+          <h3 className="font-heading text-lg mb-3 flex items-center gap-2">
+            <Shield size={18} />
+            {t('family.privacy.title')}
+          </h3>
+          <p className="text-xs text-cream-500 mb-3">{t('family.privacy.description') || 'Choose which categories are shared with your family by default.'}</p>
+          <div className="space-y-2">
+            {categories
+              .filter(cat => !['income', 'transfer'].includes(cat.id))
+              .map(cat => (
+              <div key={cat.id} className="flex items-center justify-between py-1.5">
+                <span className="flex items-center gap-2">
+                  <span>{cat.icon}</span>
+                  <span className="text-sm">{getCategoryLabel(cat, t)}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    const newRules = { ...privacyRules }
+                    if (newRules[cat.id] === 'private') {
+                      delete newRules[cat.id]
+                    } else {
+                      newRules[cat.id] = 'private'
+                    }
+                    updatePrivacyRules(newRules)
+                  }}
+                  className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors ${
+                    privacyRules[cat.id] === 'private'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                      : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                  }`}
+                >
+                  {privacyRules[cat.id] === 'private' ? <EyeOff size={12} /> : <Eye size={12} />}
+                  {privacyRules[cat.id] === 'private' ? t('family.privacy.private') : t('family.privacy.shared')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Settings section */}
+      <FamilySettings />
 
       {/* Modals */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('family.createNewFamily')}>
@@ -265,6 +314,58 @@ export default function Family() {
       <Modal open={showJoin} onClose={() => setShowJoin(false)} title={t('family.joinAFamily')}>
         <JoinFamilyForm onJoined={() => setShowJoin(false)} />
       </Modal>
+
+      {/* Email invite modal */}
+      {showInviteModal && (
+        <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title={t('family.invite.title')}>
+          {/* Invite code display */}
+          <div className="mb-4">
+            <label className="text-sm text-gray-500 mb-1 block">{t('family.invite.code')}</label>
+            <div className="flex items-center gap-2">
+              <code className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded font-mono text-lg tracking-widest flex-1 text-center">
+                {activeFamily?.inviteCode}
+              </code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(activeFamily?.inviteCode || '')
+                  toast.success(t('common.copied') || 'Copied!')
+                }}
+                className="btn-secondary text-sm px-3 py-1.5"
+              >
+                {t('common.copy') || 'Copy'}
+              </button>
+            </div>
+          </div>
+          {/* Email invite form */}
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await inviteByEmail(inviteEmail)
+              toast.success(t('family.invite.sent') || 'Invite sent!')
+              setInviteEmail('')
+              setShowInviteModal(false)
+            } catch (err) {
+              toast.error(err.message)
+            }
+          }}>
+            <label className="text-sm text-gray-500 mb-1 block">{t('family.invite.email')}</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="input flex-1"
+                placeholder="ana@email.com"
+                required
+              />
+              <button type="submit" className="btn-primary text-sm px-4 flex items-center gap-1">
+                <Mail size={14} />
+                {t('common.add')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
-  );
+  )
 }
