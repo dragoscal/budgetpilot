@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { transactions as txApi, undoImportBatch, getLastImportBatch } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import HelpButton from '../components/HelpButton';
 import { sortByDate, formatCurrency, sumAmountsMultiCurrency, getCategoryById } from '../lib/helpers';
@@ -18,7 +19,7 @@ import { SORT_OPTIONS } from '../lib/constants';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoryLabel } from '../lib/categoryManager';
 import { checkDuplicate, auditTransactions, learnCategory } from '../lib/smartFeatures';
-import { Receipt, Download, Tag, Hash, X, User, Home, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link, Camera, FileSpreadsheet } from 'lucide-react';
+import { Receipt, Download, Tag, Hash, X, Undo2, CheckSquare, Zap, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, AlertCircle, ArrowRight, Link, Camera, FileSpreadsheet, Eye, EyeOff } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
 import BatchToolbar from '../components/BatchToolbar';
 import { correlateTransactions } from '../lib/transactionCorrelation';
@@ -39,6 +40,7 @@ export default function Transactions() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, effectiveUserId } = useAuth();
+  const { isFamilyMode, activeFamily, members, familyFeed, feedLoading, loadFamilyFeed } = useFamily();
   const { t } = useTranslation();
   const { categories } = useCategories();
   const currency = user?.defaultCurrency || 'RON';
@@ -54,7 +56,7 @@ export default function Transactions() {
   const [amountMin, setAmountMin] = useState('');
   const [amountMax, setAmountMax] = useState('');
   const [sort, setSort] = useState('date-desc');
-  const [scopeFilter, setScopeFilter] = useState('all');
+  const [familyFilter, setFamilyFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState(null);
   const [deleteTx, setDeleteTx] = useState(null);
@@ -207,15 +209,27 @@ export default function Transactions() {
     setPage(1);
     setSelected(new Set());
     setSelectAllFiltered(false);
-  }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter, sort]);
+  }, [search, categoryFilter, typeFilter, tagFilter, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, familyFilter, sort]);
+
+  // Merge own transactions + family feed based on familyFilter
+  const mergedTx = useMemo(() => {
+    if (!isFamilyMode) return allTx
+    switch (familyFilter) {
+      case 'all': {
+        const myIds = new Set(allTx.map(tx => tx.id))
+        const merged = [...allTx]
+        for (const tx of familyFeed) {
+          if (!myIds.has(tx.id)) merged.push(tx)
+        }
+        return merged.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      }
+      case 'mine': return allTx
+      default: return familyFeed.filter(tx => tx.userId === familyFilter)
+    }
+  }, [isFamilyMode, familyFilter, allTx, familyFeed])
 
   const filtered = useMemo(() => {
-    let result = [...allTx];
-
-    // Scope filter
-    if (scopeFilter !== 'all') {
-      result = result.filter(t => (t.scope || 'personal') === scopeFilter);
-    }
+    let result = [...mergedTx];
 
     // Date filter
     if (dateFilter === 'custom') {
@@ -273,7 +287,7 @@ export default function Transactions() {
     }
 
     return result;
-  }, [allTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, customDateFrom, customDateTo, amountMin, amountMax, scopeFilter]);
+  }, [mergedTx, search, categoryFilter, typeFilter, tagFilter, sort, dateFilter, customDateFrom, customDateTo, amountMin, amountMax]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -478,9 +492,9 @@ export default function Transactions() {
   const handleBatchExport = () => {
     if (selected.size === 0) return;
     const selectedTxs = [...selected].map(id => allTx.find(t => t.id === id)).filter(Boolean);
-    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Scope'];
+    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Visibility'];
     const rows = selectedTxs.map((t) => [
-      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
+      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.visibility || '',
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -530,9 +544,9 @@ export default function Transactions() {
   };
 
   const exportCSV = () => {
-    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Scope'];
+    const headers = ['Date', 'Type', 'Merchant', 'Category', 'Amount', 'Currency', 'Description', 'Tags', 'Visibility'];
     const rows = filtered.map((t) => [
-      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.scope || 'personal',
+      t.date, t.type, t.merchant, t.category, t.amount, t.currency, t.description, (t.tags || []).join(';'), t.visibility || '',
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -827,30 +841,35 @@ export default function Transactions() {
         type={typeFilter} onType={setTypeFilter}
       />
 
-      {/* Scope filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-cream-500">{t('household.title')}</span>
-        <div className="flex gap-1.5">
-          {[
-            { id: 'all', label: t('household.scopeAll') },
-            { id: 'personal', label: t('household.scopePersonal'), icon: User },
-            { id: 'household', label: t('household.scopeHousehold'), icon: Home },
-          ].map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setScopeFilter(s.id)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all flex items-center gap-1 ${
-                scopeFilter === s.id
-                  ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300 shadow-sm'
-                  : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
-              }`}
-            >
-              {s.icon && <s.icon size={11} />}
-              {s.label}
-            </button>
-          ))}
+      {/* Family filter */}
+      {isFamilyMode && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-cream-500">{t('family.title')}</span>
+          <div className="flex gap-1.5">
+            {[
+              { id: 'all', label: t('family.filter.all') },
+              { id: 'mine', label: t('family.filter.mine') },
+            ].concat(
+              members.filter(m => m.userId !== effectiveUserId).map(m => ({
+                id: m.userId,
+                label: `${m.emoji || '\ud83d\udc64'} ${m.displayName}`
+              }))
+            ).map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFamilyFilter(f.id)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all flex items-center gap-1 ${
+                  familyFilter === f.id
+                    ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300 shadow-sm'
+                    : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Amount range filter */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -1022,14 +1041,36 @@ export default function Transactions() {
             )}
             <div className="divide-y divide-cream-100 dark:divide-dark-border">
               {paginated.map((tx) => (
-                <TransactionRow
-                  key={tx.id}
-                  transaction={tx}
-                  onEdit={setEditTx}
-                  onDelete={setDeleteTx}
-                  selected={selected.has(tx.id)}
-                  onSelect={handleSelect}
-                />
+                <div key={tx.id} className="flex items-center">
+                  <div className="flex-1 min-w-0">
+                    <TransactionRow
+                      transaction={tx}
+                      onEdit={setEditTx}
+                      onDelete={setDeleteTx}
+                      selected={selected.has(tx.id)}
+                      onSelect={handleSelect}
+                    />
+                  </div>
+                  {tx.userId !== effectiveUserId && isFamilyMode && (
+                    <span className="text-xs ml-1 shrink-0" title={members.find(m => m.userId === tx.userId)?.displayName}>
+                      {members.find(m => m.userId === tx.userId)?.emoji || '\ud83d\udc64'}
+                    </span>
+                  )}
+                  {tx.userId === effectiveUserId && isFamilyMode && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        const newVis = tx.visibility === 'private' ? 'family' : 'private'
+                        await txApi.update(tx.id, { visibility: newVis })
+                        loadTransactions()
+                      }}
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0 ml-1"
+                      title={(tx.visibility ?? 'family') === 'private' ? t('family.visibility.private') : t('family.visibility.family')}
+                    >
+                      {(tx.visibility ?? 'family') === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
             {/* Pagination Controls */}
@@ -1067,8 +1108,8 @@ export default function Transactions() {
           <EmptyState
             icon={Receipt}
             title={t('transactions.noFound')}
-            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax || scopeFilter !== 'all' ? t('transactions.adjustFilters') : t('transactions.addFirst')}
-            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax && scopeFilter === 'all' ? t('transactions.addTransaction') : undefined}
+            description={search || categoryFilter || typeFilter || tagFilter.length > 0 || dateFilter !== 'all' || amountMin || amountMax || familyFilter !== 'all' ? t('transactions.adjustFilters') : t('transactions.addFirst')}
+            action={!search && !categoryFilter && tagFilter.length === 0 && dateFilter === 'all' && !amountMin && !amountMax && familyFilter === 'all' ? t('transactions.addTransaction') : undefined}
             onAction={() => navigate('/add')}
           />
         )}
