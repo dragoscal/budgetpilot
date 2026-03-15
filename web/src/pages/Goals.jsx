@@ -10,10 +10,12 @@ import GoalCard from '../components/GoalCard';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import PageTabs from '../components/PageTabs';
-import { Target, Plus, Star, Trophy } from 'lucide-react';
+import { Target, Plus, Star, Trophy, Users } from 'lucide-react';
+import { useFamily } from '../contexts/FamilyContext';
 
 export default function Goals() {
   const { user, effectiveUserId } = useAuth();
+  const { isFamilyMode, activeFamily } = useFamily();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [goalsList, setGoals] = useState([]);
@@ -25,6 +27,7 @@ export default function Goals() {
 
   // Form
   const [form, setForm] = useState({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency: user?.defaultCurrency || 'RON', icon: '🎯', color: '#059669', interestRate: '', minimumPayment: '' });
+  const [goalScope, setGoalScope] = useState('personal'); // 'personal' | 'family'
 
   const currency = user?.defaultCurrency || 'RON';
   const loadVersion = useRef(0);
@@ -74,6 +77,7 @@ export default function Goals() {
         interestRate: form.interestRate ? Number(form.interestRate) : undefined,
         minimumPayment: form.minimumPayment ? Number(form.minimumPayment) : undefined,
         userId: effectiveUserId,
+        familyId: goalScope === 'family' && activeFamily ? activeFamily.id : null,
       };
       if (editGoal) {
         await goalsApi.update(editGoal.id, goalData);
@@ -119,11 +123,13 @@ export default function Goals() {
   const handleEdit = (goal) => {
     setEditGoal(goal);
     setForm({ name: goal.name, type: goal.type, targetAmount: goal.targetAmount.toString(), currentAmount: (goal.currentAmount || 0).toString(), targetDate: goal.targetDate || '', currency: goal.currency || currency, icon: goal.icon || '🎯', color: goal.color || '#059669', interestRate: goal.interestRate?.toString() || '', minimumPayment: goal.minimumPayment?.toString() || '' });
+    setGoalScope(goal.familyId ? 'family' : 'personal');
     setShowForm(true);
   };
 
   const resetForm = () => {
     setForm({ name: '', type: 'save_up', targetAmount: '', currentAmount: '0', targetDate: '', currency, icon: '🎯', color: '#059669', interestRate: '', minimumPayment: '' });
+    setGoalScope('personal');
   };
 
   const saveUpGoals = goalsList.filter((g) => g.type === 'save_up');
@@ -156,7 +162,16 @@ export default function Goals() {
             <div>
               <h3 className="section-title">{t('goals.saveUp')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {saveUpGoals.map((g) => <GoalCard key={g.id} goal={g} onEdit={handleEdit} onDelete={handleDelete} onAddFunds={setFundGoal} />)}
+                {saveUpGoals.map((g) => (
+                  <div key={g.id} className="relative">
+                    {g.familyId && (
+                      <span className="absolute top-2 right-2 z-10 flex items-center gap-1 text-[10px] font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/30 px-1.5 py-0.5 rounded-full">
+                        <Users size={10} /> {t('family.title')}
+                      </span>
+                    )}
+                    <GoalCard goal={g} onEdit={handleEdit} onDelete={handleDelete} onAddFunds={setFundGoal} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -164,7 +179,16 @@ export default function Goals() {
             <div>
               <h3 className="section-title">{t('goals.payDown')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {payDownGoals.map((g) => <GoalCard key={g.id} goal={g} onEdit={handleEdit} onDelete={handleDelete} onAddFunds={setFundGoal} />)}
+                {payDownGoals.map((g) => (
+                  <div key={g.id} className="relative">
+                    {g.familyId && (
+                      <span className="absolute top-2 right-2 z-10 flex items-center gap-1 text-[10px] font-medium text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/30 px-1.5 py-0.5 rounded-full">
+                        <Users size={10} /> {t('family.title')}
+                      </span>
+                    )}
+                    <GoalCard goal={g} onEdit={handleEdit} onDelete={handleDelete} onAddFunds={setFundGoal} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -183,6 +207,27 @@ export default function Goals() {
               </button>
             ))}
           </div>
+          {isFamilyMode && (
+            <div className="flex gap-2">
+              {[
+                { id: 'personal', label: t('family.filter.mine') },
+                { id: 'family', label: t('family.title') },
+              ].map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setGoalScope(s.id)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    goalScope === s.id
+                      ? 'bg-accent-50 dark:bg-accent-500/10 border-accent-300 dark:border-accent-600/30 text-accent-700 dark:text-accent-300'
+                      : 'border-cream-300 dark:border-dark-border text-cream-500 hover:bg-cream-100 dark:hover:bg-dark-border'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div><label className="label">{t('goals.name')}</label><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('goals.emergencyFundPlaceholder')} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">{t('goals.targetAmount')}</label><input type="number" className="input" value={form.targetAmount} onChange={(e) => setForm((f) => ({ ...f, targetAmount: e.target.value }))} placeholder="0" inputMode="decimal" /></div>
