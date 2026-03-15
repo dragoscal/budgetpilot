@@ -164,11 +164,6 @@ Examples: "coffee at starbucks" → dining, dining:cafe; "uber ride" → transpo
 Product → subcategory: bread/pastry = groceries:bakery, milk/yogurt/cheese/eggs = groceries:dairy, chicken/meat/fish = groceries:meat, vegetables/fruits = groceries:produce, coffee = dining:cafe, fuel/gas = transport:fuel, pharmacy/medicine = health:pharmacy
 Romanian: paine/covrigi/corn = groceries:bakery, lapte/iaurt/branza/smantana/oua = groceries:dairy, pui/carne/peste = groceries:meat, legume/fructe = groceries:produce, cafea = dining:cafe, benzina/motorina = transport:fuel, farmacie/medicamente = health:pharmacy
 
-FAMILY MEMBER DETECTION:
-If the input starts with or contains a person's NAME followed by amount+description, that person PAID this expense. Set "paidBy" to the person's name.
-Examples: "Maria 20 coffee" → paidBy: "Maria", merchant: "", description: "Coffee", amount: 20, category: "dining", subcategory: "dining:cafe"
-"Alex 50 groceries" → paidBy: "Alex", merchant: "", description: "Groceries", category: "groceries"
-
 DEBT/LOAN DETECTION (English: "debt", "owe", "loan", "lent", "borrowed"; Romanian: "datorie", "imprumut", "datorez", "mi-a dat", "i-am dat"):
 If input contains debt keywords + a person name + amount, it's a debt entry. Set "isDebt": true and "debtTo": person name.
 Examples: "debt Alex 50 pizza" → isDebt: true, debtTo: "Alex", merchant: "", description: "Pizza", category: "dining"
@@ -187,7 +182,6 @@ Return JSON:
     "type": "expense",
     "description": "Brief note or product name",
     "confidence": 0.9,
-    "paidBy": null,
     "isDebt": false,
     "debtTo": null
   }]
@@ -1351,8 +1345,7 @@ function normalizeNLPResult(result, userId = 'local', originalText = '') {
       items: [],
       notes: '',
       tags: [],
-      // Family member / debt tracking from NLP
-      paidBy: t.paidBy || null,
+      // Debt tracking from NLP
       isDebt: !!t.isDebt,
       debtTo: t.debtTo || null,
       userId,

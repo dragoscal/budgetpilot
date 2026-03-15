@@ -7,7 +7,7 @@ import { formatCurrency } from './helpers';
  */
 export function generateCSV(transactions) {
   const BOM = '\uFEFF'; // UTF-8 BOM for Excel
-  const headers = ['Date', 'Type', 'Merchant', 'Category', 'Subcategory', 'Amount', 'Currency', 'Description', 'Tags', 'Source', 'Scope'];
+  const headers = ['Date', 'Type', 'Merchant', 'Category', 'Subcategory', 'Amount', 'Currency', 'Description', 'Tags', 'Source', 'Visibility'];
 
   const escape = (val) => {
     if (val === null || val === undefined) return '';
@@ -29,7 +29,7 @@ export function generateCSV(transactions) {
     escape(t.description || ''),
     escape((t.tags || []).join('; ')),
     escape(t.source || 'manual'),
-    escape(t.scope || 'personal'),
+    escape(t.visibility || ''),
   ]);
 
   const csv = BOM + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
